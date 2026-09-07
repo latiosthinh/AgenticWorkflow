@@ -65,7 +65,12 @@ flowchart LR
   3. Bot-identity events filtered — no recursive loops.
   4. Complete AC → ticket transitions to "Ready to Dev" with L1 audit summary comment.
   5. Ambiguous ticket stays "New" with specific missing-info comment.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffolding, SQLite WAL deduplication store, HMAC verification, bot shield, and Fastify ingress route.
+- [ ] 01-02-PLAN.md — Definition of Done rubric prompt, Zod audit schema, and Vercel AI SDK reasoning service.
+- [ ] 01-03-PLAN.md — Azure DevOps REST client with retry backoff, HTML discussion formatters, and background audit worker pipeline.
 
 ### Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint
 **Goal**: Isolated execution environment, tag-scoped tools, and non-blocking interactive plan checkpoint.
