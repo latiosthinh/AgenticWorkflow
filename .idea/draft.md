@@ -1,67 +1,35 @@
-# Agentic SDLC Workflow Draft
+# Agentic SDLC Workflow — Golden Path Standard
 
-## Lifecycle Overview
+Based on: **The Proposed Standard — Ten Steps in Seven Columns & Six Evidence Levels (L1–L6)**
 
 ```
-[ ADO Dashboard ]
-       │
-       ▼
-1. Ticket Intake & Audit (Agent)
-   - Read ticket requirements & acceptance criteria
-   - Audit quality / missing details
-   - Transition: -> "Ready to Dev"
-       │
-       ▼
-2. Developer Triage & Trigger (Human)
-   - Assign domain tags: frontend, backend, fullstack, infra
-   - Transition: -> "In Dev"
-       │
-       ▼ (Event Trigger)
-3. Implementation Loop (Agent - Local / Cloud)
-   - Load role-specific skills & MCP tools
-   - Plan -> Code -> Unit Test -> Fix loop
-   - Create Pull Request (PR)
-   - Transition: -> "Dev Done"
-       │
-       ▼
-4. Developer Review & Iteration (Human / Feedback Loop)
-   - Review PR
-   - Option A: Request changes (comments, modified description) -> Move back to "In Dev" -> Re-triggers Agent
-   - Option B: Approve & Merge PR -> Move to "Ready for QA"
-       │
-       ▼
-5. QA Verification Loop (Tester / QA Agent)
-   - Tester runs manual / automated validation loop
-   - Fail -> Move back to "In Dev" with bug details
-   - Pass -> Move to "Ready to Deploy"
-       │
-       ▼
-6. Done
-   - Ticket reaches "Ready to Deploy"
-   - Workflow marked completed
+┌───────────────┬───────────────────────────────┬───────────────┬───────────────┬───────────────────────────────┬───────────────────────────────┬───────────────┐
+│ 1. CONTRACT   │ 2. EXECUTE                    │ 3. CHECK      │ 4. ACCEPT     │ 5. MERGE                      │ 6. DEPLOY                     │ 7. LEARN      │
+├───────────────┼───────────────┬───────────────┼───────────────┼───────────────┼───────────────┬───────────────┼───────────────┬───────────────┼───────────────┤
+│ Step 1:       │ Step 2:       │ Step 3:       │ Step 4:       │ Step 5:       │ Step 6:       │ Step 7:       │ Step 8:       │ Step 9:       │ Step 10:      │
+│ Ticket + AC   │ Plan          │ Implement     │ Test + verify │ Accept        │ PR review     │ CI gates      │ Deploy        │ Monitor       │ Learn         │
+│ (human        │ (agent ·      │ (agent,       │ (agent runs)  │ (human        │ (human        │ (pipeline     │ (human        │ (prod         │ (skills fed   │
+│  contract)    │  Q→human)     │  bounded)     │               │  validates)   │  merges)      │  re-runs it)  │  approves)    │  signals)     │  back)        │
+│ [Human owns]  │ [Agent exec]  │ [Agent exec]  │ [Agent exec]  │ [Human owns]  │ [Human owns]  │ [Pipeline]    │ [Human owns]  │ [Pipeline]    │ [Agent exec]  │
+│ [Human input◇]│ [Human input◇]│               │               │ [Verdict ◆]   │ [Verdict ◆]   │               │ [Verdict ◆]   │               │               │
+└───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┘
 ```
 
-## Key Components
+## Six Evidence Levels (L1–L6)
 
-### 1. Integration & Triggers
-- **Source**: Azure DevOps (ADO) Boards / Work Items API & Webhooks.
-- **Event Listeners**:
-  - `ticket.created` / `ticket.updated` -> triggers requirements audit agent.
-  - `ticket.state_changed` to `"In Dev"` -> triggers coding agent dispatch.
-  - `ticket.state_changed` back to `"In Dev"` with comments -> triggers review-fix agent loop.
-  - `ticket.state_changed` to `"Ready for QA"` -> triggers QA workflow.
+| Level | Evidence Dimension | Primary Question | Mapped Golden Path Column | Evidence Artifact |
+|---|---|---|---|---|
+| **L1** | **Requirement** | Is "done" defined right? | **CONTRACT** | Audited Acceptance Criteria, Scope boundary checklist, testability sign-off |
+| **L2** | **Code Quality** | Is the code sound? | **MERGE (CI scans)** | Linting clean, SonarQube/ESLint score, zero static analysis regressions, <250 LOC diff |
+| **L3** | **Functional** | Does it behave as specified? | **CHECK (agent) & MERGE (CI)** | Local unit test pass trace, CI test suite green re-run, regression test matrix |
+| **L4** | **Security** | Is it safe? | **MERGE (Scan gate)** | SAST scan passed, zero high/crit dependency CVEs, secret leak scan zero |
+| **L5** | **Deploy Safety** | Can we ship and undo it? | **DEPLOY** | Staging migration verification, automated rollback dry-run, canary strategy verified |
+| **L6** | **Prod Confidence** | Is it working for real users? | **DEPLOY (Monitor) & LEARN** | Real-time telemetry signals, zero error rate spikes, skills & learnings extracted |
 
-### 2. Agent Execution Layer
-- **Environment**: Local CLI runner or Cloud container worker.
-- **Context Injection**:
-  - Ticket description, acceptance criteria, comments history.
-  - Repository context, branches, target stack.
-  - Modular skills and MCP servers (Git, Code search, Test runner, ADO API).
-- **Execution Loop**:
-  - Self-verification with local tests before PR.
-  - PR link attached back to ADO work item.
+## Interaction & Actor Roles
 
-### 3. Human-in-the-Loop Gates
-- Gate 1: Requirement audit sign-off (Dev picks up ticket).
-- Gate 2: Code review & PR approval.
-- Gate 3: QA sign-off before deploy.
+- **Human Owns**: Step 1 (Contract), Step 5 (Accept), Step 6 (PR Review), Step 8 (Deploy).
+- **Human Input (◇)**: Step 1 (Ticket + AC authoring), Step 2 (Interactive Plan Q&A clarification).
+- **Human Verdict (◆)**: Step 5 (Acceptance sign-off), Step 6 (PR Merge decision), Step 8 (Deploy approval).
+- **Agent Executes**: Step 2 (Plan formulation), Step 3 (Bounded implementation), Step 4 (Test & verify), Step 10 (Skill extraction & feedback).
+- **Pipeline Re-runs**: Step 7 (CI gate re-runs: tests, linter, security scans), Step 9 (Production signal monitoring).
