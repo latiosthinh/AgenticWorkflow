@@ -1,123 +1,164 @@
-# Roadmap: Agentic SDLC Workflow (Golden Path Standard)
+# Roadmap: Agentic SDLC Workflow (Golden Path, post-audit v2)
 
 ## Overview
 
-Implements the **Golden Path Standard: Ten Steps in Seven Columns with Six Evidence Levels (L1–L6)** integrated with Azure DevOps. The workflow guides each work item through Contract definition (L1), interactive Planning (Q→human) and Bounded Implementation, local Testing & Verification (L3), Human Acceptance Gate, PR Review & CI Pipeline Gates (L2, L3, L4), Deployment Approval & Monitoring (L5, L6), and automated Skill Learning feedback.
+Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidence)** adapted per audit decisions: QA stage restored between Merge and Deploy; gated deploy + prod monitoring in v1 scope; existing ADO board states reused (ACCEPT gate lives on `Dev Done`); native ADO branch policies and Environments enforce CI/deploy gates — the system reads gate status, never re-implements it.
 
-## Golden Path Alignment (7 Columns, 10 Steps)
+## Authoritative ADO State Matrix
 
-```
-[1. CONTRACT] ──► [2. EXECUTE] ──► [3. CHECK] ──► [4. ACCEPT] ──► [5. MERGE] ──► [6. DEPLOY] ──► [7. LEARN]
-   Step 1:           Step 2: Plan     Step 4:        Step 5:         Step 6: PR     Step 8:         Step 10:
-   Ticket + AC       (Q→human)        Test+verify    Accept          Review (merge) Deploy (approve) Learn (skills)
-   (L1 Evidence)     Step 3:          (L3 Evidence)  (Human Verdict) Step 7: CI     Step 9: Monitor
-                     Implement                       [◆ Gate]        Gates (L2,L4)  (L5,L6 Evidence)
+| Golden Path Step | Column | ADO State | Actor | Evidence |
+|---|---|---|---|---|
+| 1. Ticket + AC | CONTRACT | `New` → `Ready to Dev` | human authors ◇, audit agent checks | **L1** |
+| — triage | CONTRACT | `Ready to Dev` → `In Dev` | human assigns domain tags | — |
+| 2. Plan (Q→human) | EXECUTE | `In Dev` (blocked-on-human flag; sandbox released) | agent ◇ human answers | locked plan |
+| 3. Implement | EXECUTE | `In Dev` | agent, bounded <250 LOC | — |
+| 4. Test + verify | CHECK | `In Dev` → `Dev Done` | agent runs, self-repairs | **L3 local** |
+| 5. Accept | ACCEPT | `Dev Done` | human verdict ◆ (packet: tests + diff + preview) | acceptance |
+| 6. PR review | MERGE | `Dev Done` | human verdict ◆ (reject → `In Dev`, breaker ≤2) | — |
+| 7. CI gates | MERGE | merge blocked until green | native branch policy (pipeline re-runs) | **L2, L3, L4** |
+| QA verify | QA | merge → `Ready for QA`; fail → `In Dev` (bounce ≤2); pass → `Ready to Deploy` | tester / QA agent | **L3 integration** |
+| 8. Deploy | DEPLOY | `Ready to Deploy` | human ◆ via native ADO Environment approval | **L5** |
+| 9. Monitor | DEPLOY | post-deploy window (default 30 min) | pipeline reads Azure Monitor/App Insights | **L6** |
+| 10. Learn | LEARN | after Done | agent extracts → PR to skills repo (human merges) | skills fed back |
+
+Workflow **complete ("Done")** = deployed + monitor window passed + L1–L6 evidence index attached.
+
+## Adapted Flow (differs from raw standard: +QA column, native gates)
+
+```mermaid
+flowchart LR
+    C["1 CONTRACT\nTicket+AC ◇\nL1"] --> E["2 EXECUTE\nPlan Q→human ◇\nImplement bounded"]
+    E --> K["3 CHECK\nTest+verify\nL3 local"]
+    K --> A["4 ACCEPT\nhuman ◆ @ Dev Done"]
+    A -->|reject ≤2| E
+    A --> M["5 MERGE\nPR review ◆\nCI branch policy\nL2 L3 L4"]
+    M -->|review reject ≤2| E
+    M --> Q["QA\nReady for QA\nintegration L3"]
+    Q -->|fail ≤2 + 2-strike| E
+    Q --> D["6 DEPLOY\nEnvironment approval ◆ L5\nMonitor telemetry L6"]
+    D --> L["7 LEARN\nskills PR → human merge"]
+    L -.->|fed back| E
 ```
 
 ## Phases
 
-- [ ] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** - Ingest and verify Azure DevOps service hooks with deduplication, loop protection, and automated requirements audit for Definition of Done (L1 Evidence).
-- [ ] **Phase 2: EXECUTE (Plan & Foundation) — Ephemeral Sandbox, Dynamic MCP & Plan Checkpoint** - Ephemeral git worktree manager, process isolation with secret scrubbing, domain-scoped MCP tools, and interactive plan clarification (`Q→human`).
-- [ ] **Phase 3: EXECUTE & CHECK — Bounded Implementation & Self-Repair Test Verification** - Bounded multi-file code editing (<250 LOC), read-only test assertion protection, and automated unit test self-repair loops (L3 Evidence).
-- [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Circuit Breaker** - Functional preview/verification artifact attachment, human acceptance verdict gate, and rework circuit breaker (max 2 bounces).
-- [ ] **Phase 5: MERGE — PR Review Gate & CI Quality/Security Pipelines** - Automated PR creation (`AB#<id>`), human code review merge gate, and pipeline CI gates re-running tests (L3), code quality scans (L2), and security checks (L4).
-- [ ] **Phase 6: DEPLOY — Deploy Safety Approval & Production Telemetry Monitoring** - Human deployment approval gate with rollback verification (L5 Safety), automated pipeline deployment, and production telemetry monitoring (L6 Prod Confidence).
-- [ ] **Phase 7: LEARN — Continuous Improvement & Skills Feedback Loop** - Post-deployment learning agent extracting patterns, domain knowledge, and failure postmortems back into project skills and context documentation.
+- [ ] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition.
+- [ ] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle.
+- [ ] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`.
+- [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker.
+- [ ] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`.
+- [ ] **Phase 6: QA — Verification Loop** — Integration/e2e suite runner, 2-strike flake filter, failure diagnostics → `In Dev` (bounce ≤2), pass → `Ready to Deploy`.
+- [ ] **Phase 7: DEPLOY — Native Environment Approval & Telemetry Monitor** — ADO Environments approval wiring (L5), Azure Monitor/App Insights evaluation window (L6), Done marking with evidence index.
+- [ ] **Phase 8: LEARN — Skills Feedback Loop** — Lifecycle analysis, pattern/postmortem extraction, PR-based skills submission (human merge).
 
 ---
 
 ## Phase Details
 
 ### Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor
-**Goal**: Establish secure webhook ingress, deduplication, and automated ticket audit verifying Definition of Done (L1 Requirement Evidence).
-**Depends on**: Nothing (first phase)
+**Goal**: Secure webhook ingress, deduplication, loop protection, and automated L1 contract audit.
+**Depends on**: Nothing
 **Requirements**: INGEST-01, INGEST-02, INGEST-03, CONTR-01, CONTR-02
-**Success Criteria** (what must be TRUE):
-  1. Incoming ADO service hook webhook with valid HMAC signature is accepted with HTTP 202; invalid signature rejected with HTTP 401.
-  2. Duplicate webhook deliveries with identical `(workItemId, revId)` are dropped without redundant task execution.
-  3. Work item updates performed by bot identity are filtered out to prevent recursive loops.
-  4. Auditor agent checks ticket & AC for Definition of Done clarity and testability, attaching L1 Evidence badge to work item.
-  5. Valid tickets automatically transition to "Ready to Dev"; ambiguous tickets receive comments detailing missing criteria.
+**Success Criteria**:
+  1. Valid HMAC webhook accepted (HTTP 202); invalid rejected (HTTP 401).
+  2. Duplicate `(workItemId, revId)` deliveries dropped.
+  3. Bot-identity events filtered — no recursive loops.
+  4. Complete AC → ticket transitions to "Ready to Dev" with L1 audit summary comment.
+  5. Ambiguous ticket stays "New" with specific missing-info comment.
 **Plans**: TBD
 
-### Phase 2: EXECUTE (Plan & Foundation) — Ephemeral Sandbox, Dynamic MCP & Plan Checkpoint
-**Goal**: Provision isolated execution environments, domain-scoped tools, and execute interactive plan clarification (`Q→human`) before implementation.
+### Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint
+**Goal**: Isolated execution environment, tag-scoped tools, and non-blocking interactive plan checkpoint.
 **Depends on**: Phase 1
 **Requirements**: PLAN-01, PLAN-02, DISP-01, SAND-01, SAND-02
-**Success Criteria** (what must be TRUE):
-  1. Transition to "In Dev" triggers task worker with ephemeral git worktree isolated from host repository.
-  2. Domain tags (`frontend`, `backend`, `infra`) dynamically mount matching MCP tool servers in agent context.
-  3. Process runner executes commands within strict 120s timeout and scrubs PATs and API keys from environment and logs.
-  4. Agent formulates implementation plan and posts interactive clarification questions (`Q→human`) to discussion when ambiguities arise.
-  5. Human responses are captured and incorporated into a locked implementation plan before code modifications begin.
+**Success Criteria**:
+  1. "In Dev" transition provisions ephemeral git worktree isolated from host repo.
+  2. Domain tags mount matching MCP servers only (no kitchen-sink toolsets).
+  3. Commands run under 120s timeout with PATs/API keys scrubbed from env and logs.
+  4. Plan questions posted to work item; sandbox released while awaiting answers.
+  5. Human answer comment re-triggers run; 24h unanswered → ping; plan locked before first code edit.
 **Plans**: TBD
 
-### Phase 3: EXECUTE & CHECK — Bounded Implementation & Self-Repair Test Verification
-**Goal**: Autonomously modify code within bounded limits, verify with local test suites, and self-repair failures (L3 Functional Evidence).
+### Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification
+**Goal**: Bounded code generation verified by local tests with self-repair (L3 local evidence).
 **Depends on**: Phase 2
 **Requirements**: IMPL-01, IMPL-02, TEST-01, TEST-02
-**Success Criteria** (what must be TRUE):
-  1. Developer agent executes multi-file code modifications respecting a diff ceiling of <250 LOC.
-  2. Existing test assertion files are enforced read-only and agent modifications to them are rejected.
-  3. Agent runs local unit tests, detects failures, and autonomously repairs code within 3-5 iterations.
-  4. Passing implementation produces structured test execution logs establishing L3 Functional Evidence.
+**Success Criteria**:
+  1. Multi-file edits respect <250 LOC diff ceiling.
+  2. Test assertion files read-only; modifications rejected pre-PR.
+  3. Failing tests trigger self-repair loop capped at 3-5 iterations.
+  4. Repair budget exhaustion → blocked flag + diagnostics comment (no silent failure).
+  5. Green tests → structured L3 report attached; ticket → "Dev Done".
 **Plans**: TBD
 
-### Phase 4: ACCEPT — Human Validation Gate & Rework Circuit Breaker
-**Goal**: Provide human functional acceptance gate before merge with bounded rework bounce handling.
+### Phase 4: ACCEPT — Human Validation Gate & Rework Breaker
+**Goal**: Human functional acceptance at `Dev Done` with bounded rework.
 **Depends on**: Phase 3
 **Requirements**: ACCP-01, ACCP-02, ACCP-03
-**Success Criteria** (what must be TRUE):
-  1. Work item transitions to "Accept" state with preview/test evidence attached for human validation.
-  2. Human developer/stakeholder renders acceptance verdict: Approve (proceed to PR) or Reject (rework loop).
-  3. Rejection triggers rework agent on existing branch with cumulative context (AC + prior diff + feedback).
-  4. Rework cycle counter caps at 2 automated iterations, escalating to human tech lead if issues persist.
+**Success Criteria**:
+  1. Acceptance packet posted: test summary + diff stat + PR link + preview URL (where available).
+  2. Approve verdict unlocks PR merge path; reject moves ticket to "In Dev" with comments.
+  3. Reject re-triggers rework agent with cumulative envelope (AC + prior diff + feedback).
+  4. Shared breaker caps automated bounces at 2, then escalates to tech lead.
 **Plans**: TBD
 
-### Phase 5: MERGE — PR Review Gate & CI Quality/Security Pipelines
-**Goal**: Orchestrate pull request review, human merge gate, and pipeline CI verification (L2 Code Quality, L3 Functional Re-run, L4 Security).
+### Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification
+**Goal**: PR review orchestration with native branch-policy enforcement (L2/L3/L4) and merge transition.
 **Depends on**: Phase 4
-**Requirements**: MRG-01, MRG-02, MRG-03
-**Success Criteria** (what must be TRUE):
-  1. Agent opens Azure DevOps PR linked with `AB#<id>` containing complete L1 and L3 evidence summary.
-  2. Human reviewer conducts code review and renders PR merge verdict.
-  3. Azure Pipelines CI gates re-run full test suite (L3 Functional re-run), static analysis / linters (L2 Code Quality), and security/dependency scans (L4 Security Gate).
-  4. PR merge automatically triggers transition to deployment stage.
+**Requirements**: MRG-01, MRG-02, MRG-03, MRG-04, MRG-05
+**Success Criteria**:
+  1. PR created with `AB#<id>` link and L1/L3 evidence in description.
+  2. Merge path blocked until acceptance verdict passed.
+  3. System reads branch-policy status (build, quality scan, SAST) — merge only when green; no custom CI code.
+  4. Review rejection → "In Dev" rework (shared breaker); new commits land on existing PR.
+  5. Merge → ticket "Ready for QA" + merge summary comment.
 **Plans**: TBD
 
-### Phase 6: DEPLOY — Deploy Safety Approval & Production Telemetry Monitoring
-**Goal**: Enforce human deployment approval with rollback verification and monitor production signals (L5 Deploy Safety, L6 Prod Confidence).
+### Phase 6: QA — Verification Loop
+**Goal**: Post-merge integration verification with deterministic failure handling.
 **Depends on**: Phase 5
-**Requirements**: DPLY-01, DPLY-02
-**Success Criteria** (what must be TRUE):
-  1. Human deployment approval gate validates release notes, migration safety, and automated rollback readiness (L5 Evidence).
-  2. Deployment pipeline triggers release upon approval and monitors production telemetry signals (error rates, response times).
-  3. Telemetry stability over evaluation window establishes L6 Prod Confidence and marks release as successful.
+**Requirements**: QA-01, QA-02, QA-03, QA-04
+**Success Criteria**:
+  1. "Ready for QA" triggers integration/e2e suite on staging.
+  2. 2-strike filter: consecutive identical failures required before bounce.
+  3. QA fail → "In Dev" with reproduction logs + diagnostics (bounce cap 2, then human escalation).
+  4. QA pass → "Ready to Deploy" + QA evidence summary.
 **Plans**: TBD
 
-### Phase 7: LEARN — Continuous Improvement & Skills Feedback Loop
-**Goal**: Capture post-deployment learnings and update agent skills for continuous workflow improvement.
+### Phase 7: DEPLOY — Native Environment Approval & Telemetry Monitor
+**Goal**: Human-gated deployment via native ADO Environments (L5) and post-deploy telemetry confidence (L6).
 **Depends on**: Phase 6
+**Requirements**: DPLY-01, DPLY-02, DPLY-03
+**Success Criteria**:
+  1. Release blocked behind ADO Environment approval; reviewer sees rollback-readiness evidence (L5).
+  2. Post-deploy monitor reads Azure Monitor/App Insights for 30-min window: error-rate + p95-latency checks.
+  3. Threshold breach → alert + owner notification + release bounce path documented.
+  4. Window passed → work item marked Done with L1–L6 evidence index attached.
+**Plans**: TBD
+
+### Phase 8: LEARN — Skills Feedback Loop
+**Goal**: Convert completed lifecycles into reviewed, persistent agent skills.
+**Depends on**: Phase 7
 **Requirements**: LRN-01, LRN-02
-**Success Criteria** (what must be TRUE):
-  1. Learning agent analyzes completed ticket lifecycle (rework cycles, PR comments, test fixes, telemetry).
-  2. Extracts domain patterns, architectural conventions, or error prevention rules.
-  3. Commits findings into project skills repository and documentation to guide subsequent agent executions.
+**Success Criteria**:
+  1. Learning agent analyzes rework cycles, review comments, test fixes, telemetry of completed ticket.
+  2. Extracted patterns/postmortems submitted as PR to skills repo — never direct commit.
+  3. Human merge required before skills affect subsequent runs.
 **Plans**: TBD
 
 ---
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
 | 1. CONTRACT: Ingress & L1 Auditor | 0/TBD | Not started | - |
-| 2. EXECUTE: Sandbox, MCP & Plan (Q→human) | 0/TBD | Not started | - |
-| 3. EXECUTE & CHECK: Implement & Test (L3) | 0/TBD | Not started | - |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0/TBD | Not started | - |
+| 3. EXECUTE + CHECK: Implement & Test | 0/TBD | Not started | - |
 | 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
-| 5. MERGE: PR Review & CI Gates (L2, L3, L4) | 0/TBD | Not started | - |
-| 6. DEPLOY: Deploy Approval & Monitor (L5, L6) | 0/TBD | Not started | - |
-| 7. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |
+| 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
+| 6. QA: Verification Loop | 0/TBD | Not started | - |
+| 7. DEPLOY: Environment Approval & Monitor | 0/TBD | Not started | - |
+| 8. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |

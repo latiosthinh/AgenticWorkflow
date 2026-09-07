@@ -186,3 +186,16 @@ Based on research dependencies, component isolation rules, and pitfall preventio
 ---
 *Research completed: 2026-09-07*  
 *Ready for roadmap: yes*
+
+---
+
+## Addendum (2026-09-07, post-audit)
+
+**This research predates the Golden Path realignment. Where it conflicts, ROADMAP.md v2 wins:**
+
+1. **Phase count**: 6 phases here → 8 phases in roadmap v2 (ACCEPT gate split out, QA restored, DEPLOY + LEARN added).
+2. **QA**: research deferred automated QA agent to v2 — audit decision restored QA verification loop as v1 Phase 6 (human tester and/or agent, 2-strike flake filter).
+3. **Queue/persistence**: ARCHITECTURE.md sketches Redis/BullMQ/SQS — superseded by STACK.md decision: SQLite WAL (better-sqlite3 + Drizzle) + p-queue. No external broker in v1.
+4. **CI gates**: no custom CI orchestration — native ADO branch policies enforce L2/L3/L4; system reads status only.
+5. **Deploy**: in v1 scope via native ADO Environments approval (L5) + Azure Monitor/App Insights window (L6). Research "stop at Ready to Deploy" superseded.
+6. **Evidence model**: L1–L6 levels now attached to work items per state matrix in ROADMAP.md.

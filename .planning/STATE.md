@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-09-07)
+See: `.planning/PROJECT.md` (updated 2026-09-07 post-audit)
 
-**Core value:** Deterministic, evidence-backed software delivery across the 7 Golden Path columns (Contract, Execute, Check, Accept, Merge, Deploy, Learn) with 6 evidence levels (L1–L6) and human verdict gates.
+**Core value:** Deterministic, evidence-backed delivery across the adapted Golden Path (Contract → Execute → Check → Accept → Merge → QA → Deploy → Learn) with L1–L6 evidence, native ADO gates, and human verdicts.
 **Current focus:** Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor
 
 ## Current Position
 
-Phase: 1 of 7 (CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor)
+Phase: 1 of 8 (CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor)
 Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-09-07 — Aligned with Golden Path standard (7 columns, 10 steps, L1-L6 evidence)
+Status: Ready to plan (audit blockers resolved 2026-09-07)
+Last activity: 2026-09-07 — Golden Path audit applied: QA restored, gated deploy in scope, native ADO gates, rework loop reinstated, plan checkpoint made non-blocking
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -28,12 +28,13 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. CONTRACT: Ingress & L1 Auditor | 0 | - | - |
-| 2. EXECUTE: Sandbox, MCP & Plan (Q→human) | 0 | - | - |
-| 3. EXECUTE & CHECK: Implement & Test (L3) | 0 | - | - |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0 | - | - |
+| 3. EXECUTE + CHECK: Implement & Test | 0 | - | - |
 | 4. ACCEPT: Human Validation Gate | 0 | - | - |
-| 5. MERGE: PR Review & CI Gates (L2, L3, L4) | 0 | - | - |
-| 6. DEPLOY: Deploy Approval & Monitor (L5, L6) | 0 | - | - |
-| 7. LEARN: Skills Feedback Loop | 0 | - | - |
+| 5. MERGE: PR & Native CI Gates | 0 | - | - |
+| 6. QA: Verification Loop | 0 | - | - |
+| 7. DEPLOY: Environment Approval & Monitor | 0 | - | - |
+| 8. LEARN: Skills Feedback Loop | 0 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -48,11 +49,14 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Golden Path]: 10 steps across 7 columns (Contract, Execute, Check, Accept, Merge, Deploy, Learn).
-- [Evidence]: Explicit tracking of L1-L6 evidence levels on ADO work items.
-- [Execute]: Interactive plan checkpoint (`Q→human`) before code generation.
-- [Accept]: Explicit human functional validation gate prior to PR merge.
-- [Learn]: Post-deployment automated skill feedback into knowledge base.
+- [Audit]: QA stage restored as Phase 6 (`Ready for QA` state, 2-strike flake filter, bounce ≤2).
+- [Audit]: v1 includes gated deploy + telemetry monitor (native ADO Environments approval, Azure Monitor 30-min window).
+- [Audit]: Reuse existing ADO states — ACCEPT gate lives on `Dev Done`; no new board columns.
+- [Audit]: Native ADO branch policies enforce L2/L3/L4 CI gates; system reads status only, no custom CI orchestration.
+- [Audit]: Plan checkpoint (`Q→human`) non-blocking — sandbox released while awaiting answers; comment re-triggers; 24h ping.
+- [Audit]: PR-review rejection rework loop reinstated (MRG-04), shares max-2 breaker with ACCEPT (ACCP-03).
+- [Audit]: LEARN writes go through PR to skills repo — never direct commit (prompt-injection persistence guard).
+- [Init]: ADO Boards is single source of truth; SQLite WAL queue decouples ingress from workers.
 
 ### Pending Todos
 
@@ -60,18 +64,18 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- None blocking Phase 1. Audit resolved: see `.planning/AUDIT-golden-path.md` (Decisions Resolved section).
 
 ## Deferred Items
 
-Items acknowledged and carried forward:
-
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Research | Windows container vs execa process isolation tradeoff | Resolve in Phase 2 planning | 2026-09-07 |
+| Research | AST-based multi-file patching approach | Resolve in Phase 3 planning | 2026-09-07 |
+| Infra | Local dev webhook tunnel (cloudflared/ngrok) vs polling fallback | Resolve in Phase 1 planning | 2026-09-07 |
 
 ## Session Continuity
 
 Last session: 2026-09-07
-Stopped at: Golden Path roadmap aligned (7 phases, 24 requirements), ready for Phase 1 planning
+Stopped at: Audit decisions applied — roadmap v2 (8 phases, 31 requirements), ready for Phase 1 planning
 Resume file: None

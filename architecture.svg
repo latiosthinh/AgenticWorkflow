@@ -1,9 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 980" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 880" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <defs>
-    <!-- Card Gradients -->
     <linearGradient id="humanCard" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1f6feb" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#388bfd" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#388bfd" stop-opacity="0.08"/>
     </linearGradient>
     <linearGradient id="agentCard" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#d29922" stop-opacity="0.25"/>
@@ -11,19 +10,18 @@
     </linearGradient>
     <linearGradient id="pipelineCard" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#238636" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#2ea043" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#2ea043" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="qaCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#db61a2" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#f778ba" stop-opacity="0.08"/>
     </linearGradient>
     <linearGradient id="evidenceCard" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#161b22" stop-opacity="0.9"/>
       <stop offset="100%" stop-color="#21262d" stop-opacity="0.9"/>
     </linearGradient>
-
-    <!-- Markers -->
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#58a6ff" />
-    </marker>
-    <marker id="arrow-gold" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#d29922" />
     </marker>
     <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#f85149" />
@@ -35,292 +33,306 @@
 
   <style>
     .super-title { fill: #d29922; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-    .main-title { fill: #f0f6fc; font-size: 28px; font-weight: 700; }
-    .col-header { fill: #8b949e; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
-    
-    .card-title { fill: #f0f6fc; font-size: 15px; font-weight: 700; }
-    .card-sub { font-size: 12px; }
-    .card-meta { fill: #8b949e; font-size: 11px; }
-    
+    .main-title { fill: #f0f6fc; font-size: 26px; font-weight: 700; }
+    .col-header { fill: #8b949e; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .state-label { fill: #58a6ff; font-size: 10px; font-style: italic; }
+    .card-title { fill: #f0f6fc; font-size: 14px; font-weight: 700; }
+    .card-sub { font-size: 11px; }
+    .card-meta { fill: #8b949e; font-size: 10.5px; }
     .legend-text { fill: #8b949e; font-size: 12px; }
     .ev-num { fill: #f0f6fc; font-size: 12px; font-weight: 700; }
     .ev-q { fill: #8b949e; font-size: 11px; }
-    .ev-col { fill: #58a6ff; font-size: 11px; font-weight: 600; }
-    
+    .ev-col { fill: #58a6ff; font-size: 10.5px; font-weight: 600; }
     .flow-conn { stroke: #58a6ff; stroke-width: 2; fill: none; marker-end: url(#arrow); }
     .loop-conn { stroke: #f85149; stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; marker-end: url(#arrow-red); }
     .learn-conn { stroke: #bc8cff; stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; marker-end: url(#arrow-purple); }
+    .badge-restored { fill: #f778ba; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
   </style>
 
   <!-- ==================== HEADER ==================== -->
-  <text x="50" y="45" class="super-title">Example 1 · Golden Path</text>
-  <text x="50" y="80" class="main-title">The proposed standard — ten steps in seven columns.</text>
+  <text x="38" y="40" class="super-title">Golden Path · Adapted (post-audit v2)</text>
+  <text x="38" y="72" class="main-title">Ten steps · eight stages · six evidence levels (L1–L6)</text>
+  <text x="38" y="94" class="card-meta">QA restored · gated deploy + monitor in v1 · native ADO branch policies (L2/L3/L4) &amp; Environments approval (L5) · ACCEPT gate on Dev Done state</text>
 
   <!-- Legend -->
-  <g transform="translate(680, 58)">
-    <!-- human owns -->
+  <g transform="translate(760, 44)">
     <rect x="0" y="2" width="12" height="12" rx="2" fill="none" stroke="#58a6ff" stroke-width="2"/>
     <text x="18" y="13" class="legend-text">human owns</text>
-
-    <!-- human input ◇ -->
-    <text x="105" y="14" fill="#58a6ff" font-size="16">◇</text>
-    <text x="122" y="13" class="legend-text">human input</text>
-
-    <!-- human verdict ◆ -->
-    <text x="210" y="14" fill="#58a6ff" font-size="16">◆</text>
-    <text x="227" y="13" class="legend-text">human verdict</text>
-
-    <!-- agent executes -->
-    <rect x="330" y="2" width="12" height="12" rx="2" fill="#d29922"/>
-    <text x="348" y="13" class="legend-text">agent executes</text>
-
-    <!-- pipeline re-runs it -->
-    <rect x="460" y="2" width="12" height="12" rx="2" fill="#2ea043"/>
-    <text x="478" y="13" class="legend-text">pipeline re-runs it</text>
+    <text x="105" y="14" fill="#58a6ff" font-size="15">◇</text>
+    <text x="120" y="13" class="legend-text">human input</text>
+    <text x="205" y="14" fill="#58a6ff" font-size="15">◆</text>
+    <text x="220" y="13" class="legend-text">human verdict</text>
+    <rect x="320" y="2" width="12" height="12" rx="2" fill="#d29922"/>
+    <text x="338" y="13" class="legend-text">agent executes</text>
+    <rect x="450" y="2" width="12" height="12" rx="2" fill="#2ea043"/>
+    <text x="468" y="13" class="legend-text">pipeline / native ADO</text>
+    <rect x="610" y="2" width="12" height="12" rx="2" fill="#db61a2"/>
+    <text x="628" y="13" class="legend-text">QA (restored)</text>
   </g>
 
-  <!-- ==================== 7 COLUMNS BOARD ==================== -->
+  <!-- ==================== 8-COLUMN BOARD ==================== -->
+  <!-- Column geometry: x = 38 + 187*i, width 175 -->
 
   <!-- 1. CONTRACT -->
-  <g transform="translate(50, 120)">
-    <text x="10" y="0" class="col-header">Contract</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-    
-    <!-- Step 1 Card -->
-    <rect x="12" y="30" width="166" height="170" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Ticket + AC</text>
-    <text x="150" y="58" fill="#58a6ff" font-size="16">◇</text>
-    <text x="24" y="80" class="card-sub" fill="#58a6ff">human contract</text>
-    <text x="24" y="110" class="card-meta">• User story &amp; scope</text>
-    <text x="24" y="128" class="card-meta">• Definition of Done</text>
-    <text x="24" y="146" class="card-meta">• Auditor Agent checks</text>
-    <text x="24" y="164" class="card-meta" fill="#388bfd">→ Evidence: L1</text>
+  <g transform="translate(38, 120)">
+    <text x="4" y="0" class="col-header">1 · Contract</text>
+    <text x="4" y="14" class="state-label">New → Ready to Dev</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="180" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Ticket + AC</text>
+    <text x="140" y="62" fill="#58a6ff" font-size="14">◇</text>
+    <text x="22" y="82" class="card-sub" fill="#58a6ff">human contract</text>
+    <text x="22" y="106" class="card-meta">• User story &amp; scope</text>
+    <text x="22" y="122" class="card-meta">• Definition of Done</text>
+    <text x="22" y="138" class="card-meta">• Audit agent checks</text>
+    <text x="22" y="154" class="card-meta">  clarity &amp; testability</text>
+    <text x="22" y="176" class="card-meta" fill="#388bfd">→ Evidence: L1</text>
+    <rect x="12" y="238" width="151" height="100" rx="6" fill="#21262d" stroke="#30363d" stroke-width="1.5"/>
+    <text x="22" y="260" class="card-title" font-size="12">Triage (human)</text>
+    <text x="22" y="282" class="card-meta">• Assign domain tags:</text>
+    <text x="22" y="298" class="card-meta">  frontend / backend / infra</text>
+    <text x="22" y="314" class="card-meta">• Move → "In Dev"</text>
   </g>
 
   <!-- 2. EXECUTE -->
-  <g transform="translate(260, 120)">
-    <text x="10" y="0" class="col-header">Execute</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 2: Plan -->
-    <rect x="12" y="30" width="166" height="150" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Plan</text>
-    <text x="150" y="58" fill="#58a6ff" font-size="16">◇</text>
-    <text x="24" y="80" class="card-sub" fill="#d29922">agent · Q→human</text>
-    <text x="24" y="105" class="card-meta">• Break down steps</text>
-    <text x="24" y="123" class="card-meta">• Interactive questions</text>
-    <text x="24" y="141" class="card-meta">• Clarify ambiguities</text>
-
-    <!-- Step 3: Implement -->
-    <rect x="12" y="200" width="166" height="150" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
-    <text x="24" y="228" class="card-title">Implement</text>
-    <text x="24" y="250" class="card-sub" fill="#d29922">agent, bounded</text>
-    <text x="24" y="275" class="card-meta">• Git worktree sandbox</text>
-    <text x="24" y="293" class="card-meta">• Diff budget &lt;250 LOC</text>
-    <text x="24" y="311" class="card-meta">• Locked test files</text>
-    <text x="24" y="329" class="card-meta">• Dynamic MCP tools</text>
+  <g transform="translate(225, 120)">
+    <text x="4" y="0" class="col-header">2 · Execute</text>
+    <text x="4" y="14" class="state-label">In Dev</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="170" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Plan</text>
+    <text x="140" y="62" fill="#58a6ff" font-size="14">◇</text>
+    <text x="22" y="82" class="card-sub" fill="#d29922">agent · Q→human</text>
+    <text x="22" y="106" class="card-meta">• Questions posted to</text>
+    <text x="22" y="122" class="card-meta">  work item; sandbox</text>
+    <text x="22" y="138" class="card-meta">  released while waiting</text>
+    <text x="22" y="154" class="card-meta">• Comment re-triggers</text>
+    <text x="22" y="170" class="card-meta">• 24h ping · plan locked</text>
+    <text x="22" y="192" class="card-meta" fill="#d29922">  before first edit</text>
+    <rect x="12" y="228" width="151" height="176" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
+    <text x="22" y="252" class="card-title">Implement</text>
+    <text x="22" y="272" class="card-sub" fill="#d29922">agent, bounded</text>
+    <text x="22" y="296" class="card-meta">• Ephemeral git worktree</text>
+    <text x="22" y="312" class="card-meta">• Dynamic MCP by tag</text>
+    <text x="22" y="328" class="card-meta">• Diff budget &lt;250 LOC</text>
+    <text x="22" y="344" class="card-meta">• Test files read-only</text>
+    <text x="22" y="360" class="card-meta">• 120s timeout · env</text>
+    <text x="22" y="376" class="card-meta">  secrets scrubbed</text>
   </g>
 
   <!-- 3. CHECK -->
-  <g transform="translate(470, 120)">
-    <text x="10" y="0" class="col-header">Check</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 4: Test + verify -->
-    <rect x="12" y="30" width="166" height="170" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Test + verify</text>
-    <text x="24" y="80" class="card-sub" fill="#d29922">agent runs</text>
-    <text x="24" y="110" class="card-meta">• Unit test suite</text>
-    <text x="24" y="128" class="card-meta">• Self-repair loop (3-5x)</text>
-    <text x="24" y="146" class="card-meta">• Static verification</text>
-    <text x="24" y="164" class="card-meta" fill="#388bfd">→ Evidence: L3</text>
+  <g transform="translate(412, 120)">
+    <text x="4" y="0" class="col-header">3 · Check</text>
+    <text x="4" y="14" class="state-label">In Dev → Dev Done</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="190" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Test + verify</text>
+    <text x="22" y="82" class="card-sub" fill="#d29922">agent runs</text>
+    <text x="22" y="106" class="card-meta">• Local unit test suite</text>
+    <text x="22" y="122" class="card-meta">• Self-repair loop</text>
+    <text x="22" y="138" class="card-meta">  (max 3–5 iterations)</text>
+    <text x="22" y="154" class="card-meta">• Budget exhausted →</text>
+    <text x="22" y="170" class="card-meta">  blocked flag + logs</text>
+    <text x="22" y="192" class="card-meta" fill="#388bfd">→ Evidence: L3 local</text>
   </g>
 
   <!-- 4. ACCEPT -->
-  <g transform="translate(680, 120)">
-    <text x="10" y="0" class="col-header">Accept</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 5: Accept -->
-    <rect x="12" y="30" width="166" height="170" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Accept</text>
-    <text x="150" y="58" fill="#58a6ff" font-size="16">◆</text>
-    <text x="24" y="80" class="card-sub" fill="#58a6ff">human validates</text>
-    <text x="24" y="110" class="card-meta">• Preview / staging run</text>
-    <text x="24" y="128" class="card-meta">• Functional sign-off</text>
-    <text x="24" y="146" class="card-meta">• Reject: Rework loop</text>
-    <text x="24" y="164" class="card-meta">• Max 2 bounce breaker</text>
+  <g transform="translate(599, 120)">
+    <text x="4" y="0" class="col-header">4 · Accept</text>
+    <text x="4" y="14" class="state-label">Dev Done (reused state)</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="200" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Accept</text>
+    <text x="140" y="62" fill="#58a6ff" font-size="14">◆</text>
+    <text x="22" y="82" class="card-sub" fill="#58a6ff">human validates</text>
+    <text x="22" y="106" class="card-meta">• Acceptance packet:</text>
+    <text x="22" y="122" class="card-meta">  test summary + diff</text>
+    <text x="22" y="138" class="card-meta">  stat + PR + preview</text>
+    <text x="22" y="154" class="card-meta">• Approve → PR merge</text>
+    <text x="22" y="170" class="card-meta">• Reject → "In Dev"</text>
+    <text x="22" y="192" class="card-meta" fill="#f85149">• Breaker: ≤2 bounces</text>
+    <text x="22" y="212" class="card-meta" fill="#f85149">  (shared w/ PR review)</text>
   </g>
 
   <!-- 5. MERGE -->
-  <g transform="translate(890, 120)">
-    <text x="10" y="0" class="col-header">Merge</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 6: PR review -->
-    <rect x="12" y="30" width="166" height="140" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">PR review</text>
-    <text x="150" y="58" fill="#58a6ff" font-size="16">◆</text>
-    <text x="24" y="80" class="card-sub" fill="#58a6ff">human merges</text>
-    <text x="24" y="105" class="card-meta">• Code diff inspection</text>
-    <text x="24" y="123" class="card-meta">• Review discussion</text>
-    <text x="24" y="141" class="card-meta">• Merge authorization</text>
-
-    <!-- Step 7: CI gates -->
-    <rect x="12" y="190" width="166" height="150" rx="6" fill="url(#pipelineCard)" stroke="#2ea043" stroke-width="2"/>
-    <text x="24" y="218" class="card-title">CI gates</text>
-    <text x="24" y="240" class="card-sub" fill="#3fb950">pipeline re-runs it</text>
-    <text x="24" y="265" class="card-meta">• L2 Code quality scans</text>
-    <text x="24" y="283" class="card-meta">• L3 Functional re-run</text>
-    <text x="24" y="301" class="card-meta">• L4 Security &amp; SAST gate</text>
-    <text x="24" y="319" class="card-meta" fill="#388bfd">→ Evidence: L2, L3, L4</text>
+  <g transform="translate(786, 120)">
+    <text x="4" y="0" class="col-header">5 · Merge</text>
+    <text x="4" y="14" class="state-label">Dev Done → Ready for QA</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="150" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">PR review</text>
+    <text x="140" y="62" fill="#58a6ff" font-size="14">◆</text>
+    <text x="22" y="82" class="card-sub" fill="#58a6ff">human merges</text>
+    <text x="22" y="106" class="card-meta">• PR linked AB#&lt;id&gt;</text>
+    <text x="22" y="122" class="card-meta">• Reject → "In Dev"</text>
+    <text x="22" y="138" class="card-meta">  rework envelope (≤2)</text>
+    <text x="22" y="160" class="card-meta">• Merge → Ready for QA</text>
+    <rect x="12" y="208" width="151" height="160" rx="6" fill="url(#pipelineCard)" stroke="#2ea043" stroke-width="2"/>
+    <text x="22" y="232" class="card-title">CI gates</text>
+    <text x="22" y="252" class="card-sub" fill="#3fb950">native branch policy</text>
+    <text x="22" y="276" class="card-meta">• Pipeline re-runs tests</text>
+    <text x="22" y="292" class="card-meta">  L3 · quality scans L2</text>
+    <text x="22" y="308" class="card-meta">• SAST / CVE gate L4</text>
+    <text x="22" y="324" class="card-meta">• System READS status</text>
+    <text x="22" y="340" class="card-meta">  only — no custom CI</text>
+    <text x="22" y="360" class="card-meta" fill="#388bfd">→ Evidence: L2 L3 L4</text>
   </g>
 
-  <!-- 6. DEPLOY -->
-  <g transform="translate(1100, 120)">
-    <text x="10" y="0" class="col-header">Deploy</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 8: Deploy -->
-    <rect x="12" y="30" width="166" height="140" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Deploy</text>
-    <text x="150" y="58" fill="#58a6ff" font-size="16">◆</text>
-    <text x="24" y="80" class="card-sub" fill="#58a6ff">human approves</text>
-    <text x="24" y="105" class="card-meta">• Ship authorization</text>
-    <text x="24" y="123" class="card-meta">• Rollback safety check</text>
-    <text x="24" y="141" class="card-meta" fill="#388bfd">→ Evidence: L5</text>
-
-    <!-- Step 9: Monitor -->
-    <rect x="12" y="190" width="166" height="140" rx="6" fill="url(#pipelineCard)" stroke="#2ea043" stroke-width="2"/>
-    <text x="24" y="218" class="card-title">Monitor</text>
-    <text x="24" y="240" class="card-sub" fill="#3fb950">prod signals</text>
-    <text x="24" y="265" class="card-meta">• Real-time telemetry</text>
-    <text x="24" y="283" class="card-meta">• Error rate &amp; latency</text>
-    <text x="24" y="301" class="card-meta" fill="#388bfd">→ Evidence: L6</text>
+  <!-- 6. QA (RESTORED) -->
+  <g transform="translate(973, 120)">
+    <text x="4" y="0" class="col-header">QA · Restored</text>
+    <text x="4" y="14" class="state-label">Ready for QA → Ready to Deploy</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#db61a2" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="220" rx="6" fill="url(#qaCard)" stroke="#db61a2" stroke-width="2"/>
+    <text x="22" y="58" class="badge-restored">RESTORED (AUDIT B2)</text>
+    <text x="22" y="80" class="card-title">QA verify</text>
+    <text x="22" y="100" class="card-sub" fill="#f778ba">tester / QA agent</text>
+    <text x="22" y="124" class="card-meta">• Integration / e2e</text>
+    <text x="22" y="140" class="card-meta">  suite on staging</text>
+    <text x="22" y="156" class="card-meta">• 2-strike flake filter</text>
+    <text x="22" y="172" class="card-meta">• Fail → "In Dev" +</text>
+    <text x="22" y="188" class="card-meta">  repro logs (≤2)</text>
+    <text x="22" y="204" class="card-meta">• Pass → Ready to Deploy</text>
+    <text x="22" y="226" class="card-meta" fill="#388bfd">→ Evidence: L3 integ.</text>
+    <text x="22" y="248" class="card-meta" fill="#db61a2">  bounce cap 2 → human</text>
   </g>
 
-  <!-- 7. LEARN -->
-  <g transform="translate(1310, 120)">
-    <text x="10" y="0" class="col-header">Learn</text>
-    <rect x="0" y="15" width="190" height="420" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-
-    <!-- Step 10: Learn -->
-    <rect x="12" y="30" width="166" height="170" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
-    <text x="24" y="58" class="card-title">Learn</text>
-    <text x="24" y="80" class="card-sub" fill="#d29922">skills fed back</text>
-    <text x="24" y="110" class="card-meta">• Extract patterns</text>
-    <text x="24" y="128" class="card-meta">• Postmortem learnings</text>
-    <text x="24" y="146" class="card-meta">• Update agent skills</text>
-    <text x="24" y="164" class="card-meta" fill="#bc8cff">↺ Self-improving loop</text>
+  <!-- 7. DEPLOY -->
+  <g transform="translate(1160, 120)">
+    <text x="4" y="0" class="col-header">6 · Deploy</text>
+    <text x="4" y="14" class="state-label">Ready to Deploy → Done</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="160" rx="6" fill="url(#humanCard)" stroke="#58a6ff" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Deploy</text>
+    <text x="140" y="62" fill="#58a6ff" font-size="14">◆</text>
+    <text x="22" y="82" class="card-sub" fill="#58a6ff">native Environment</text>
+    <text x="22" y="106" class="card-meta">• ADO Environments</text>
+    <text x="22" y="122" class="card-meta">  approval gate</text>
+    <text x="22" y="138" class="card-meta">• Rollback readiness</text>
+    <text x="22" y="154" class="card-meta">  verified pre-ship</text>
+    <text x="22" y="176" class="card-meta" fill="#388bfd">→ Evidence: L5</text>
+    <rect x="12" y="218" width="151" height="150" rx="6" fill="url(#pipelineCard)" stroke="#2ea043" stroke-width="2"/>
+    <text x="22" y="242" class="card-title">Monitor</text>
+    <text x="22" y="262" class="card-sub" fill="#3fb950">prod signals · 30 min</text>
+    <text x="22" y="286" class="card-meta">• Azure Monitor /</text>
+    <text x="22" y="302" class="card-meta">  App Insights window</text>
+    <text x="22" y="318" class="card-meta">• Error-rate + p95 checks</text>
+    <text x="22" y="334" class="card-meta">• Breach → alert + owner</text>
+    <text x="22" y="354" class="card-meta" fill="#388bfd">→ Evidence: L6 · Done</text>
   </g>
 
+  <!-- 8. LEARN -->
+  <g transform="translate(1347, 120)">
+    <text x="4" y="0" class="col-header">7 · Learn</text>
+    <text x="4" y="14" class="state-label">post-Done</text>
+    <rect x="0" y="22" width="175" height="400" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect x="12" y="38" width="151" height="190" rx="6" fill="url(#agentCard)" stroke="#d29922" stroke-width="2"/>
+    <text x="22" y="62" class="card-title">Learn</text>
+    <text x="22" y="82" class="card-sub" fill="#d29922">skills fed back</text>
+    <text x="22" y="106" class="card-meta">• Analyze rework,</text>
+    <text x="22" y="122" class="card-meta">  reviews, fixes,</text>
+    <text x="22" y="138" class="card-meta">  telemetry</text>
+    <text x="22" y="154" class="card-meta">• Extract patterns &amp;</text>
+    <text x="22" y="170" class="card-meta">  postmortems</text>
+    <text x="22" y="192" class="card-meta" fill="#bc8cff">• PR to skills repo —</text>
+    <text x="22" y="208" class="card-meta" fill="#bc8cff">  human merge only</text>
+  </g>
 
   <!-- ==================== FLOW ARROWS ==================== -->
-  <!-- Step 1 -> Step 2 -->
-  <path d="M 228 235 L 272 225" class="flow-conn"/>
+  <!-- Contract -> Execute -->
+  <path d="M 205 300 L 233 250" class="flow-conn"/>
+  <!-- Plan -> Implement -->
+  <path d="M 312 320 L 312 344" class="flow-conn"/>
+  <!-- Execute -> Check -->
+  <path d="M 392 380 L 420 260" class="flow-conn"/>
+  <!-- Check -> Accept -->
+  <path d="M 579 250 L 607 250" class="flow-conn"/>
+  <!-- Accept -> Merge -->
+  <path d="M 766 250 L 794 220" class="flow-conn"/>
+  <!-- PR review -> CI gates -->
+  <path d="M 873 300 L 873 324" class="flow-conn"/>
+  <!-- Merge -> QA -->
+  <path d="M 953 300 L 981 260" class="flow-conn"/>
+  <!-- QA -> Deploy -->
+  <path d="M 1140 260 L 1168 220" class="flow-conn"/>
+  <!-- Deploy -> Monitor -->
+  <path d="M 1257 320 L 1257 334" class="flow-conn"/>
+  <!-- Monitor -> Learn -->
+  <path d="M 1327 300 L 1355 250" class="flow-conn"/>
 
-  <!-- Step 2 -> Step 3 -->
-  <path d="M 355 300 L 355 320" class="flow-conn"/>
+  <!-- Reject loops back to Execute -->
+  <!-- Accept reject -->
+  <path d="M 680 350 C 680 490, 330 490, 330 410" class="loop-conn"/>
+  <text x="505" y="482" fill="#f85149" font-size="10.5" font-weight="bold" text-anchor="middle">Accept reject → In Dev (≤2)</text>
+  <!-- PR review reject -->
+  <path d="M 860 350 C 860 530, 345 530, 345 410" class="loop-conn"/>
+  <text x="620" y="524" fill="#f85149" font-size="10.5" font-weight="bold" text-anchor="middle">PR review reject → rework envelope (≤2, shared breaker)</text>
+  <!-- QA fail -->
+  <path d="M 1050 370 C 1050 570, 360 570, 360 410" class="loop-conn"/>
+  <text x="740" y="564" fill="#f85149" font-size="10.5" font-weight="bold" text-anchor="middle">QA fail → In Dev + repro logs (bounce ≤2, 2-strike flake filter)</text>
 
-  <!-- Step 3 -> Step 4 -->
-  <path d="M 438 395 L 482 245" class="flow-conn"/>
-
-  <!-- Step 4 -> Step 5 -->
-  <path d="M 648 245 L 692 245" class="flow-conn"/>
-
-  <!-- Step 5 Rejection Loop back to Step 3 -->
-  <path d="M 775 320 C 775 490, 360 490, 360 370" class="loop-conn"/>
-  <text x="560" y="475" fill="#f85149" font-size="11" font-weight="bold" text-anchor="middle">Acceptance Reject / Rework (max 2)</text>
-
-  <!-- Step 5 -> Step 6 -->
-  <path d="M 858 245 L 902 225" class="flow-conn"/>
-
-  <!-- Step 6 Rejection Loop back to Step 3 -->
-  <path d="M 985 290 C 985 520, 340 520, 340 370" class="loop-conn"/>
-
-  <!-- Step 6 -> Step 7 -->
-  <path d="M 985 290 L 985 310" class="flow-conn"/>
-
-  <!-- Step 7 -> Step 8 -->
-  <path d="M 1068 395 L 1112 225" class="flow-conn"/>
-
-  <!-- Step 8 -> Step 9 -->
-  <path d="M 1195 290 L 1195 310" class="flow-conn"/>
-
-  <!-- Step 9 -> Step 10 -->
-  <path d="M 1278 395 L 1322 245" class="flow-conn"/>
-
-  <!-- Step 10 Skills Feedback Loop back to Step 2 Plan -->
-  <path d="M 1405 200 C 1405 90, 360 90, 360 150" class="learn-conn"/>
-  <text x="890" y="105" fill="#bc8cff" font-size="11" font-weight="bold" text-anchor="middle">Skills &amp; Learnings Fed Back to Agent Memory (Step 2)</text>
-
+  <!-- Learn feedback to Plan -->
+  <path d="M 1420 230 C 1420 130, 320 130, 320 158" class="learn-conn"/>
+  <text x="880" y="142" fill="#bc8cff" font-size="11" font-weight="bold" text-anchor="middle">Skills &amp; learnings fed back to Plan (Step 2) — via reviewed PR</text>
 
   <!-- ==================== EVIDENCE LEVELS (L1-L6) ==================== -->
-  <g transform="translate(50, 600)">
-    <text x="0" y="0" class="super-title" style="fill:#8b949e;">Six Evidence Levels (L1–L6) — What Kind of Evidence · Mapped to Columns Above</text>
-    
-    <!-- L1 -->
-    <g transform="translate(0, 20)">
-      <rect x="0" y="0" width="230" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#1f6feb" opacity="0.3"/>
-      <text x="21" y="30" fill="#58a6ff" font-size="12" font-weight="bold">L1</text>
-      <text x="50" y="30" class="ev-num">requirement</text>
-      <text x="15" y="60" class="ev-q">is "done" defined right?</text>
-      <text x="15" y="125" class="ev-col">CONTRACT</text>
+  <g transform="translate(38, 610)">
+    <text x="0" y="0" class="super-title" style="fill:#8b949e;">Six Evidence Levels (L1–L6) — mapped to adapted stages</text>
+
+    <g transform="translate(0, 18)">
+      <rect x="0" y="0" width="234" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#1f6feb" opacity="0.3"/>
+      <text x="20" y="29" fill="#58a6ff" font-size="12" font-weight="bold">L1</text>
+      <text x="48" y="29" class="ev-num">requirement</text>
+      <text x="14" y="58" class="ev-q">is "done" defined right?</text>
+      <text x="14" y="118" class="ev-col">CONTRACT — audit summary</text>
     </g>
 
-    <!-- L2 -->
-    <g transform="translate(244, 20)">
-      <rect x="0" y="0" width="230" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#238636" opacity="0.3"/>
-      <text x="21" y="30" fill="#3fb950" font-size="12" font-weight="bold">L2</text>
-      <text x="50" y="30" class="ev-num">code quality</text>
-      <text x="15" y="60" class="ev-q">is the code sound?</text>
-      <text x="15" y="125" class="ev-col">MERGE — CI scans</text>
+    <g transform="translate(248, 18)">
+      <rect x="0" y="0" width="234" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#238636" opacity="0.3"/>
+      <text x="20" y="29" fill="#3fb950" font-size="12" font-weight="bold">L2</text>
+      <text x="48" y="29" class="ev-num">code quality</text>
+      <text x="14" y="58" class="ev-q">is the code sound?</text>
+      <text x="14" y="118" class="ev-col">MERGE — native branch policy scans</text>
     </g>
 
-    <!-- L3 -->
-    <g transform="translate(488, 20)">
-      <rect x="0" y="0" width="230" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#d29922" opacity="0.3"/>
-      <text x="21" y="30" fill="#d29922" font-size="12" font-weight="bold">L3</text>
-      <text x="50" y="30" class="ev-num">functional</text>
-      <text x="15" y="60" class="ev-q">does it behave as specified?</text>
-      <text x="15" y="125" class="ev-col">CHECK, then re-run in MERGE</text>
+    <g transform="translate(496, 18)">
+      <rect x="0" y="0" width="234" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#d29922" opacity="0.3"/>
+      <text x="20" y="29" fill="#d29922" font-size="12" font-weight="bold">L3</text>
+      <text x="48" y="29" class="ev-num">functional</text>
+      <text x="14" y="58" class="ev-q">does it behave as specified?</text>
+      <text x="14" y="118" class="ev-col">CHECK local · MERGE re-run · QA integration</text>
     </g>
 
-    <!-- L4 -->
-    <g transform="translate(732, 20)">
-      <rect x="0" y="0" width="230" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#8957e5" opacity="0.3"/>
-      <text x="21" y="30" fill="#a371f7" font-size="12" font-weight="bold">L4</text>
-      <text x="50" y="30" class="ev-num">security</text>
-      <text x="15" y="60" class="ev-q">is it safe?</text>
-      <text x="15" y="125" class="ev-col">MERGE — scan gate</text>
+    <g transform="translate(744, 18)">
+      <rect x="0" y="0" width="234" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#8957e5" opacity="0.3"/>
+      <text x="20" y="29" fill="#a371f7" font-size="12" font-weight="bold">L4</text>
+      <text x="48" y="29" class="ev-num">security</text>
+      <text x="14" y="58" class="ev-q">is it safe?</text>
+      <text x="14" y="118" class="ev-col">MERGE — SAST / CVE scan gate</text>
     </g>
 
-    <!-- L5 -->
-    <g transform="translate(976, 20)">
-      <rect x="0" y="0" width="230" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#1f6feb" opacity="0.3"/>
-      <text x="21" y="30" fill="#58a6ff" font-size="12" font-weight="bold">L5</text>
-      <text x="50" y="30" class="ev-num">deploy safety</text>
-      <text x="15" y="60" class="ev-q">can we ship and undo it?</text>
-      <text x="15" y="125" class="ev-col">DEPLOY</text>
+    <g transform="translate(992, 18)">
+      <rect x="0" y="0" width="234" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#1f6feb" opacity="0.3"/>
+      <text x="20" y="29" fill="#58a6ff" font-size="12" font-weight="bold">L5</text>
+      <text x="48" y="29" class="ev-num">deploy safety</text>
+      <text x="14" y="58" class="ev-q">can we ship and undo it?</text>
+      <text x="14" y="118" class="ev-col">DEPLOY — native Environment approval</text>
     </g>
 
-    <!-- L6 -->
-    <g transform="translate(1220, 20)">
-      <rect x="0" y="0" width="240" height="150" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
-      <rect x="15" y="15" width="28" height="20" rx="4" fill="#d29922" opacity="0.3"/>
-      <text x="21" y="30" fill="#d29922" font-size="12" font-weight="bold">L6</text>
-      <text x="50" y="30" class="ev-num">prod confidence</text>
-      <text x="15" y="60" class="ev-q">is it working for real users?</text>
-      <text x="15" y="125" class="ev-col">DEPLOY monitor, then LEARN</text>
+    <g transform="translate(1240, 18)">
+      <rect x="0" y="0" width="246" height="140" rx="6" fill="url(#evidenceCard)" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="14" y="14" width="28" height="20" rx="4" fill="#d29922" opacity="0.3"/>
+      <text x="20" y="29" fill="#d29922" font-size="12" font-weight="bold">L6</text>
+      <text x="48" y="29" class="ev-num">prod confidence</text>
+      <text x="14" y="58" class="ev-q">is it working for real users?</text>
+      <text x="14" y="118" class="ev-col">DEPLOY monitor (30-min) · LEARN</text>
     </g>
   </g>
 
-  <!-- Footer note -->
-  <text x="50" y="800" fill="#8b949e" font-size="12">NO SCORING ON THIS BOARD · EVIDENCE RECORDED IN WORK ITEM BADGES &amp; AUDIT LOGS</text>
-
+  <text x="38" y="805" fill="#8b949e" font-size="11.5">NO SCORING ON THIS BOARD · EVIDENCE RECORDED IN WORK ITEM BADGES &amp; AUDIT LOGS · DONE = DEPLOYED + MONITOR WINDOW PASSED + L1–L6 EVIDENCE INDEX ATTACHED</text>
 </svg>
