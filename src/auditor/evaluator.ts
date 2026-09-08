@@ -30,7 +30,7 @@ function evaluateDoDDeterministically(ticket: TicketInput): AuditResult {
   }
 
   // 2. Completeness: check for unresolved placeholders
-  const placeholderRegex = /\b(tbd|todo|placeholder|see doc|later)\b|\?/i;
+  const placeholderRegex = /\b(tbd|todo|placeholder|see doc|later)\b|(?:\s|^)\?{2,}(?:\s|$)/i;
   const hasPlaceholders = placeholderRegex.test(combined);
 
   if (hasPlaceholders) {

@@ -87,6 +87,18 @@ describe('L1 Contract Auditor', () => {
       expect(result.criteria_summary).toBeTruthy();
     });
 
+    it('allows natural question marks and URL query parameters without false-positive placeholder rejection', async () => {
+      const ticket = {
+        title: 'Query active users with GET /api/users?status=active',
+        description: 'Does the system support pagination? As an admin, retrieve active user records.',
+        acceptanceCriteria:
+          'Given valid credentials, when GET /api/users?status=active is called, then status 200 is returned with list of users.',
+      };
+
+      const result = await auditTicketContract(ticket);
+      expect(result.passed).toBe(true);
+    });
+
     it('produces failed verdict for ticket containing placeholders (TBD/TODO)', async () => {
       const ticket = {
         title: 'Fix auth issue TBD later',
