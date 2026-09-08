@@ -1,0 +1,237 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { simpleGit } from 'simple-git';
+import {
+  calculateCumulativeDiff,
+  assertDiffCeiling,
+  verifyPackageDependencies,
+} from '../src/execute/diff-guard.js';
+import {
+  createCoderTools,
+  commitImplementation,
+} from '../src/execute/coder.js';
+
+describe('Diff Ceiling and Dependency Guard', () => {
+  let tempRepo: string;
+
+  beforeEach(async () => {
+    tempRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'diff-guard-test-'));
+    const git = simpleGit(tempRepo);
+    await git.init();
+    await git.addConfig('user.name', 'Tester');
+    await git.addConfig('user.email', 'tester@example.com');
+    fs.writeFileSync(path.join(tempRepo, 'index.ts'), 'console.log("init");\n');
+    await git.add('.');
+    await git.commit('Initial');
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempRepo, { recursive: true, force: true });
+  });
+
+  it('calculates cumulative diff and parses insertions and deletions correctly', async () => {
+    const git = simpleGit(tempRepo);
+    const baseCommit = (await git.revparse(['HEAD'])).trim();
+
+    fs.writeFileSync(path.join(tempRepo, 'feature.ts'), 'export const a = 1;\nexport const b = 2;\n');
+    const stat = await calculateCumulativeDiff(git, baseCommit);
+
+    expect(stat.filesChanged).toBe(1);
+    expect(stat.insertions).toBe(2);
+    expect(stat.deletions).toBe(0);
+    expect(stat.totalLoc).toBe(2);
+    expect(stat.rawStat).toContain('1 file changed');
+  });
+
+  it('calculates cumulative diff across multiple commits and working tree edits', async () => {
+    const git = simpleGit(tempRepo);
+    const baseCommit = (await git.revparse(['HEAD'])).trim();
+
+    fs.writeFileSync(path.join(tempRepo, 'file1.ts'), 'console.log("1");\nconsole.log("2");\n');
+    await git.add('.');
+    await git.commit('Add file1');
+
+    fs.writeFileSync(path.join(tempRepo, 'file2.ts'), 'console.log("3");\n');
+    await git.add('.');
+    await git.commit('Add file2');
+
+    const stat = await calculateCumulativeDiff(git, baseCommit);
+    expect(stat.filesChanged).toBe(2);
+    expect(stat.insertions).toBe(3);
+    expect(stat.deletions).toBe(0);
+    expect(stat.totalLoc).toBe(3);
+  });
+
+  it('allows diff when totalLoc is within ceiling limit', async () => {
+    const git = simpleGit(tempRepo);
+    const baseCommit = (await git.revparse(['HEAD'])).trim();
+
+    fs.writeFileSync(path.join(tempRepo, 'small.ts'), 'const a = 1;\n');
+    const stat = await assertDiffCeiling(git, baseCommit, 250);
+    expect(stat.totalLoc).toBe(1);
+  });
+
+  it('rejects changes exceeding 250 LOC ceiling with descriptive error', async () => {
+    const git = simpleGit(tempRepo);
+    const baseCommit = (await git.revparse(['HEAD'])).trim();
+
+    // Add 260 lines
+    const bigFile = Array.from({ length: 260 }, (_, i) => `line ${i}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(tempRepo, 'big.ts'), bigFile);
+
+    const stat = await calculateCumulativeDiff(git, baseCommit);
+    expect(stat.totalLoc).toBe(260);
+
+    await expect(assertDiffCeiling(git, baseCommit, 250)).rejects.toThrow(
+      /Diff ceiling exceeded: 260 LOC changed \(ceiling is <250 LOC\)\. Aborting implementation\./
+    );
+  });
+
+  it('guards package dependencies against unapproved additions', () => {
+    const original = JSON.stringify({
+      dependencies: { express: '^4.0.0' },
+      devDependencies: { vitest: '^1.0.0' },
+    });
+    const updated = JSON.stringify({
+      dependencies: { express: '^4.0.0', lodash: '^4.17.21', axios: '^1.6.0' },
+      devDependencies: { vitest: '^1.0.0' },
+    });
+
+    // lodash and axios added, but only axios is mentioned in AC
+    const result = verifyPackageDependencies(
+      original,
+      updated,
+      'Add HTTP client with axios for user service'
+    );
+    expect(result.valid).toBe(false);
+    expect(result.unauthorizedPackages).toContain('lodash');
+    expect(result.unauthorizedPackages).not.toContain('axios');
+  });
+
+  it('permits added packages when listed in allowlist', () => {
+    const original = JSON.stringify({
+      dependencies: { express: '^4.0.0' },
+    });
+    const updated = JSON.stringify({
+      dependencies: { express: '^4.0.0', pino: '^9.0.0' },
+    });
+
+    const result = verifyPackageDependencies(
+      original,
+      updated,
+      'Refactor logging service',
+      ['pino']
+    );
+    expect(result.valid).toBe(true);
+    expect(result.unauthorizedPackages).toEqual([]);
+  });
+
+  it('handles invalid or empty package.json gracefully', () => {
+    const result = verifyPackageDependencies('', '', 'No deps');
+    expect(result.valid).toBe(true);
+    expect(result.unauthorizedPackages).toEqual([]);
+  });
+});
+
+describe('Bounded Coder Tools and Conventional Commit', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coder-tools-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('creates, edits, and deletes files within the worktree', async () => {
+    const tools = createCoderTools(tempDir);
+
+    // Create file
+    const createRes = await tools.createFile.execute({
+      relativePath: 'src/hello.ts',
+      content: 'export const hello = "world";',
+    });
+    expect(createRes.success).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, 'src/hello.ts'))).toBe(true);
+    expect(fs.readFileSync(path.join(tempDir, 'src/hello.ts'), 'utf8')).toBe(
+      'export const hello = "world";'
+    );
+
+    // Edit file
+    const editRes = await tools.editFile.execute({
+      relativePath: 'src/hello.ts',
+      content: 'export const hello = "updated";',
+    });
+    expect(editRes.success).toBe(true);
+    expect(fs.readFileSync(path.join(tempDir, 'src/hello.ts'), 'utf8')).toBe(
+      'export const hello = "updated";'
+    );
+
+    // Delete file
+    const deleteRes = await tools.deleteFile.execute({
+      relativePath: 'src/hello.ts',
+    });
+    expect(deleteRes.success).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, 'src/hello.ts'))).toBe(false);
+  });
+
+  it('throws when editing a non-existent file', async () => {
+    const tools = createCoderTools(tempDir);
+    await expect(
+      tools.editFile.execute({
+        relativePath: 'missing.ts',
+        content: 'content',
+      })
+    ).rejects.toThrow(/File does not exist/);
+  });
+
+  it('denies directory traversal attempts in createFile, editFile, deleteFile', async () => {
+    const tools = createCoderTools(tempDir);
+
+    await expect(
+      tools.createFile.execute({
+        relativePath: '../secret.txt',
+        content: 'pwned',
+      })
+    ).rejects.toThrow(/Path traversal denied/);
+
+    await expect(
+      tools.editFile.execute({
+        relativePath: '../../etc/passwd',
+        content: 'hacked',
+      })
+    ).rejects.toThrow(/Path traversal denied/);
+
+    await expect(
+      tools.deleteFile.execute({
+        relativePath: '../other.txt',
+      })
+    ).rejects.toThrow(/Path traversal denied/);
+  });
+
+  it('commits implementation using conventional format and AB#<id> trailer', async () => {
+    const git = simpleGit(tempDir);
+    await git.init();
+    await git.addConfig('user.name', 'Coder');
+    await git.addConfig('user.email', 'coder@example.com');
+
+    fs.writeFileSync(path.join(tempDir, 'feature.ts'), 'console.log("feat");\n');
+
+    const commitHash = await commitImplementation(
+      git,
+      4001,
+      'feat',
+      'add user profile endpoint'
+    );
+
+    expect(commitHash).toBeTruthy();
+
+    const log = await git.log({ maxCount: 1 });
+    const latestCommit = log.latest;
+    expect(latestCommit?.message).toContain('feat(#4001): add user profile endpoint');
+    expect(latestCommit?.body).toContain('AB#4001');
+  });
+});
