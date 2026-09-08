@@ -21,6 +21,7 @@ import {
   formatPlanQuestionsComment,
   formatPlanLockedComment,
 } from '../plan/formatter.js';
+import { env } from '../config/env.js';
 
 export async function processWorkItemExecute(
   workItemId: number,
@@ -135,6 +136,9 @@ export async function processWorkItemExecute(
       mcpSession = await createDynamicMcpTools({
         worktreePath: worktreeResult.worktreePath,
         tags,
+        knownSecrets: [env.ADO_PAT, env.OPENAI_API_KEY, env.ADO_WEBHOOK_SECRET].filter(
+          Boolean
+        ) as string[],
       });
 
       // Formulate implementation plan
