@@ -8,6 +8,68 @@ export interface WorkItemDetails {
   description: string;
   acceptanceCriteria: string;
   state: string;
+  tags?: string;
+  history?: string;
+}
+
+export function buildTagPatch(
+  currentTags: string | undefined,
+  tagToAdd?: string,
+  tagToRemove?: string
+): JsonPatchDocument {
+  const existing = currentTags
+    ? currentTags
+        .split(';')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  let updated = [...existing];
+  if (tagToAdd && !updated.includes(tagToAdd)) {
+    updated.push(tagToAdd);
+  }
+  if (tagToRemove) {
+    updated = updated.filter((t) => t !== tagToRemove);
+  }
+
+  const tagValue = updated.join('; ');
+  return [
+    {
+      op: currentTags !== undefined ? Operation.Replace : Operation.Add,
+      path: '/fields/System.Tags',
+      value: tagValue,
+    },
+  ];
+}
+
+export function buildPlanQuestionPatch(
+  htmlComment: string,
+  currentTags?: string
+): JsonPatchDocument {
+  const tagPatches = buildTagPatch(currentTags, '[awaiting-input]');
+  return [
+    ...tagPatches,
+    {
+      op: Operation.Add,
+      path: '/fields/System.History',
+      value: htmlComment,
+    },
+  ];
+}
+
+export function buildPlanLockedPatch(
+  htmlComment: string,
+  currentTags?: string
+): JsonPatchDocument {
+  const tagPatches = buildTagPatch(currentTags, undefined, '[awaiting-input]');
+  return [
+    ...tagPatches,
+    {
+      op: Operation.Add,
+      path: '/fields/System.History',
+      value: htmlComment,
+    },
+  ];
 }
 
 export function buildReadyToDevPatch(htmlComment: string): JsonPatchDocument {
@@ -45,7 +107,19 @@ export async function getWorkItemDetails(workItemId: number): Promise<WorkItemDe
     description: fields['System.Description'] || '',
     acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || '',
     state: fields['System.State'] || '',
+    tags: fields['System.Tags'] || '',
+    history: fields['System.History'] || '',
   };
+}
+
+export async function updateWorkItemTags(
+  workItemId: number,
+  tagToAdd?: string,
+  tagToRemove?: string
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  const patchDoc = buildTagPatch(details.tags, tagToAdd, tagToRemove);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 
 export async function transitionToReadyToDev(
