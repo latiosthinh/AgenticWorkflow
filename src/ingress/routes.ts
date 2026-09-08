@@ -39,7 +39,7 @@ export async function webhookRoutes(fastify: FastifyInstance) {
     const workItemId = Number(resource?.workItemId || resource?.id);
     const revId = Number(resource?.rev || resource?.fields?.['System.Rev']);
 
-    if (!workItemId || isNaN(workItemId) || !revId || isNaN(revId)) {
+    if (!Number.isInteger(workItemId) || workItemId <= 0 || !Number.isInteger(revId) || revId <= 0) {
       return reply.code(400).send({ error: 'Missing or invalid workItemId or revId' });
     }
 

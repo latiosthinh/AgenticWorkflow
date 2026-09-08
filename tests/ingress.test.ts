@@ -76,6 +76,36 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
     expect(response.json()).toEqual({ error: 'Invalid HMAC signature' });
   });
 
+  it('rejects non-positive integer workItemId and revId with HTTP 400', async () => {
+    const invalidPayloads = [
+      { id: -5, rev: 1 },
+      { id: 101, rev: -1 },
+      { id: 10.5, rev: 1 },
+      { id: 0, rev: 1 },
+      { id: 101, rev: 0 },
+    ];
+
+    for (const resource of invalidPayloads) {
+      const payload = JSON.stringify({
+        eventType: 'workitem.updated',
+        resource,
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/ado/webhook',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': createSignature(payload),
+        },
+        payload,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: 'Missing or invalid workItemId or revId' });
+    }
+  });
+
   it('accepts valid HMAC and returns HTTP 202 Accepted, creating a pending dedup row', async () => {
     const workItemId = 501;
     const revId = 2;
