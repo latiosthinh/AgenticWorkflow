@@ -43,7 +43,7 @@ flowchart LR
 ## Phases
 
 - [x] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition. (completed 2026-09-08)
-- [ ] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle.
+- [x] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle. (completed 2026-09-08)
 - [ ] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`.
 - [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker.
 - [ ] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`.
@@ -87,7 +87,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Ephemeral git worktree manager with test protection, and hardened execa process runner with 120s timeout and credential scrubbing.
 - [x] 02-02-PLAN.md — In-process McpServer harness, common tools, domain tool extensions, and dynamic tag dispatcher with 12-tool ceiling.
-- [ ] 02-03-PLAN.md — Drizzle plan schema, planning agent with ambiguity evaluator, checkpoint persistence, 24h/72h watchdog, and execution worker router.
+- [x] 02-03-PLAN.md — Drizzle plan schema, planning agent with ambiguity evaluator, checkpoint persistence, 24h/72h watchdog, and execution worker router.
 
 ### Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification
 **Goal**: Bounded code generation verified by local tests with self-repair (L3 local evidence).
