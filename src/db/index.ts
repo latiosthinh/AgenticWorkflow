@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS plan_checkpoints (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_plan_checkpoints_lookup ON plan_checkpoints(work_item_id, status);
+CREATE INDEX IF NOT EXISTS idx_plan_checkpoints_status ON plan_checkpoints(status);
 `);
 
 export const db = drizzle(sqlite, { schema });
