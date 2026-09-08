@@ -3,7 +3,7 @@ import type { CommandOptions, CommandResult } from './types.js';
 
 // ponytail: execa host runner with signal cascades; wrap in docker run when running untrusted public repos in v2
 
-export const SENSITIVE_KEY_PATTERN = /(PAT|API_KEY|TOKEN|SECRET)/i;
+export const SENSITIVE_KEY_PATTERN = /(PAT|API_KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|AUTH_KEY)/i;
 export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,})/g;
 export const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
 

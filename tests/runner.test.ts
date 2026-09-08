@@ -9,12 +9,16 @@ import {
 
 describe('subprocess runner', () => {
   describe('sanitizeEnv', () => {
-    it('strips sensitive environment variables matching PAT, API_KEY, TOKEN, SECRET', () => {
+    it('strips sensitive environment variables matching PAT, API_KEY, TOKEN, SECRET, PASSWORD, PASSWD, CREDENTIAL', () => {
       const sanitized = sanitizeEnv({
         ADO_PAT: 'pat-secret-value-12345',
         OPENAI_API_KEY: 'sk-proj-secret-key',
         MY_SECRET_TOKEN: 'token-abc-xyz',
         APP_SECRET: 'super-app-secret',
+        DB_PASSWORD: 'super-secret-db-pass',
+        USER_PASSWD: 'secret-user-passwd',
+        AWS_CREDENTIAL: 'aws-secret-credential',
+        SSH_PRIVATE_KEY: 'ssh-rsa-priv-key',
         CUSTOM_SAFE_FLAG: 'true',
         NODE_ENV: 'test',
       });
@@ -23,6 +27,10 @@ describe('subprocess runner', () => {
       expect(sanitized.OPENAI_API_KEY).toBeUndefined();
       expect(sanitized.MY_SECRET_TOKEN).toBeUndefined();
       expect(sanitized.APP_SECRET).toBeUndefined();
+      expect(sanitized.DB_PASSWORD).toBeUndefined();
+      expect(sanitized.USER_PASSWD).toBeUndefined();
+      expect(sanitized.AWS_CREDENTIAL).toBeUndefined();
+      expect(sanitized.SSH_PRIVATE_KEY).toBeUndefined();
       expect(sanitized.CUSTOM_SAFE_FLAG).toBe('true');
       expect(sanitized.NODE_ENV).toBe('test');
       expect(sanitized.PATH).toBeDefined();
