@@ -4,6 +4,15 @@ export interface TicketInput {
   acceptanceCriteria: string;
 }
 
+export function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export function buildAuditorPrompt(
   ticketOrTitle: TicketInput | string,
   description?: string,
@@ -46,9 +55,9 @@ Return your evaluation in structured schema:
 - criteria_summary: executive evaluation of acceptance criteria testability, persona clarity, and scope completeness.`;
 
   const prompt = `<user_ticket_input>
-<title>${ticket.title}</title>
-<description>${ticket.description}</description>
-<acceptanceCriteria>${ticket.acceptanceCriteria}</acceptanceCriteria>
+<title>${escapeXml(ticket.title)}</title>
+<description>${escapeXml(ticket.description)}</description>
+<acceptanceCriteria>${escapeXml(ticket.acceptanceCriteria)}</acceptanceCriteria>
 </user_ticket_input>`;
 
   return {
