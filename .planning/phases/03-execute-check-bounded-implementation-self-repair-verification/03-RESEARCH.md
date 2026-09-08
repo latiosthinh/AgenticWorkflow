@@ -549,9 +549,10 @@ export async function executeRepairLoop(options: RepairLoopOptions) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Handling test files with multiple runners (e.g. backend vs frontend):**
+   - RESOLVED: Run project default unit test command (`npm test`), which finishes in <10 seconds for unit suites.
    - What we know: Vitest runs all unit tests in the project.
    - What's unclear: If a ticket touches only frontend code, should it run only frontend tests or full suite?
    - Recommendation: Run the project default unit test command (`npm test`), which finishes in <10 seconds for unit suites.
