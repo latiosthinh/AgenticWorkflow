@@ -10,7 +10,7 @@ Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidenc
 |---|---|---|---|---|
 | 1. Ticket + AC | CONTRACT | 3/3 | Complete    | 2026-09-08 |
 | — triage | CONTRACT | `Ready to Dev` → `In Dev` | human assigns domain tags | — |
-| 2. Plan (Q→human) | EXECUTE | `In Dev` (blocked-on-human flag; sandbox released) | agent ◇ human answers | locked plan |
+| 2. Plan (Q→human) | EXECUTE | 3/3 | Complete    | 2026-09-08 |
 | 3. Implement | EXECUTE | `In Dev` | agent, bounded <250 LOC | — |
 | 4. Test + verify | CHECK | `In Dev` → `Dev Done` | agent runs, self-repairs | **L3 local** |
 | 5. Accept | ACCEPT | `Dev Done` | human verdict ◆ (packet: tests + diff + preview) | acceptance |
@@ -99,7 +99,12 @@ Plans:
   3. Failing tests trigger self-repair loop capped at 3-5 iterations.
   4. Repair budget exhaustion → blocked flag + diagnostics comment (no silent failure).
   5. Green tests → structured L3 report attached; ticket → "Dev Done".
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Bounded code editing foundation, diff ceiling guard (<250 LOC), package dependency checker, and test assertion immutability guard.
+- [ ] 03-02-PLAN.md — Local test runner, diagnostic stack trace parser, and automated self-repair loop with WIP branch preservation on exhaustion.
+- [ ] 03-03-PLAN.md — L3 evidence schema, SQLite persistence, formatted ADO discussion badges, and execution worker pipeline transitioning to Dev Done.
 
 ### Phase 4: ACCEPT — Human Validation Gate & Rework Breaker
 **Goal**: Human functional acceptance at `Dev Done` with bounded rework.
@@ -165,8 +170,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
 | 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
-| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 2/3 | In progress | - |
-| 3. EXECUTE + CHECK: Implement & Test | 0/TBD | Not started | - |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 3/3 | Complete | 2026-09-08 |
+| 3. EXECUTE + CHECK: Implement & Test | 0/3 | Not started | - |
 | 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
 | 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
 | 6. QA: Verification Loop | 0/TBD | Not started | - |
