@@ -59,6 +59,22 @@ CREATE TABLE IF NOT EXISTS plan_checkpoints (
 
 CREATE INDEX IF NOT EXISTS idx_plan_checkpoints_lookup ON plan_checkpoints(work_item_id, status);
 CREATE INDEX IF NOT EXISTS idx_plan_checkpoints_status ON plan_checkpoints(status);
+
+CREATE TABLE IF NOT EXISTS l3_evidence (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  rev_id INTEGER NOT NULL,
+  test_suite TEXT NOT NULL,
+  total_tests INTEGER NOT NULL,
+  passed INTEGER NOT NULL,
+  failed INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  coverage_summary TEXT,
+  git_diff_stat TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_l3_evidence_lookup ON l3_evidence(work_item_id, rev_id);
 `);
 
 export const db = drizzle(sqlite, { schema });

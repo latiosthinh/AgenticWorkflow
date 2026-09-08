@@ -59,9 +59,33 @@ export const planCheckpoints = sqliteTable(
   ]
 );
 
+export const l3Evidence = sqliteTable(
+  'l3_evidence',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workItemId: integer('work_item_id').notNull(),
+    revId: integer('rev_id').notNull(),
+    testSuite: text('test_suite').notNull(),
+    totalTests: integer('total_tests').notNull(),
+    passed: integer('passed').notNull(),
+    failed: integer('failed').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    coverageSummary: text('coverage_summary'),
+    gitDiffStat: text('git_diff_stat').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('idx_l3_evidence_lookup').on(table.workItemId, table.revId),
+  ]
+);
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
 export type PlanCheckpoint = typeof planCheckpoints.$inferSelect;
 export type InsertPlanCheckpoint = typeof planCheckpoints.$inferInsert;
+export type L3Evidence = typeof l3Evidence.$inferSelect;
+export type InsertL3Evidence = typeof l3Evidence.$inferInsert;
