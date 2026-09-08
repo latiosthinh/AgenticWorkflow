@@ -9,20 +9,35 @@ export async function routeWorkItemEvent(
   workItemId: number,
   revId: number
 ): Promise<void> {
-  const workItem = await getWorkItemDetails(workItemId);
+  try {
+    const workItem = await getWorkItemDetails(workItemId);
 
-  if (workItem.state === 'New') {
-    await processWorkItemAudit(workItemId, revId);
-  } else if (
-    workItem.state === 'In Dev' ||
-    (workItem.tags && workItem.tags.includes('[awaiting-input]'))
-  ) {
-    await processWorkItemExecute(workItemId, revId);
-  } else {
+    if (workItem.state === 'New') {
+      await processWorkItemAudit(workItemId, revId);
+    } else if (
+      workItem.state === 'In Dev' ||
+      (workItem.tags && workItem.tags.includes('[awaiting-input]'))
+    ) {
+      await processWorkItemExecute(workItemId, revId);
+    } else {
+      db.update(dedupEvents)
+        .set({
+          status: 'skipped',
+          errorMessage: `Ticket state '${workItem.state}' has no active handler`,
+        })
+        .where(
+          and(
+            eq(dedupEvents.workItemId, workItemId),
+            eq(dedupEvents.revId, revId)
+          )
+        )
+        .run();
+    }
+  } catch (err: any) {
     db.update(dedupEvents)
       .set({
-        status: 'skipped',
-        errorMessage: `Ticket state '${workItem.state}' has no active handler`,
+        status: 'failed',
+        errorMessage: err?.message || String(err),
       })
       .where(
         and(
@@ -31,6 +46,11 @@ export async function routeWorkItemEvent(
         )
       )
       .run();
+    console.error(
+      `[router] Failed routing work item ${workItemId} rev ${revId}:`,
+      err
+    );
+    throw err;
   }
 }
 

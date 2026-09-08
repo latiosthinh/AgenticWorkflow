@@ -592,4 +592,35 @@ describe('Execute Router Dispatches', () => {
     expect(dedup?.status).toBe('skipped');
     expect(dedup?.errorMessage).toContain("Ticket state 'Closed' has no active handler");
   });
+
+  it('marks dedupEvents as failed if getWorkItemDetails throws during routing', async () => {
+    const workItemId = 6004;
+    const revId = 1;
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockRejectedValue(new Error('ADO network timeout')),
+      updateWorkItem: vi.fn(),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    db.insert(dedupEvents)
+      .values({
+        workItemId,
+        revId,
+        status: 'pending',
+        payloadHash: 'hash-6004',
+        receivedAt: new Date(),
+      })
+      .run();
+
+    await expect(routeWorkItemEvent(workItemId, revId)).rejects.toThrow('ADO network timeout');
+
+    const dedup = db
+      .select()
+      .from(dedupEvents)
+      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
+      .get();
+    expect(dedup?.status).toBe('failed');
+    expect(dedup?.errorMessage).toContain('ADO network timeout');
+  });
 });
