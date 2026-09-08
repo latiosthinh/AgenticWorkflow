@@ -7,6 +7,7 @@ import { routeWorkItemEvent } from './execute/router.js';
 import { startPlanWatchdog } from './plan/watchdog.js';
 import { purgeOldDedupEvents, sqlite } from './db/index.js';
 import { workItemQueueManager } from './queue/lane-manager.js';
+import { pruneOrphanedWorktrees } from './sandbox/worktree.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -31,6 +32,14 @@ export async function buildApp(): Promise<FastifyInstance> {
 }
 
 export async function startServer(): Promise<{ app: FastifyInstance; stop: () => Promise<void> }> {
+  // Startup worktree prune
+  try {
+    const prunedWorktrees = await pruneOrphanedWorktrees(process.cwd());
+    console.log(`[worktree-prune] Startup sweep cleaned ${prunedWorktrees} orphaned worktrees`);
+  } catch (err) {
+    console.error('[worktree-prune] Startup sweep failed:', err);
+  }
+
   // Startup deduplication purge
   try {
     const purgeResult = purgeOldDedupEvents(7);
