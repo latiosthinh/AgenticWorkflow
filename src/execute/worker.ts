@@ -201,6 +201,11 @@ export async function processWorkItemExecute(
         await mcpSession.close();
         mcpSession = undefined;
 
+        if (worktreeResult) {
+          await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+          worktreeResult = undefined;
+        }
+
         db.update(dedupEvents)
           .set({ status: 'completed' })
           .where(
