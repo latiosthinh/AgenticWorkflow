@@ -34,15 +34,24 @@ export async function withRetry<T>(
       const retryAfterHeader =
         headers?.['retry-after'] ?? headers?.['Retry-After'];
 
-      const delay = retryAfterHeader
-        ? Number(retryAfterHeader) * 1000
-        : Math.min(10000, baseDelayMs * 2 ** (attempt - 1) + Math.random() * 200);
+      let delayMs: number;
+      if (retryAfterHeader) {
+        const seconds = Number(retryAfterHeader);
+        if (!isNaN(seconds)) {
+          delayMs = seconds * 1000;
+        } else {
+          const targetTime = Date.parse(retryAfterHeader);
+          delayMs = !isNaN(targetTime) ? Math.max(0, targetTime - Date.now()) : baseDelayMs;
+        }
+      } else {
+        delayMs = Math.min(10000, baseDelayMs * 2 ** (attempt - 1) + Math.random() * 200);
+      }
 
       console.warn(
-        `[ado-client] Retry attempt ${attempt}/${maxRetries} after ${delay.toFixed(0)}ms due to status ${statusCode}`
+        `[ado-client] Retry attempt ${attempt}/${maxRetries} after ${delayMs.toFixed(0)}ms due to status ${statusCode}`
       );
 
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
   throw new Error('Retry exhausted');

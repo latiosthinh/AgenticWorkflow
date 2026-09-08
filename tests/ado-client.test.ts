@@ -51,6 +51,28 @@ describe('Azure DevOps Client & Work Item Integration', () => {
       expect(fn).toHaveBeenCalledTimes(2);
     });
 
+    it('recovers from transient HTTP 429 errors with numeric and HTTP-date Retry-After', async () => {
+      const pastHttpDate = new Date(Date.now() - 1000).toUTCString();
+      const rateLimitErr1 = {
+        statusCode: 429,
+        headers: { 'retry-after': '0' },
+      };
+      const rateLimitErr2 = {
+        statusCode: 429,
+        headers: { 'retry-after': pastHttpDate },
+      };
+
+      const fn = vi
+        .fn()
+        .mockRejectedValueOnce(rateLimitErr1)
+        .mockRejectedValueOnce(rateLimitErr2)
+        .mockResolvedValue('recovered');
+
+      const result = await withRetry(fn, 3, 1);
+      expect(result).toBe('recovered');
+      expect(fn).toHaveBeenCalledTimes(3);
+    });
+
     it('throws immediately on non-retryable 4xx errors', async () => {
       const clientErr = { statusCode: 400, message: 'Bad Request' };
       const fn = vi.fn().mockRejectedValue(clientErr);
