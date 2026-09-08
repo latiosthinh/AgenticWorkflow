@@ -8,7 +8,7 @@ Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidenc
 
 | Golden Path Step | Column | ADO State | Actor | Evidence |
 |---|---|---|---|---|
-| 1. Ticket + AC | CONTRACT | `New` → `Ready to Dev` | human authors ◇, audit agent checks | **L1** |
+| 1. Ticket + AC | CONTRACT | 3/3 | Complete   | 2026-09-08 |
 | — triage | CONTRACT | `Ready to Dev` → `In Dev` | human assigns domain tags | — |
 | 2. Plan (Q→human) | EXECUTE | `In Dev` (blocked-on-human flag; sandbox released) | agent ◇ human answers | locked plan |
 | 3. Implement | EXECUTE | `In Dev` | agent, bounded <250 LOC | — |
@@ -42,7 +42,7 @@ flowchart LR
 
 ## Phases
 
-- [ ] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition.
+- [x] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition. (completed 2026-09-08)
 - [ ] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle.
 - [ ] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`.
 - [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker.
@@ -70,7 +70,7 @@ flowchart LR
 Plans:
 - [x] 01-01-PLAN.md — Project scaffolding, SQLite WAL deduplication store, HMAC verification, bot shield, and Fastify ingress route.
 - [x] 01-02-PLAN.md — Definition of Done rubric prompt, Zod audit schema, and Vercel AI SDK reasoning service.
-- [ ] 01-03-PLAN.md — Azure DevOps REST client with retry backoff, HTML discussion formatters, and background audit worker pipeline.
+- [x] 01-03-PLAN.md — Azure DevOps REST client with retry backoff, HTML discussion formatters, and background audit worker pipeline.
 
 ### Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint
 **Goal**: Isolated execution environment, tag-scoped tools, and non-blocking interactive plan checkpoint.

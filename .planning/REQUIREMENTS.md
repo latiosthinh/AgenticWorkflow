@@ -13,7 +13,7 @@
 - [x] **INGEST-02**: System deduplicates events by `(workItemId, revId)` to prevent duplicate dispatches and race conditions.
 - [x] **INGEST-03**: System filters out agent/bot identity actions to prevent recursive webhook loops.
 - [x] **CONTR-01**: Auditor agent inspects ticket & AC for Definition of Done clarity, scope completeness, and testability (L1 Evidence).
-- [ ] **CONTR-02**: System transitions validated tickets to "Ready to Dev" and posts L1 audit summary in the work item discussion; ambiguous tickets stay in "New" with missing-info comments.
+- [x] **CONTR-02**: System transitions validated tickets to "Ready to Dev" and posts L1 audit summary in the work item discussion; ambiguous tickets stay in "New" with missing-info comments.
 
 ### 2. EXECUTE — Plan & Implement
 
@@ -92,7 +92,7 @@
 | INGEST-02 | Phase 1 | Complete |
 | INGEST-03 | Phase 1 | Complete |
 | CONTR-01 | Phase 1 | Complete |
-| CONTR-02 | Phase 1 | Pending |
+| CONTR-02 | Phase 1 | Complete |
 | PLAN-01 | Phase 2 | Pending |
 | PLAN-02 | Phase 2 | Pending |
 | DISP-01 | Phase 2 | Pending |
