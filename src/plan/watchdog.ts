@@ -21,60 +21,67 @@ export async function checkPlanCheckpointTimeouts(): Promise<{
     .all();
 
   for (const cp of pending) {
-    const createdAt =
-      cp.createdAt instanceof Date
-        ? cp.createdAt.getTime()
-        : new Date(cp.createdAt).getTime();
-    const elapsed = Date.now() - createdAt;
+    try {
+      const createdAt =
+        cp.createdAt instanceof Date
+          ? cp.createdAt.getTime()
+          : new Date(cp.createdAt).getTime();
+      const elapsed = Date.now() - createdAt;
 
-    if (elapsed >= SEVENTY_TWO_HOURS_MS && !cp.escalatedAt) {
-      const escalationComment =
-        '<strong>[Plan Checkpoint] Escalation: Work Item Blocked</strong><p>Clarification questions have been unanswered for over 72 hours. Marking work item Blocked.</p><!-- [automated-agent] -->';
+      if (elapsed >= SEVENTY_TWO_HOURS_MS && !cp.escalatedAt) {
+        const escalationComment =
+          '<strong>[Plan Checkpoint] Escalation: Work Item Blocked</strong><p>Clarification questions have been unanswered for over 72 hours. Marking work item Blocked.</p><!-- [automated-agent] -->';
 
-      await adoClient.updateWorkItem(cp.workItemId, [
-        {
-          op: Operation.Replace,
-          path: '/fields/System.State',
-          value: 'Blocked',
-        },
-        {
-          op: Operation.Add,
-          path: '/fields/System.History',
-          value: escalationComment,
-        },
-      ]);
+        await adoClient.updateWorkItem(cp.workItemId, [
+          {
+            op: Operation.Replace,
+            path: '/fields/System.State',
+            value: 'Blocked',
+          },
+          {
+            op: Operation.Add,
+            path: '/fields/System.History',
+            value: escalationComment,
+          },
+        ]);
 
-      db.update(planCheckpoints)
-        .set({
-          status: 'blocked',
-          escalatedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(planCheckpoints.id, cp.id))
-        .run();
+        db.update(planCheckpoints)
+          .set({
+            status: 'blocked',
+            escalatedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(planCheckpoints.id, cp.id))
+          .run();
 
-      escalated++;
-    } else if (elapsed >= TWENTY_FOUR_HOURS_MS && !cp.remindedAt) {
-      const reminderComment =
-        '<strong>[Plan Reminder] Action Required: Unanswered Questions</strong><p>The implementation plan is awaiting developer reply. Please respond to the questions above to resume work.</p><!-- [automated-agent] -->';
+        escalated++;
+      } else if (elapsed >= TWENTY_FOUR_HOURS_MS && !cp.remindedAt) {
+        const reminderComment =
+          '<strong>[Plan Reminder] Action Required: Unanswered Questions</strong><p>The implementation plan is awaiting developer reply. Please respond to the questions above to resume work.</p><!-- [automated-agent] -->';
 
-      await adoClient.updateWorkItem(cp.workItemId, [
-        {
-          op: Operation.Add,
-          path: '/fields/System.History',
-          value: reminderComment,
-        },
-      ]);
+        await adoClient.updateWorkItem(cp.workItemId, [
+          {
+            op: Operation.Add,
+            path: '/fields/System.History',
+            value: reminderComment,
+          },
+        ]);
 
-      db.update(planCheckpoints)
-        .set({
-          remindedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(planCheckpoints.id, cp.id))
-        .run();
+        db.update(planCheckpoints)
+          .set({
+            remindedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(planCheckpoints.id, cp.id))
+          .run();
 
-      reminded++;
+        reminded++;
+      }
+    } catch (itemErr) {
+      console.error(
+        `[plan-watchdog] Failed updating timeout for checkpoint ${cp.id} (ticket ${cp.workItemId}):`,
+        itemErr
+      );
     }
   }
 

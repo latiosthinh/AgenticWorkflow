@@ -184,6 +184,55 @@ describe('Plan Watchdog 24h/72h Timeouts', () => {
     expect(cp.status).toBe('blocked');
     expect(cp.escalatedAt).not.toBeNull();
   });
+
+  it('handles API error in one checkpoint without starving subsequent checkpoints', async () => {
+    const errorWorkItemId = 4003;
+    const okWorkItemId = 4004;
+    const oldTime = new Date(Date.now() - 25 * 60 * 60 * 1000);
+
+    db.insert(planCheckpoints)
+      .values({
+        workItemId: errorWorkItemId,
+        revId: 1,
+        status: 'pending_human_input',
+        questions: JSON.stringify(['Question 1']),
+        createdAt: oldTime,
+        updatedAt: oldTime,
+      })
+      .run();
+
+    db.insert(planCheckpoints)
+      .values({
+        workItemId: okWorkItemId,
+        revId: 1,
+        status: 'pending_human_input',
+        questions: JSON.stringify(['Question 2']),
+        createdAt: oldTime,
+        updatedAt: oldTime,
+      })
+      .run();
+
+    const mockWitApi = {
+      updateWorkItem: vi.fn().mockImplementation((...args: any[]) => {
+        const id = args.find((a: any) => typeof a === 'number');
+        if (id === errorWorkItemId) {
+          return Promise.reject(new Error('ADO ticket deleted or permission denied'));
+        }
+        return Promise.resolve({ id });
+      }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkPlanCheckpointTimeouts();
+    expect(result.reminded).toBe(1);
+
+    const [okCp] = db
+      .select()
+      .from(planCheckpoints)
+      .where(eq(planCheckpoints.workItemId, okWorkItemId))
+      .all();
+    expect(okCp.remindedAt).not.toBeNull();
+  });
 });
 
 describe('Execution Worker Pipeline', () => {
