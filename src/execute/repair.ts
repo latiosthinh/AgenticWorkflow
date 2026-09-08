@@ -60,12 +60,7 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
   // Budget exhausted: preserve work on WIP branch
   const wipBranch = `wip/ticket-${options.workItemId}`;
   try {
-    const branches = await options.git.branchLocal();
-    if (branches.all.includes(wipBranch)) {
-      await options.git.checkout(wipBranch);
-    } else {
-      await options.git.checkoutLocalBranch(wipBranch);
-    }
+    await options.git.checkout(['-B', wipBranch]);
     await options.git.add('.');
     const status = await options.git.status();
     if (status.staged.length > 0 || !status.isClean()) {

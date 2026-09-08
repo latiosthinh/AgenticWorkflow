@@ -221,6 +221,46 @@ describe('Iterative Self-Repair Loop with WIP Branch Preservation', () => {
     expect(result.diagnostics).toContain('at src/math.ts:10:3');
   });
 
+  it('resets and checks out wip branch cleanly even when wip branch already exists', async () => {
+    const git = simpleGit(tempRepo);
+
+    // Pre-create wip branch with different commit
+    await git.checkoutLocalBranch('wip/ticket-2049');
+    fs.writeFileSync(path.join(tempRepo, 'old-wip.ts'), 'old content\n');
+    await git.add('.');
+    await git.commit('old wip commit');
+
+    // Switch back to master
+    await git.checkout('master');
+
+    // Create uncommitted change on master
+    fs.writeFileSync(path.join(tempRepo, 'new-wip.ts'), 'new uncommitted work\n');
+
+    const result = await executeRepairLoop({
+      worktreePath: tempRepo,
+      git,
+      workItemId: 2049,
+      maxCycles: 1,
+      mockTestRunner: async () => ({
+        passed: false,
+        exitCode: 1,
+        stdout: 'FAIL tests/app.test.ts\nAssertionError: failed',
+        stderr: '',
+        timedOut: false,
+        durationMs: 30,
+      }),
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.wipBranch).toBe('wip/ticket-2049');
+
+    const branches = await git.branchLocal();
+    expect(branches.current).toBe('wip/ticket-2049');
+
+    const log = await git.log({ maxCount: 1 });
+    expect(log.latest?.message).toContain('wip: repair budget exhausted for ticket 2049');
+  });
+
   it('clamps maxCycles to minimum 1 and maximum 5', async () => {
     const git = simpleGit(tempRepo);
     let attempts = 0;
