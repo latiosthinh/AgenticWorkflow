@@ -109,7 +109,21 @@ Substantive achievement: Completed the L1 Contract Auditor pipeline by connectin
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Serialized Vitest test file execution to prevent SQLite concurrency races**
+- **Found during:** Full test suite run (`npx vitest run`)
+- **Issue:** Vitest parallel workers were executing file suites concurrently against a single shared SQLite database (`./data/test_gateway.db`), causing `beforeEach` table resets to race with active assertions in concurrent test files.
+- **Fix:** Added `fileParallelism: false` to `vitest.config.ts` to run test files serially, ensuring deterministic isolation on the local SQLite file.
+- **Files modified:** `vitest.config.ts`
+- **Commit:** `832b435`
+
+**2. [Rule 3 - Blocking Issue] Isolated ingress route tests from background ADO calls**
+- **Found during:** Full test suite run (`npx vitest run`)
+- **Issue:** Webhook route integration tests in `tests/ingress.test.ts` were invoking `processWorkItemAudit` in the background with unmocked dummy work item IDs, resulting in unhandled ADO network rejections.
+- **Fix:** Registered a no-op handler `registerWorkItemHandler(async () => {})` in `beforeAll` of `tests/ingress.test.ts`.
+- **Files modified:** `tests/ingress.test.ts`
+- **Commit:** `832b435`
 
 ## Self-Check: PASSED
 
@@ -122,3 +136,4 @@ None - plan executed exactly as written.
 - FOUND: tests/worker.test.ts
 - FOUND commit 5365e8a: feat(01-03): implement azure devops rest client, backoff and comment formatter
 - FOUND commit 1a78720: feat(01-03): implement background worker pipeline and server lifecycle
+- FOUND commit 832b435: fix(01-03): serialize vitest file execution and isolate ingress background handler
