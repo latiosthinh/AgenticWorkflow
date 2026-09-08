@@ -8,8 +8,10 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^2.0.45",
     "@ai-sdk/openai": "^4.0.60",
     "@fastify/sensible": "^6.0.5",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "ai": "^7.0.93",
     "azure-devops-node-api": "^17.0.0",
     "better-sqlite3": "^13.0.3",
