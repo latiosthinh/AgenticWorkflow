@@ -35,6 +35,7 @@ import {
   calculateCumulativeDiff,
   verifyPackageDependencies,
 } from './diff-guard.js';
+import { commitImplementation } from './coder.js';
 import { checkTestImmutability } from '../test-runner/immutability.js';
 import { executeRepairLoop } from './repair.js';
 import {
@@ -189,6 +190,22 @@ async function runExecutionPipeline(
     durationMs,
     gitDiffStat: rawDiffStat,
   });
+
+  await git.add('.');
+  const gitStatus = await git.status();
+  if (gitStatus.staged.length > 0 || !gitStatus.isClean()) {
+    await commitImplementation(
+      git,
+      workItem.id,
+      'feat',
+      workItem.title
+    );
+    try {
+      await git.push('origin', worktreeResult.branchName);
+    } catch {
+      // Ignore remote push failures in local/offline test environments
+    }
+  }
 
   await transitionToDevDone(workItem.id, comment);
   await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
