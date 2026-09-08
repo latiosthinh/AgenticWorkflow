@@ -79,7 +79,7 @@ export async function processWorkItemExecute(
           .run();
 
         console.log(
-          `Plan locked for ticket ${workItemId} with developer answers. Ready for Phase 3 implementation.`
+          `[execute-worker] Plan locked for ticket ${workItemId} with developer answers. Ready for Phase 3 implementation.`
         );
         return;
       } else {
