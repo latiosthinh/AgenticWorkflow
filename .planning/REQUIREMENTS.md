@@ -28,7 +28,7 @@
 ### 3. CHECK — Test & Verify (L3 Functional Evidence, local)
 
 - [ ] **TEST-01**: Agent executes local unit tests against modified code and generates structured test execution reports (L3 Evidence).
-- [ ] **TEST-02**: Agent detects test failures and enters an automated self-repair loop (max 3-5 iterations) using failure traces; budget exhaustion posts diagnostics and flags ticket blocked.
+- [x] **TEST-02**: Agent detects test failures and enters an automated self-repair loop (max 3-5 iterations) using failure traces; budget exhaustion posts diagnostics and flags ticket blocked.
 
 ### 4. ACCEPT — Human Validation Gate (at `Dev Done` state)
 
@@ -101,7 +101,7 @@
 | IMPL-01 | Phase 3 | Complete |
 | IMPL-02 | Phase 3 | Complete |
 | TEST-01 | Phase 3 | Pending |
-| TEST-02 | Phase 3 | Pending |
+| TEST-02 | Phase 3 | Complete |
 | ACCP-01 | Phase 4 | Pending |
 | ACCP-02 | Phase 4 | Pending |
 | ACCP-03 | Phase 4 | Pending |
