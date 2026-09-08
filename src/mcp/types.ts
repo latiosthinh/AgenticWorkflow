@@ -9,6 +9,7 @@ export interface ToolRegistryOptions {
   worktreePath: string;
   tags: string[];
   knownSecrets?: string[];
+  extraTools?: McpToolDefinition[];
 }
 
 export interface DynamicMcpSession {
