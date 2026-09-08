@@ -483,11 +483,11 @@ export class AdoClient {
 |---|-------|---------|---------------|
 | A1 | ADO Service Hook uses header `x-hub-signature-256` for HMAC verification | Ingress & Webhook Security | If ADO uses Basic Auth or custom header, HMAC header check fails. Mitigation: verified in CONTEXT.md locked decision; local development tunnel or ADO webhook settings allow custom header configuration. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Local webhook intake during development:**
+   - RESOLVED: Supported via cloudflared tunnel CLI wrapper and WIQL polling fallback in `src/ingress/poller.ts` per Plan 01 Task 3.
    - What we know: Corporate firewalls block inbound webhooks to `localhost:3000`. CONTEXT.md locked decision specifies support for `--tunnel` flag or webhook polling fallback.
-   - What's unclear: Preferred tunnel provider (cloudflared vs ngrok) for developer machine.
    - Recommendation: Support `cloudflared tunnel` wrapper CLI script with fallback to periodic ADO polling (`WIQL query WHERE System.State = 'New'`) when `--tunnel` is not active.
 
 ## Environment Availability
