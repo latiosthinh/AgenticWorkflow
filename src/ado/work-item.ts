@@ -1,5 +1,5 @@
 import { JsonPatchDocument, Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { adoClient, withRetry } from './client.js';
+import { adoClient } from './client.js';
 
 export interface WorkItemDetails {
   id: number;
@@ -36,19 +36,16 @@ export function buildFeedbackPatch(htmlComment: string): JsonPatchDocument {
 }
 
 export async function getWorkItemDetails(workItemId: number): Promise<WorkItemDetails> {
-  return withRetry(async () => {
-    const witApi = await adoClient.getWorkItemTrackingApi();
-    const workItem = await witApi.getWorkItem(workItemId);
-    const fields = workItem.fields || {};
-    return {
-      id: workItem.id ?? workItemId,
-      rev: workItem.rev ?? fields['System.Rev'] ?? 1,
-      title: fields['System.Title'] || '',
-      description: fields['System.Description'] || '',
-      acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || '',
-      state: fields['System.State'] || '',
-    };
-  });
+  const workItem = await adoClient.getWorkItem(workItemId);
+  const fields = workItem.fields || {};
+  return {
+    id: workItem.id ?? workItemId,
+    rev: workItem.rev ?? fields['System.Rev'] ?? 1,
+    title: fields['System.Title'] || '',
+    description: fields['System.Description'] || '',
+    acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || '',
+    state: fields['System.State'] || '',
+  };
 }
 
 export async function transitionToReadyToDev(
@@ -56,13 +53,7 @@ export async function transitionToReadyToDev(
   htmlComment: string
 ): Promise<any> {
   const patchDoc = buildReadyToDevPatch(htmlComment);
-  return withRetry(async () => {
-    const witApi = await adoClient.getWorkItemTrackingApi();
-    if (witApi.updateWorkItem.length === 2) {
-      return (witApi.updateWorkItem as any)(patchDoc, workItemId);
-    }
-    return (witApi.updateWorkItem as any)(undefined, patchDoc, workItemId);
-  });
+  return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 
 export async function postFeedbackComment(
@@ -70,12 +61,6 @@ export async function postFeedbackComment(
   htmlComment: string
 ): Promise<any> {
   const patchDoc = buildFeedbackPatch(htmlComment);
-  return withRetry(async () => {
-    const witApi = await adoClient.getWorkItemTrackingApi();
-    if (witApi.updateWorkItem.length === 2) {
-      return (witApi.updateWorkItem as any)(patchDoc, workItemId);
-    }
-    return (witApi.updateWorkItem as any)(undefined, patchDoc, workItemId);
-  });
+  return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2
