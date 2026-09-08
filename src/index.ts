@@ -3,7 +3,8 @@ import fastifyRawBody from 'fastify-raw-body';
 import sensible from '@fastify/sensible';
 import { env } from './config/env.js';
 import { webhookRoutes, registerWorkItemHandler } from './ingress/routes.js';
-import { processWorkItemAudit } from './auditor/worker.js';
+import { routeWorkItemEvent } from './execute/router.js';
+import { startPlanWatchdog } from './plan/watchdog.js';
 import { purgeOldDedupEvents, sqlite } from './db/index.js';
 import { workItemQueueManager } from './queue/lane-manager.js';
 
@@ -23,7 +24,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(sensible);
 
-  registerWorkItemHandler(processWorkItemAudit);
+  registerWorkItemHandler(routeWorkItemEvent);
   await app.register(webhookRoutes);
 
   return app;
@@ -48,6 +49,8 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
     }
   }, 24 * 60 * 60 * 1000);
 
+  const watchdog = startPlanWatchdog();
+
   const app = await buildApp();
 
   let isShuttingDown = false;
@@ -59,6 +62,7 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
     }
 
     clearInterval(purgeInterval);
+    watchdog.stop();
 
     try {
       await app.close();

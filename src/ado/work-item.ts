@@ -1,4 +1,8 @@
-import { JsonPatchDocument, Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
+import {
+  JsonPatchDocument,
+  JsonPatchOperation,
+  Operation,
+} from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { adoClient } from './client.js';
 
 export interface WorkItemDetails {
@@ -16,7 +20,7 @@ export function buildTagPatch(
   currentTags: string | undefined,
   tagToAdd?: string,
   tagToRemove?: string
-): JsonPatchDocument {
+): JsonPatchOperation[] & JsonPatchDocument {
   const existing = currentTags
     ? currentTags
         .split(';')
@@ -39,7 +43,7 @@ export function buildTagPatch(
       path: '/fields/System.Tags',
       value: tagValue,
     },
-  ];
+  ] as unknown as JsonPatchOperation[] & JsonPatchDocument;
 }
 
 export function buildPlanQuestionPatch(
@@ -54,7 +58,7 @@ export function buildPlanQuestionPatch(
       path: '/fields/System.History',
       value: htmlComment,
     },
-  ];
+  ] as unknown as JsonPatchDocument;
 }
 
 export function buildPlanLockedPatch(
@@ -69,7 +73,7 @@ export function buildPlanLockedPatch(
       path: '/fields/System.History',
       value: htmlComment,
     },
-  ];
+  ] as unknown as JsonPatchDocument;
 }
 
 export function buildReadyToDevPatch(htmlComment: string): JsonPatchDocument {

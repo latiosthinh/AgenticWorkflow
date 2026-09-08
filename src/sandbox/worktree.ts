@@ -83,6 +83,11 @@ export async function createWorktree(
     fs.mkdirSync(worktreeDir, { recursive: true });
   }
 
+  // If worktree path already exists from previous run, clean it up first
+  if (fs.existsSync(worktreePath)) {
+    await cleanupWorktree(repoRoot, worktreePath, { deleteBranch: true, branchName });
+  }
+
   // If local branch already exists, remove it cleanly first
   try {
     const branchSummary = await git.branchLocal();

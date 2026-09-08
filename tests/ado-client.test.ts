@@ -209,6 +209,8 @@ describe('Azure DevOps Client & Work Item Integration', () => {
         description: '<p>JWT auth implementation</p>',
         acceptanceCriteria: '<p>Given valid creds return 200</p>',
         state: 'New',
+        tags: '',
+        history: '',
       });
       expect(mockWitApi.getWorkItem).toHaveBeenCalledWith(42);
     });
