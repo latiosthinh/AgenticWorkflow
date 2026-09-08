@@ -28,7 +28,7 @@ export async function processWorkItemExecute(
 ): Promise<void> {
   try {
     // Step 1: Fetch work item details
-    const workItem = await getWorkItemDetails(workItemId);
+    const workItem = await getWorkItemDetails(workItemId, revId);
 
     // Step 2: Check for Resumption Flow
     const isAwaitingInput = workItem.tags?.includes('[awaiting-input]');

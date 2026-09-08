@@ -279,20 +279,23 @@ describe('Execution Worker Pipeline', () => {
       testStrategy: 'vitest run tests/db.test.ts',
     });
 
+    const mockWorkItemData = {
+      id: workItemId,
+      rev: revId,
+      fields: {
+        'System.Title': 'Setup cloud storage',
+        'System.Description': 'Store files in S3 bucket',
+        'Microsoft.VSTS.Common.AcceptanceCriteria': 'Given file, upload to S3',
+        'System.State': 'In Dev',
+        'System.Tags': 'backend; [awaiting-input]',
+        'System.History':
+          '<p>Use Postgres schema and return 400 on validation failure</p>',
+      },
+    };
+
     const mockWitApi = {
-      getWorkItem: vi.fn().mockResolvedValue({
-        id: workItemId,
-        rev: revId,
-        fields: {
-          'System.Title': 'Setup cloud storage',
-          'System.Description': 'Store files in S3 bucket',
-          'Microsoft.VSTS.Common.AcceptanceCriteria': 'Given file, upload to S3',
-          'System.State': 'In Dev',
-          'System.Tags': 'backend; [awaiting-input]',
-          'System.History':
-            '<p>Use Postgres schema and return 400 on validation failure</p>',
-        },
-      }),
+      getWorkItem: vi.fn().mockResolvedValue(mockWorkItemData),
+      getRevision: vi.fn().mockResolvedValue(mockWorkItemData),
       updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);

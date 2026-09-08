@@ -215,6 +215,32 @@ describe('Azure DevOps Client & Work Item Integration', () => {
       expect(mockWitApi.getWorkItem).toHaveBeenCalledWith(42);
     });
 
+    it('getWorkItemDetails queries specific revision when revId is provided', async () => {
+      const mockWitApi = {
+        getWorkItem: vi.fn(),
+        getRevision: vi.fn().mockResolvedValue({
+          id: 42,
+          rev: 4,
+          fields: {
+            'System.Title': 'Implement user auth',
+            'System.Description': '<p>JWT auth implementation</p>',
+            'Microsoft.VSTS.Common.AcceptanceCriteria': '<p>Given valid creds return 200</p>',
+            'System.State': 'In Dev',
+            'System.History': '<p>Human reply comment</p>',
+          },
+        }),
+        updateWorkItem: vi.fn(),
+      };
+
+      adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+      const details = await getWorkItemDetails(42, 4);
+      expect(details.history).toBe('<p>Human reply comment</p>');
+      expect(details.rev).toBe(4);
+      expect(mockWitApi.getRevision).toHaveBeenCalledWith(42, 4);
+      expect(mockWitApi.getWorkItem).not.toHaveBeenCalled();
+    });
+
     it('transitionToReadyToDev dispatches JSON patch update', async () => {
       const mockWitApi = {
         getWorkItem: vi.fn(),

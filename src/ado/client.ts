@@ -87,6 +87,16 @@ export class AdoClient {
     });
   }
 
+  async getRevision(id: number, rev: number): Promise<WorkItem> {
+    return withRetry(async () => {
+      const witApi = await this.getWorkItemTrackingApi();
+      if (typeof (witApi as any).getRevision === 'function') {
+        return witApi.getRevision(id, rev);
+      }
+      return witApi.getWorkItem(id);
+    });
+  }
+
   async updateWorkItem(id: number, patchDoc: JsonPatchDocument): Promise<WorkItem> {
     return withRetry(async () => {
       const witApi = await this.getWorkItemTrackingApi();

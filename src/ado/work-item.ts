@@ -101,8 +101,13 @@ export function buildFeedbackPatch(htmlComment: string): JsonPatchDocument {
   ];
 }
 
-export async function getWorkItemDetails(workItemId: number): Promise<WorkItemDetails> {
-  const workItem = await adoClient.getWorkItem(workItemId);
+export async function getWorkItemDetails(
+  workItemId: number,
+  revId?: number
+): Promise<WorkItemDetails> {
+  const workItem = revId
+    ? await adoClient.getRevision(workItemId, revId)
+    : await adoClient.getWorkItem(workItemId);
   const fields = workItem.fields || {};
   return {
     id: workItem.id ?? workItemId,
