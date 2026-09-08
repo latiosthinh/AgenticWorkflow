@@ -38,6 +38,7 @@ import {
 import { commitImplementation } from './coder.js';
 import { checkTestImmutability } from '../test-runner/immutability.js';
 import { executeRepairLoop } from './repair.js';
+import { parseVitestSummary } from '../test-runner/parser.js';
 import {
   recordL3Evidence,
   formatL3EvidenceComment,
@@ -175,22 +176,30 @@ async function runExecutionPipeline(
   const durationMs = repairResult.testResult?.durationMs || 100;
   const rawDiffStat = diffStat.rawStat || 'clean';
 
+  const vitestSummary = parseVitestSummary(
+    repairResult.testResult?.stdout || '',
+    durationMs
+  );
+  const totalTests = vitestSummary.totalTests || 1;
+  const passed = vitestSummary.passed || (vitestSummary.failed === 0 ? totalTests : 0);
+  const failed = vitestSummary.failed;
+
   await recordL3Evidence({
     workItemId: workItem.id,
     revId,
     testSuite: 'vitest',
-    totalTests: 1,
-    passed: 1,
-    failed: 0,
+    totalTests,
+    passed,
+    failed,
     durationMs,
     gitDiffStat: rawDiffStat,
   });
 
   const comment = formatL3EvidenceComment({
     testSuite: 'vitest',
-    totalTests: 1,
-    passed: 1,
-    failed: 0,
+    totalTests,
+    passed,
+    failed,
     durationMs,
     gitDiffStat: rawDiffStat,
   });
