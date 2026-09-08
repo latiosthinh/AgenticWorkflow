@@ -4,6 +4,11 @@ import {
   Operation,
 } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { adoClient } from './client.js';
+import {
+  buildDevDonePatch,
+  buildRepairExhaustedPatch,
+  buildContractConflictPatch,
+} from '../test-runner/evidence.js';
 
 export interface WorkItemDetails {
   id: number;
@@ -144,6 +149,49 @@ export async function postFeedbackComment(
   htmlComment: string
 ): Promise<any> {
   const patchDoc = buildFeedbackPatch(htmlComment);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
+}
+
+export async function transitionToDevDone(
+  workItemId: number,
+  htmlComment: string
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  const patchDoc = buildDevDonePatch(htmlComment, details.tags);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
+}
+
+export async function flagTicketBlocked(
+  workItemId: number,
+  htmlComment: string,
+  type: 'contract-conflict' | 'repair-exhausted' | 'diff-ceiling'
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  let patchDoc: any;
+  if (type === 'contract-conflict') {
+    patchDoc = buildContractConflictPatch(htmlComment, details.tags);
+  } else if (type === 'repair-exhausted') {
+    patchDoc = buildRepairExhaustedPatch(htmlComment, details.tags);
+  } else {
+    const tagPatches = buildTagPatch(
+      details.tags,
+      '[diff-ceiling-exceeded]',
+      '[awaiting-input]'
+    );
+    patchDoc = [
+      ...tagPatches,
+      {
+        op: Operation.Replace,
+        path: '/fields/System.State',
+        value: 'Blocked',
+      },
+      {
+        op: Operation.Add,
+        path: '/fields/System.History',
+        value: htmlComment,
+      },
+    ];
+  }
   return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2
