@@ -110,6 +110,25 @@ describe('Diff Ceiling and Dependency Guard', () => {
     expect(result.unauthorizedPackages).not.toContain('axios');
   });
 
+  it('rejects packages that match arbitrary English substrings in AC without boundary', () => {
+    const original = JSON.stringify({
+      dependencies: {},
+    });
+    const updated = JSON.stringify({
+      dependencies: { auth: '^1.0.0', form: '^2.0.0' },
+    });
+
+    // AC contains "authenticate" and "perform", which contain "auth" and "form" as substrings
+    const result = verifyPackageDependencies(
+      original,
+      updated,
+      'We must authenticate the user and perform operations cleanly.'
+    );
+    expect(result.valid).toBe(false);
+    expect(result.unauthorizedPackages).toContain('auth');
+    expect(result.unauthorizedPackages).toContain('form');
+  });
+
   it('permits added packages when listed in allowlist', () => {
     const original = JSON.stringify({
       dependencies: { express: '^4.0.0' },

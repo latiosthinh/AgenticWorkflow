@@ -89,11 +89,14 @@ export function verifyPackageDependencies(
   };
 
   const unauthorizedPackages: string[] = [];
-  const acLower = ticketAcceptanceCriteria.toLowerCase();
 
   for (const pkg of Object.keys(newDeps)) {
     if (!origDeps[pkg]) {
-      const isAllowedByAc = acLower.includes(pkg.toLowerCase());
+      const escaped = pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const isAllowedByAc = new RegExp(
+        `(^|[^a-zA-Z0-9_@/.-])${escaped}([^a-zA-Z0-9_@/.-]|$)`,
+        'i'
+      ).test(ticketAcceptanceCriteria);
       const isAllowlisted = allowlist.includes(pkg);
       if (!isAllowedByAc && !isAllowlisted) {
         unauthorizedPackages.push(pkg);
