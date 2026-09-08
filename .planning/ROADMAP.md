@@ -8,7 +8,7 @@ Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidenc
 
 | Golden Path Step | Column | ADO State | Actor | Evidence |
 |---|---|---|---|---|
-| 1. Ticket + AC | CONTRACT | 3/3 | Complete   | 2026-09-08 |
+| 1. Ticket + AC | CONTRACT | 3/3 | Complete    | 2026-09-08 |
 | — triage | CONTRACT | `Ready to Dev` → `In Dev` | human assigns domain tags | — |
 | 2. Plan (Q→human) | EXECUTE | `In Dev` (blocked-on-human flag; sandbox released) | agent ◇ human answers | locked plan |
 | 3. Implement | EXECUTE | `In Dev` | agent, bounded <250 LOC | — |
@@ -82,7 +82,12 @@ Plans:
   3. Commands run under 120s timeout with PATs/API keys scrubbed from env and logs.
   4. Plan questions posted to work item; sandbox released while awaiting answers.
   5. Human answer comment re-triggers run; 24h unanswered → ping; plan locked before first code edit.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Ephemeral git worktree manager with test protection, and hardened execa process runner with 120s timeout and credential scrubbing.
+- [ ] 02-02-PLAN.md — In-process McpServer harness, common tools, domain tool extensions, and dynamic tag dispatcher with 12-tool ceiling.
+- [ ] 02-03-PLAN.md — Drizzle plan schema, planning agent with ambiguity evaluator, checkpoint persistence, 24h/72h watchdog, and execution worker router.
 
 ### Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification
 **Goal**: Bounded code generation verified by local tests with self-repair (L3 local evidence).
@@ -159,8 +164,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
-| 1. CONTRACT: Ingress & L1 Auditor | 0/TBD | Not started | - |
-| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0/TBD | Not started | - |
+| 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0/3 | Not started | - |
 | 3. EXECUTE + CHECK: Implement & Test | 0/TBD | Not started | - |
 | 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
 | 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
