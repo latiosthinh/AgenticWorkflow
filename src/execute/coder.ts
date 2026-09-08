@@ -40,7 +40,7 @@ export function createCoderTools(worktreePath: string) {
   return {
     createFile: tool({
       description: 'Create a new file with specified content in the worktree',
-      parameters: z.object({
+      inputSchema: z.object({
         relativePath: z.string().describe('Relative path inside worktree'),
         content: z.string().describe('UTF-8 file content'),
       }),
@@ -53,7 +53,7 @@ export function createCoderTools(worktreePath: string) {
     }),
     editFile: tool({
       description: 'Update content of an existing file in the worktree',
-      parameters: z.object({
+      inputSchema: z.object({
         relativePath: z.string().describe('Relative path inside worktree'),
         content: z.string().describe('New content to write'),
       }),
@@ -68,7 +68,7 @@ export function createCoderTools(worktreePath: string) {
     }),
     deleteFile: tool({
       description: 'Delete a file in the worktree',
-      parameters: z.object({
+      inputSchema: z.object({
         relativePath: z.string().describe('Relative path inside worktree'),
       }),
       execute: async ({ relativePath }) => {
