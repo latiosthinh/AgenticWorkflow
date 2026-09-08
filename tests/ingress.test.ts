@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyRawBody from 'fastify-raw-body';
 import { webhookRoutes, registerWorkItemHandler } from '../src/ingress/routes.js';
+import { startTunnel } from '../src/ingress/poller.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { db, sqlite } from '../src/db/index.js';
 import { dedupEvents } from '../src/db/schema.js';
@@ -219,5 +220,13 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
     expect(lane1.concurrency).toBe(1);
     expect(lane3.concurrency).toBe(1);
     expect(lane1).not.toBe(lane3);
+  });
+
+  it('validates port number in startTunnel and rejects invalid or out-of-range ports', () => {
+    expect(() => startTunnel(-1)).toThrow('Invalid port: -1');
+    expect(() => startTunnel(0)).toThrow('Invalid port: 0');
+    expect(() => startTunnel(70000)).toThrow('Invalid port: 70000');
+    expect(() => startTunnel(NaN)).toThrow('Invalid port: NaN');
+    expect(() => startTunnel('3000; rm -rf' as any)).toThrow('Invalid port');
   });
 });

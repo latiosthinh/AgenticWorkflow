@@ -3,11 +3,14 @@ import { env } from '../config/env.js';
 
 export const WIQL_NEW_WORK_ITEMS = "SELECT [System.Id] FROM WorkItems WHERE [System.State] = 'New' ORDER BY [System.ChangedDate] DESC";
 
-export function startTunnel(port = env.PORT): ChildProcess {
+export function startTunnel(port: number = env.PORT): ChildProcess {
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid port: ${port}`);
+  }
   const tunnelUrl = `http://localhost:${port}`;
   const process = spawn('cloudflared', ['tunnel', '--url', tunnelUrl], {
     stdio: 'inherit',
-    shell: true,
+    shell: false,
   });
 
   process.on('error', (err) => {
