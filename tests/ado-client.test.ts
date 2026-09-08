@@ -42,6 +42,15 @@ describe('Azure DevOps Client & Work Item Integration', () => {
       expect(fn).toHaveBeenCalledTimes(2);
     });
 
+    it('recovers from transient network disconnect errors (ECONNRESET, ETIMEDOUT)', async () => {
+      const networkErr = { code: 'ECONNRESET', message: 'socket hang up' };
+      const fn = vi.fn().mockRejectedValueOnce(networkErr).mockResolvedValue('ok');
+
+      const result = await withRetry(fn, 3, 1);
+      expect(result).toBe('ok');
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
     it('throws immediately on non-retryable 4xx errors', async () => {
       const clientErr = { statusCode: 400, message: 'Bad Request' };
       const fn = vi.fn().mockRejectedValue(clientErr);

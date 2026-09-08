@@ -22,8 +22,10 @@ export async function withRetry<T>(
       const isRateLimited = statusCode === 429;
       const isServerError =
         typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600;
+      const isNetworkError =
+        Boolean(err?.code && ['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN'].includes(err.code));
 
-      if (attempt >= maxRetries || (!isRateLimited && !isServerError)) {
+      if (attempt >= maxRetries || (!isRateLimited && !isServerError && !isNetworkError)) {
         throw err;
       }
 
