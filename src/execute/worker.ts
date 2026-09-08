@@ -87,6 +87,7 @@ async function runExecutionPipeline(
       repairCyclesUsed: 0,
     });
     await flagTicketBlocked(workItem.id, comment, 'diff-ceiling');
+    await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     return;
   }
 
@@ -123,6 +124,7 @@ async function runExecutionPipeline(
       `<h3>[Contract Conflict] Unauthorized package dependencies added: ${unauthorizedPackages.join(', ')}</h3>`,
       'contract-conflict'
     );
+    await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     return;
   }
 
@@ -135,6 +137,7 @@ async function runExecutionPipeline(
       `<h3>[Contract Conflict] Protected test files modified: ${immutabilityResult.violations.join(', ')}</h3>`,
       'contract-conflict'
     );
+    await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     return;
   }
 
@@ -164,6 +167,7 @@ async function runExecutionPipeline(
       `<h3>[Repair Exhausted] Test self-repair budget exhausted</h3><p>WIP branch created: <code>${repairResult.wipBranch}</code></p><pre>${repairResult.diagnostics}</pre>`,
       'repair-exhausted'
     );
+    await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     return;
   }
 
