@@ -24,7 +24,7 @@ export function protectTestFiles(worktreePath: string): string[] {
         }
         walk(fullPath);
       } else if (entry.isFile()) {
-        if (/\.(test|spec)\.(ts|js|tsx|jsx)$/.test(entry.name)) {
+        if (/\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(entry.name)) {
           try {
             fs.chmodSync(fullPath, 0o444);
             protectedFiles.push(normalizePath(fullPath));

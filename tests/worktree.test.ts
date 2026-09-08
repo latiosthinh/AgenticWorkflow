@@ -47,6 +47,10 @@ describe('worktree lifecycle management', () => {
       path.join(tempRepo, 'tests', 'sample.test.ts'),
       'import { test } from "vitest";\ntest("sample", () => {});\n'
     );
+    fs.writeFileSync(
+      path.join(tempRepo, 'tests', 'uppercase.SPEC.JS'),
+      'console.log("spec");\n'
+    );
 
     await git.add('.');
     await git.commit('Initial test commit');
@@ -80,7 +84,9 @@ describe('worktree lifecycle management', () => {
 
     expect(result.branchName).toBe('task/ticket-101-user-auth-feature');
     expect(fs.existsSync(result.worktreePath)).toBe(true);
-    expect(result.testFilesProtected.length).toBeGreaterThan(0);
+    expect(result.testFilesProtected.length).toBe(2);
+    expect(result.testFilesProtected.some((f) => f.endsWith('sample.test.ts'))).toBe(true);
+    expect(result.testFilesProtected.some((f) => f.endsWith('uppercase.SPEC.JS'))).toBe(true);
 
     const protectedFile = result.testFilesProtected[0];
     expect(protectedFile.endsWith('sample.test.ts')).toBe(true);
