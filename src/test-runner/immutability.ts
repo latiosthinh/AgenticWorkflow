@@ -25,7 +25,7 @@ export function checkTestImmutability(
 
   const lines = nameStatusDiff.split('\n').map((l) => l.trim()).filter(Boolean);
   for (const line of lines) {
-    const parts = line.split(/\s+/);
+    const parts = line.split('\t');
     const status = parts[0];
     if (!status || parts.length < 2) continue;
 
@@ -51,7 +51,8 @@ export function checkTestImmutability(
         violations.push(`Modified protected baseline test: [${status}] ${parts.slice(1).join(' -> ')}`);
       }
     } else {
-      for (const rawPath of affectedPaths) {
+      const pathsToCheck = status.startsWith('R') && parts.length >= 3 ? [parts[2]] : affectedPaths;
+      for (const rawPath of pathsToCheck) {
         if (/\.(test|spec)\.(ts|js|tsx|jsx)$/i.test(rawPath)) {
           if (status.startsWith('A') || status.startsWith('R')) {
             newTestFiles.push(rawPath);

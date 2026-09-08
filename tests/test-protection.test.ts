@@ -44,6 +44,16 @@ describe('Test Immutability and Assertion Presence', () => {
     expect(result.violations[0]).toContain('tests/auth.test.ts');
   });
 
+  it('detects modification of baseline test files containing spaces in path', () => {
+    const baseline = ['tests/user profile.test.ts'];
+    const diff = 'M\ttests/user profile.test.ts\tM\tsrc/user.ts';
+
+    const result = checkTestImmutability(diff, baseline);
+    expect(result.valid).toBe(false);
+    expect(result.violations.length).toBe(1);
+    expect(result.violations[0]).toContain('tests/user profile.test.ts');
+  });
+
   it('permits modified source code files when baseline test files are untouched', () => {
     const baseline = ['tests/auth.test.ts'];
     const diff = 'M\tsrc/auth.ts\nM\tsrc/models/user.ts';
