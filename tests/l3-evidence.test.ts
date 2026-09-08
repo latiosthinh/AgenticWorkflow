@@ -426,6 +426,56 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     expect(historyOp?.value).toContain('[Contract Conflict] Protected test files modified');
   });
 
+  it('Empty New Test File: flags ticket Blocked when newly added test file lacks assertions (T-3-03)', async () => {
+    const workItemId = 9007;
+    const revId = 1;
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        rev: revId,
+        fields: {
+          'System.Title': 'Feature with dummy test',
+          'System.Description': 'Adds empty test file to fake test pass.',
+          'Microsoft.VSTS.Common.AcceptanceCriteria': 'Feature works. Assert tests pass.',
+          'System.State': 'In Dev',
+          'System.Tags': 'backend',
+        },
+      }),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    db.insert(dedupEvents)
+      .values({
+        workItemId,
+        revId,
+        status: 'pending',
+        payloadHash: 'hash-9007',
+        receivedAt: new Date(),
+      })
+      .run();
+
+    await processWorkItemExecute(workItemId, revId, {
+      mockCodeEdit: async (worktreePath) => {
+        const dummyTest = path.join(worktreePath, 'tests', 'dummy.test.ts');
+        fs.mkdirSync(path.dirname(dummyTest), { recursive: true });
+        fs.writeFileSync(dummyTest, '// Empty test without assertions\n');
+      },
+    });
+
+    const updateCalls = mockWitApi.updateWorkItem.mock.calls;
+    const lastPatchDoc = updateCalls[updateCalls.length - 1].find((a: any) => Array.isArray(a));
+    const stateOp = lastPatchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp?.value).toBe('Blocked');
+
+    const tagOp = lastPatchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp?.value).toContain('[contract-conflict]');
+
+    const historyOp = lastPatchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp?.value).toContain('[Contract Conflict] New test file lacks valid assertions');
+  });
+
   it('Unauthorized Dependency: flags ticket Blocked when package.json adds unapproved package', async () => {
     const workItemId = 9004;
     const revId = 1;

@@ -36,7 +36,10 @@ import {
   verifyPackageDependencies,
 } from './diff-guard.js';
 import { commitImplementation } from './coder.js';
-import { checkTestImmutability } from '../test-runner/immutability.js';
+import {
+  checkTestImmutability,
+  hasValidAssertions,
+} from '../test-runner/immutability.js';
 import { executeRepairLoop } from './repair.js';
 import { parseVitestSummary } from '../test-runner/parser.js';
 import {
@@ -140,6 +143,23 @@ async function runExecutionPipeline(
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     return;
+  }
+
+  // Guard newly added test files for valid assertions (T-3-03)
+  for (const newTest of immutabilityResult.newTestFiles) {
+    const fullPath = path.join(worktreeResult.worktreePath, newTest);
+    if (fs.existsSync(fullPath)) {
+      const content = fs.readFileSync(fullPath, 'utf8');
+      if (!hasValidAssertions(content)) {
+        await flagTicketBlocked(
+          workItem.id,
+          `<h3>[Contract Conflict] New test file lacks valid assertions: <code>${newTest}</code></h3>`,
+          'contract-conflict'
+        );
+        await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+        return;
+      }
+    }
   }
 
   // 6. Execute local tests & self-repair loop
