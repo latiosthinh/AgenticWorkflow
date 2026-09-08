@@ -44,7 +44,7 @@ flowchart LR
 
 - [x] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition. (completed 2026-09-08)
 - [x] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle. (completed 2026-09-08)
-- [ ] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`.
+- [x] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`. (completed 2026-09-08)
 - [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker.
 - [ ] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`.
 - [ ] **Phase 6: QA — Verification Loop** — Integration/e2e suite runner, 2-strike flake filter, failure diagnostics → `In Dev` (bounce ≤2), pass → `Ready to Deploy`.
@@ -104,7 +104,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Bounded code editing foundation, diff ceiling guard (<250 LOC), package dependency checker, and test assertion immutability guard.
 - [x] 03-02-PLAN.md — Local test runner, diagnostic stack trace parser, and automated self-repair loop with WIP branch preservation on exhaustion.
-- [ ] 03-03-PLAN.md — L3 evidence schema, SQLite persistence, formatted ADO discussion badges, and execution worker pipeline transitioning to Dev Done.
+- [x] 03-03-PLAN.md — L3 evidence schema, SQLite persistence, formatted ADO discussion badges, and execution worker pipeline transitioning to Dev Done.
 
 ### Phase 4: ACCEPT — Human Validation Gate & Rework Breaker
 **Goal**: Human functional acceptance at `Dev Done` with bounded rework.
@@ -171,7 +171,7 @@ Plans:
 |---|---|---|---|
 | 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
 | 2. EXECUTE Foundation: Sandbox, MCP & Plan | 3/3 | Complete | 2026-09-08 |
-| 3. EXECUTE + CHECK: Implement & Test | 0/3 | Not started | - |
+| 3. EXECUTE + CHECK: Implement & Test | 3/3 | Complete | 2026-09-08 |
 | 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
 | 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
 | 6. QA: Verification Loop | 0/TBD | Not started | - |
