@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-09-08T15:33:00.000Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-09-08T15:45:00.000Z"
 last_activity: 2026-09-08
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -26,26 +26,26 @@ See: `.planning/PROJECT.md` (updated 2026-09-07 post-audit)
 ## Current Position
 
 Phase: 2 of 8 (execute foundation — sandbox, dynamic mcp & plan checkpoint)
-Plan: 02-01 complete (1 of 3)
-Status: In progress (Plan 02-01 complete)
+Plan: 02-02 complete (2 of 3)
+Status: In progress (Plan 02-02 complete)
 Last activity: 2026-09-08
 
-Progress: [██████████] 67%
+Progress: [██████████] 83%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
-- Average duration: 4.4 min
-- Total execution time: 0.30 hours
+- Total plans completed: 8
+- Average duration: 4.6 min
+- Total execution time: 0.40 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. CONTRACT: Ingress & L1 Auditor | 3 | 13m | 4.3m |
-| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 1 | 5m | 5.0m |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 2 | 11m | 5.5m |
 | 3. EXECUTE + CHECK: Implement & Test | 0 | - | - |
 | 4. ACCEPT: Human Validation Gate | 0 | - | - |
 | 5. MERGE: PR & Native CI Gates | 0 | - | - |
@@ -55,7 +55,7 @@ Progress: [██████████] 67%
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (6m), 01-02 (3m), 01-03 (4m), 02-01 (5m)
+- Last 5 plans: 01-02 (3m), 01-03 (4m), 02-01 (5m), 02-02 (6m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -92,6 +92,10 @@ Recent decisions affecting current work:
 - [02-01]: Configured test assertion files with 0o444 read-only permissions during worktree setup and restored 0o666 on teardown to prevent Windows NTFS EPERM deletion locks.
 - [02-01]: Enforced 120s execution timeout with SIGTERM and 2000ms forceKill SIGKILL cascade, returning standard exit code 124 on timeout.
 - [02-01]: Added .worktrees/ to .gitignore to prevent ephemeral worktree directories from polluting git repository status.
+- [02-02]: Initialized tool request handlers on McpServer prior to connecting InMemoryTransport to permit dynamic runtime tool registration.
+- [02-02]: Enforced 12-tool ceiling and single-sentence descriptions (<=150 chars) across all tool registrations to prevent LLM prompt pollution and context saturation.
+- [02-02]: Guarded read_file against path traversal by checking relative resolution against worktreePath root.
+- [02-02]: Defaulted untagged work items safely to baseline common toolset (git_status, read_file, run_test).
 
 ### Pending Todos
 
@@ -112,5 +116,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-09-08
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-execute-foundation-sandbox-dynamic-mcp-plan-checkpoint/02-02-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
+Resume file: .planning/phases/02-execute-foundation-sandbox-dynamic-mcp-plan-checkpoint/02-03-PLAN.md

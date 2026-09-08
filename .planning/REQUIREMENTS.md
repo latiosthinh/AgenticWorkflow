@@ -19,7 +19,7 @@
 
 - [ ] **PLAN-01**: Agent formulates implementation plan and posts interactive clarification questions (`Q→human`) to the work item discussion when ambiguities exist.
 - [ ] **PLAN-02**: Plan checkpoint releases the sandbox while awaiting human answers; human comment re-triggers the run via webhook; unanswered questions ping after 24h; locked plan persists before code edits begin.
-- [ ] **DISP-01**: System dynamically resolves domain tags (`frontend`, `backend`, `infra`) to mount matching MCP tools and scoped context.
+- [x] **DISP-01**: System dynamically resolves domain tags (`frontend`, `backend`, `infra`) to mount matching MCP tools and scoped context.
 - [x] **SAND-01**: Worker provisions an ephemeral `git worktree` isolated from the host repository for each task run.
 - [x] **SAND-02**: Process runner enforces execution timeouts (120s) and scrubs sensitive credentials (PATs, API keys) from environment variables and logs.
 - [ ] **IMPL-01**: Agent executes bounded implementation modifying source files within a maximum diff budget of <250 LOC.
@@ -95,7 +95,7 @@
 | CONTR-02 | Phase 1 | Complete |
 | PLAN-01 | Phase 2 | Pending |
 | PLAN-02 | Phase 2 | Pending |
-| DISP-01 | Phase 2 | Pending |
+| DISP-01 | Phase 2 | Complete |
 | SAND-01 | Phase 2 | Complete |
 | SAND-02 | Phase 2 | Complete |
 | IMPL-01 | Phase 3 | Pending |

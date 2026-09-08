@@ -86,7 +86,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Ephemeral git worktree manager with test protection, and hardened execa process runner with 120s timeout and credential scrubbing.
-- [ ] 02-02-PLAN.md — In-process McpServer harness, common tools, domain tool extensions, and dynamic tag dispatcher with 12-tool ceiling.
+- [x] 02-02-PLAN.md — In-process McpServer harness, common tools, domain tool extensions, and dynamic tag dispatcher with 12-tool ceiling.
 - [ ] 02-03-PLAN.md — Drizzle plan schema, planning agent with ambiguity evaluator, checkpoint persistence, 24h/72h watchdog, and execution worker router.
 
 ### Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification
@@ -165,7 +165,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
 | 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
-| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0/3 | Not started | - |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 2/3 | In progress | - |
 | 3. EXECUTE + CHECK: Implement & Test | 0/TBD | Not started | - |
 | 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
 | 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
