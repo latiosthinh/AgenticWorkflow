@@ -22,6 +22,11 @@ export class WorkItemQueueManager {
   public getActiveLaneCount(): number {
     return this.lanes.size;
   }
+
+  public async drainAll(): Promise<void> {
+    await Promise.all(Array.from(this.lanes.values()).map((lane) => lane.onIdle()));
+    this.lanes.clear();
+  }
 }
 
 export const workItemQueueManager = new WorkItemQueueManager();

@@ -6,10 +6,11 @@ import { db } from '../db/index.js';
 import { dedupEvents } from '../db/schema.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
 import { env } from '../config/env.js';
+import { processWorkItemAudit } from '../auditor/worker.js';
 
 export type WorkItemHandler = (workItemId: number, revId: number) => Promise<void>;
 
-let activeHandler: WorkItemHandler | undefined;
+let activeHandler: WorkItemHandler | undefined = processWorkItemAudit;
 
 export function registerWorkItemHandler(handler: WorkItemHandler | undefined) {
   activeHandler = handler;
