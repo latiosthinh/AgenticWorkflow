@@ -40,6 +40,22 @@ CREATE TABLE IF NOT EXISTS audit_log (
   model TEXT NOT NULL,
   evaluated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS plan_checkpoints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  rev_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_human_input',
+  questions TEXT NOT NULL,
+  answers TEXT,
+  plan_markdown TEXT,
+  estimated_files TEXT,
+  test_strategy TEXT,
+  reminded_at INTEGER,
+  escalated_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `);
 
 export const db = drizzle(sqlite, { schema });

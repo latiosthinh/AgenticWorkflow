@@ -28,7 +28,33 @@ export const auditLogs = sqliteTable('audit_log', {
     .$defaultFn(() => new Date()),
 });
 
+export const planCheckpoints = sqliteTable('plan_checkpoints', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workItemId: integer('work_item_id').notNull(),
+  revId: integer('rev_id').notNull(),
+  status: text('status', {
+    enum: ['pending_human_input', 'resumed', 'locked', 'blocked', 'expired'],
+  })
+    .notNull()
+    .default('pending_human_input'),
+  questions: text('questions').notNull(),
+  answers: text('answers'),
+  planMarkdown: text('plan_markdown'),
+  estimatedFiles: text('estimated_files'),
+  testStrategy: text('test_strategy'),
+  remindedAt: integer('reminded_at', { mode: 'timestamp' }),
+  escalatedAt: integer('escalated_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+export type PlanCheckpoint = typeof planCheckpoints.$inferSelect;
+export type InsertPlanCheckpoint = typeof planCheckpoints.$inferInsert;
