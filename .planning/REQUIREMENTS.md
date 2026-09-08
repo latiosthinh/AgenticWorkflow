@@ -22,8 +22,8 @@
 - [x] **DISP-01**: System dynamically resolves domain tags (`frontend`, `backend`, `infra`) to mount matching MCP tools and scoped context.
 - [x] **SAND-01**: Worker provisions an ephemeral `git worktree` isolated from the host repository for each task run.
 - [x] **SAND-02**: Process runner enforces execution timeouts (120s) and scrubs sensitive credentials (PATs, API keys) from environment variables and logs.
-- [ ] **IMPL-01**: Agent executes bounded implementation modifying source files within a maximum diff budget of <250 LOC.
-- [ ] **IMPL-02**: System enforces read-only permissions on existing test assertion files and rejects PRs containing test-file modifications.
+- [x] **IMPL-01**: Agent executes bounded implementation modifying source files within a maximum diff budget of <250 LOC.
+- [x] **IMPL-02**: System enforces read-only permissions on existing test assertion files and rejects PRs containing test-file modifications.
 
 ### 3. CHECK — Test & Verify (L3 Functional Evidence, local)
 
@@ -98,8 +98,8 @@
 | DISP-01 | Phase 2 | Complete |
 | SAND-01 | Phase 2 | Complete |
 | SAND-02 | Phase 2 | Complete |
-| IMPL-01 | Phase 3 | Pending |
-| IMPL-02 | Phase 3 | Pending |
+| IMPL-01 | Phase 3 | Complete |
+| IMPL-02 | Phase 3 | Complete |
 | TEST-01 | Phase 3 | Pending |
 | TEST-02 | Phase 3 | Pending |
 | ACCP-01 | Phase 4 | Pending |
