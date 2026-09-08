@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import crypto from 'node:crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyRawBody from 'fastify-raw-body';
-import { webhookRoutes } from '../src/ingress/routes.js';
+import { webhookRoutes, registerWorkItemHandler } from '../src/ingress/routes.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { db, sqlite } from '../src/db/index.js';
 import { dedupEvents } from '../src/db/schema.js';
@@ -13,6 +13,7 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
+    registerWorkItemHandler(async () => {});
     app = Fastify({ logger: false });
     await app.register(fastifyRawBody, {
       field: 'rawBody',
