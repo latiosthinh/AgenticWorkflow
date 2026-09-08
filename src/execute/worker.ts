@@ -40,8 +40,10 @@ export async function processWorkItemExecute(
         typeof history === 'string' &&
         history.length > 0 &&
         !history.includes('<!-- [automated-agent] -->') &&
-        !history.includes('[Plan Q&A]') &&
-        !history.includes('[Plan Q&amp;A]');
+        !history.startsWith('### [Plan Q&A]') &&
+        !history.startsWith('### [Plan Q&amp;A]') &&
+        !history.startsWith('<h3>[Plan Q&A]') &&
+        !history.startsWith('<h3>[Plan Q&amp;A]');
 
       if (isNonBot && typeof history === 'string') {
         let estimatedFiles: string[] = [];

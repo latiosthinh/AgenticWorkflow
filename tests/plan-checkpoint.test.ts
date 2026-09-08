@@ -354,6 +354,62 @@ describe('Execution Worker Pipeline', () => {
       .get();
     expect(dedup?.status).toBe('completed');
   });
+
+  it('resumption flow: accepts human reply that quotes [Plan Q&A] substring', async () => {
+    const workItemId = 5003;
+    const revId = 2;
+
+    const initialCp = await createPlanCheckpoint({
+      workItemId,
+      revId: 1,
+      questions: ['Which database schema should be modified?'],
+      planMarkdown: '### Implementation Plan\n1. Modify src/db.ts',
+      estimatedFiles: ['src/db.ts'],
+      testStrategy: 'vitest run tests/db.test.ts',
+    });
+
+    const mockWorkItemData = {
+      id: workItemId,
+      rev: revId,
+      fields: {
+        'System.Title': 'Setup cloud storage',
+        'System.Description': 'Store files in S3 bucket',
+        'Microsoft.VSTS.Common.AcceptanceCriteria': 'Given file, upload to S3',
+        'System.State': 'In Dev',
+        'System.Tags': 'backend; [awaiting-input]',
+        'System.History':
+          '<p>Regarding [Plan Q&A]: we will use Postgres and Redis.</p>',
+      },
+    };
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue(mockWorkItemData),
+      getRevision: vi.fn().mockResolvedValue(mockWorkItemData),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    db.insert(dedupEvents)
+      .values({
+        workItemId,
+        revId,
+        status: 'pending',
+        payloadHash: 'hash-5003',
+        receivedAt: new Date(),
+      })
+      .run();
+
+    await processWorkItemExecute(workItemId, revId);
+
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const [lockedCp] = db
+      .select()
+      .from(planCheckpoints)
+      .where(eq(planCheckpoints.id, initialCp.id))
+      .all();
+    expect(lockedCp.status).toBe('locked');
+    expect(lockedCp.answers).toContain('Regarding [Plan Q&A]: we will use Postgres and Redis.');
+  });
 });
 
 describe('Execute Router Dispatches', () => {
