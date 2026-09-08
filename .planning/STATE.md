@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 01-03-PLAN.md (Phase 1 complete)
-last_updated: "2026-09-08T06:13:04.577Z"
+status: in_progress
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-09-08T15:33:00.000Z"
 last_activity: 2026-09-08
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -21,42 +21,41 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-09-07 post-audit)
 
 **Core value:** Deterministic, evidence-backed delivery across the adapted Golden Path (Contract → Execute → Check → Accept → Merge → QA → Deploy → Learn) with L1–L6 evidence, native ADO gates, and human verdicts.
-**Current focus:** Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor
+**Current focus:** Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint
 
 ## Current Position
 
 Phase: 2 of 8 (execute foundation — sandbox, dynamic mcp & plan checkpoint)
-Plan: Not started
-Status: Phase 1 complete (Plans 01-01, 01-02, 01-03 complete)
+Plan: 02-01 complete (1 of 3)
+Status: In progress (Plan 02-01 complete)
 Last activity: 2026-09-08
 
-Progress: [██████████] 100%
+Progress: [██████████] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
-- Average duration: 4.3 min
-- Total execution time: 0.22 hours
+- Total plans completed: 7
+- Average duration: 4.4 min
+- Total execution time: 0.30 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. CONTRACT: Ingress & L1 Auditor | 3 | 13m | 4.3m |
-| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 0 | - | - |
+| 2. EXECUTE Foundation: Sandbox, MCP & Plan | 1 | 5m | 5.0m |
 | 3. EXECUTE + CHECK: Implement & Test | 0 | - | - |
 | 4. ACCEPT: Human Validation Gate | 0 | - | - |
 | 5. MERGE: PR & Native CI Gates | 0 | - | - |
 | 6. QA: Verification Loop | 0 | - | - |
 | 7. DEPLOY: Environment Approval & Monitor | 0 | - | - |
 | 8. LEARN: Skills Feedback Loop | 0 | - | - |
-| 1 | 3 | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (6m), 01-02 (3m), 01-03 (4m)
+- Last 5 plans: 01-01 (6m), 01-02 (3m), 01-03 (4m), 02-01 (5m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -89,6 +88,10 @@ Recent decisions affecting current work:
 - [01-03]: Restricted L1 audit transitions strictly to tickets in 'New' state; non-'New' tickets are marked 'skipped' in dedup_events without mutation.
 - [01-03]: Persisted comprehensive audit records in SQLite audit_log table with JSON-stringified reasons and criteria summary.
 - [01-03]: Integrated startup and daily 7-day TTL cleanup and graceful signal handling (SIGINT/SIGTERM) draining all active lane queues.
+- [02-01]: Configured extendEnv: false on execa calls to ensure host process credentials cannot leak into subprocess environments.
+- [02-01]: Configured test assertion files with 0o444 read-only permissions during worktree setup and restored 0o666 on teardown to prevent Windows NTFS EPERM deletion locks.
+- [02-01]: Enforced 120s execution timeout with SIGTERM and 2000ms forceKill SIGKILL cascade, returning standard exit code 124 on timeout.
+- [02-01]: Added .worktrees/ to .gitignore to prevent ephemeral worktree directories from polluting git repository status.
 
 ### Pending Todos
 
@@ -96,7 +99,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- None blocking Phase 1. Audit resolved: see `.planning/AUDIT-golden-path.md` (Decisions Resolved section).
+- None blocking Phase 1 or 2. Audit resolved: see `.planning/AUDIT-golden-path.md` (Decisions Resolved section).
 
 ## Deferred Items
 
@@ -109,5 +112,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-09-08
-Stopped at: Completed 01-03-PLAN.md (Phase 1 complete)
-Resume file: None (Phase 1 complete; proceed to Phase 2)
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-execute-foundation-sandbox-dynamic-mcp-plan-checkpoint/02-02-PLAN.md
