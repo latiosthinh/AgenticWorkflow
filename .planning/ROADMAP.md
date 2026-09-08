@@ -69,7 +69,7 @@ flowchart LR
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffolding, SQLite WAL deduplication store, HMAC verification, bot shield, and Fastify ingress route.
-- [ ] 01-02-PLAN.md — Definition of Done rubric prompt, Zod audit schema, and Vercel AI SDK reasoning service.
+- [x] 01-02-PLAN.md — Definition of Done rubric prompt, Zod audit schema, and Vercel AI SDK reasoning service.
 - [ ] 01-03-PLAN.md — Azure DevOps REST client with retry backoff, HTML discussion formatters, and background audit worker pipeline.
 
 ### Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint

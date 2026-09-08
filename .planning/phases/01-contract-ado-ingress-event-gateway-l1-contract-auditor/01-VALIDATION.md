@@ -41,7 +41,7 @@ created: 2026-09-07
 | 1-01-01 | 01 | 1 | INGEST-01 | T-1-01 | Valid HMAC signature accepts (HTTP 202); invalid/tampered signature rejects (HTTP 401) | integration | `npx vitest run tests/ingress.test.ts -t "HMAC"` | ❌ W0 | ⬜ pending |
 | 1-01-02 | 01 | 1 | INGEST-02 | T-1-03 | Duplicate (workItemId, revId) returns HTTP 200 duplicate_ignored and skips execution | integration | `npx vitest run tests/dedup.test.ts` | ❌ W0 | ⬜ pending |
 | 1-01-03 | 01 | 1 | INGEST-03 | T-1-05 | Bot ID in revisedBy or marker in comment terminates task before LLM invocation | unit | `npx vitest run tests/bot-shield.test.ts` | ❌ W0 | ⬜ pending |
-| 1-02-01 | 02 | 2 | CONTR-01 | T-1-04 | Auditor evaluates DoD testability and completeness with structured Zod schema output | unit | `npx vitest run tests/auditor.test.ts` | ❌ W0 | ⬜ pending |
+| 1-02-01 | 02 | 2 | CONTR-01 | T-1-04 | Auditor evaluates DoD testability and completeness with structured Zod schema output | unit | `npx vitest run tests/auditor.test.ts` | ✅ | ✅ green |
 | 1-02-02 | 02 | 2 | CONTR-02 | — | Valid AC patches state to Ready to Dev; ambiguous keeps New with missing specs comment | integration | `npx vitest run tests/ado-client.test.ts` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -54,7 +54,7 @@ created: 2026-09-07
 - [ ] `tests/ingress.test.ts` — Fastify injection tests for HMAC validation (valid, missing, mismatched length, corrupted)
 - [ ] `tests/dedup.test.ts` — SQLite table constraint tests verifying idempotency and 200 duplicate responses
 - [ ] `tests/bot-shield.test.ts` — Unit tests for bot ID and marker matching
-- [ ] `tests/auditor.test.ts` — Unit tests mocking LLM response to verify Zod schema validation and rubric parsing
+- [x] `tests/auditor.test.ts` — Unit tests mocking LLM response to verify Zod schema validation and rubric parsing
 - [ ] `tests/ado-client.test.ts` — Integration tests with mocked ADO REST client verifying JSON Patch structure
 
 ---
