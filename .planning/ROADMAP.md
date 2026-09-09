@@ -45,7 +45,7 @@ flowchart LR
 - [x] **Phase 1: CONTRACT — ADO Ingress, Event Gateway & L1 Contract Auditor** — Webhook HMAC verification, SQLite dedup lock, bot echo filter, requirements auditor, `New` → `Ready to Dev` transition. (completed 2026-09-08)
 - [x] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle. (completed 2026-09-08)
 - [x] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`. (completed 2026-09-08)
-- [ ] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker.
+- [x] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker. (completed 2026-09-09)
 - [ ] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`.
 - [ ] **Phase 6: QA — Verification Loop** — Integration/e2e suite runner, 2-strike flake filter, failure diagnostics → `In Dev` (bounce ≤2), pass → `Ready to Deploy`.
 - [ ] **Phase 7: DEPLOY — Native Environment Approval & Telemetry Monitor** — ADO Environments approval wiring (L5), Azure Monitor/App Insights evaluation window (L6), Done marking with evidence index.
@@ -120,7 +120,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Acceptance Packet formatting, preview/PR URL resolvers, and ADO Dev Done transition patch builder.
 - [x] 04-02-PLAN.md — Shared rework circuit breaker schema, persistence service, and tech lead escalation patch builder.
-- [ ] 04-03-PLAN.md — Human acceptance verdict detection, cumulative rework context envelope, task branch resumption, and end-to-end rework execution pipeline.
+- [x] 04-03-PLAN.md — Human acceptance verdict detection, cumulative rework context envelope, task branch resumption, and end-to-end rework execution pipeline.
 
 ### Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification
 **Goal**: PR review orchestration with native branch-policy enforcement (L2/L3/L4) and merge transition.
