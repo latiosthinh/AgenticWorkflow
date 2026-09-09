@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { dedupEvents, l3Evidence } from '../db/schema.js';
 import {
@@ -18,6 +18,37 @@ import { createOrGetPullRequest } from '../ado/git.js';
 import { formatPrDescription } from '../ado/formatter.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
+
+function parseDiffStat(statStr?: string): { totalLoc: number; filesChanged: number } {
+  if (!statStr) return { totalLoc: 50, filesChanged: 2 };
+  try {
+    const parsed = JSON.parse(statStr);
+    if (typeof parsed === 'object' && parsed !== null && typeof parsed.totalLoc === 'number') {
+      return {
+        totalLoc: parsed.totalLoc,
+        filesChanged: parsed.filesChanged ?? 1,
+      };
+    }
+  } catch {
+    // not JSON, fall back to regex parsing
+  }
+
+  const filesMatch = statStr.match(/(\d+)\s+files?\s+changed/);
+  const insMatch = statStr.match(/(\d+)\s+insertions?\(\+\)/);
+  const delMatch = statStr.match(/(\d+)\s+deletions?\(-\)/);
+  const locMatch = statStr.match(/(\d+)\s+LOC/);
+
+  const filesChanged = filesMatch ? parseInt(filesMatch[1], 10) : 2;
+  const totalLoc =
+    insMatch || delMatch
+      ? (insMatch ? parseInt(insMatch[1], 10) : 0) +
+        (delMatch ? parseInt(delMatch[1], 10) : 0)
+      : locMatch
+        ? parseInt(locMatch[1], 10)
+        : 50;
+
+  return { totalLoc, filesChanged };
+}
 
 export async function routeWorkItemEvent(
   workItemId: number,
@@ -98,6 +129,7 @@ export async function routeWorkItemEvent(
         .select()
         .from(l3Evidence)
         .where(eq(l3Evidence.workItemId, workItemId))
+        .orderBy(desc(l3Evidence.id))
         .get();
 
       const testSummary = evidence
@@ -116,10 +148,7 @@ export async function routeWorkItemEvent(
             durationMs: 100,
           };
 
-      const diffStat = {
-        totalLoc: 50,
-        filesChanged: 2,
-      };
+      const diffStat = parseDiffStat(evidence?.gitDiffStat);
 
       const prDescription = formatPrDescription({
         workItemId,
