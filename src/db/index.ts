@@ -75,6 +75,18 @@ CREATE TABLE IF NOT EXISTS l3_evidence (
 );
 
 CREATE INDEX IF NOT EXISTS idx_l3_evidence_lookup ON l3_evidence(work_item_id, rev_id);
+
+CREATE TABLE IF NOT EXISTS rework_cycles (
+  work_item_id INTEGER PRIMARY KEY,
+  bounce_count INTEGER NOT NULL DEFAULT 0,
+  last_bounce_at INTEGER,
+  source_gate TEXT NOT NULL,
+  escalated_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rework_cycles_lookup ON rework_cycles(work_item_id, bounce_count);
 `);
 
 export const db = drizzle(sqlite, { schema });

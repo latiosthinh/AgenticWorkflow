@@ -81,6 +81,26 @@ export const l3Evidence = sqliteTable(
   ]
 );
 
+export const reworkCycles = sqliteTable(
+  'rework_cycles',
+  {
+    workItemId: integer('work_item_id').primaryKey(),
+    bounceCount: integer('bounce_count').notNull().default(0),
+    lastBounceAt: integer('last_bounce_at', { mode: 'timestamp' }),
+    sourceGate: text('source_gate', { enum: ['accept', 'pr_review'] }).notNull(),
+    escalatedAt: integer('escalated_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index('idx_rework_cycles_lookup').on(table.workItemId, table.bounceCount),
+  ]
+);
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -89,3 +109,5 @@ export type PlanCheckpoint = typeof planCheckpoints.$inferSelect;
 export type InsertPlanCheckpoint = typeof planCheckpoints.$inferInsert;
 export type L3Evidence = typeof l3Evidence.$inferSelect;
 export type InsertL3Evidence = typeof l3Evidence.$inferInsert;
+export type ReworkCycle = typeof reworkCycles.$inferSelect;
+export type InsertReworkCycle = typeof reworkCycles.$inferInsert;
