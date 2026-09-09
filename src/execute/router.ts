@@ -21,7 +21,7 @@ export async function routeWorkItemEvent(
   options?: any
 ): Promise<void> {
   try {
-    const workItem = await getWorkItemDetails(workItemId);
+    const workItem = await getWorkItemDetails(workItemId, revId);
 
     let previousState: string | undefined;
     if (revId > 1) {
