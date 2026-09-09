@@ -17,6 +17,7 @@ import { processWorkItemRework } from './rework-worker.js';
 import { createOrGetPullRequest } from '../ado/git.js';
 import { formatPrDescription } from '../ado/formatter.js';
 import { env } from '../config/env.js';
+import { slugify } from '../utils/paths.js';
 
 export async function routeWorkItemEvent(
   workItemId: number,
@@ -128,10 +129,7 @@ export async function routeWorkItemEvent(
         diffStat,
       });
 
-      const slug = workItem.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+      const slug = slugify(workItem.title);
       const sourceBranch = `task/ticket-${workItemId}-${slug}`;
 
       await createOrGetPullRequest({
