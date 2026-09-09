@@ -1,6 +1,7 @@
 import type { GitPullRequest } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { adoClient, withRetry } from './client.js';
+import { env } from '../config/env.js';
 
 export async function getPullRequest(
   repositoryId: string,
@@ -22,7 +23,8 @@ export async function createOrGetPullRequest(params: {
 }): Promise<GitPullRequest> {
   const gitApi = await adoClient.getGitApi();
   const sourceRefName = `refs/heads/${params.sourceBranch.replace(/^refs\/heads\//, '')}`;
-  const targetRefName = `refs/heads/${(params.targetBranch || 'main').replace(/^refs\/heads\//, '')}`;
+  const defaultBranch = env.ADO_DEFAULT_BRANCH || 'main';
+  const targetRefName = `refs/heads/${(params.targetBranch || defaultBranch).replace(/^refs\/heads\//, '')}`;
 
   const existingPrs = await withRetry(() =>
     gitApi.getPullRequests(
