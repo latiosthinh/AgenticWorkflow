@@ -10,6 +10,8 @@ export const EnvSchema = z.object({
   ADO_BOT_ID: z.string().min(1, 'ADO_BOT_ID is required'),
   ADO_WEBHOOK_SECRET: z.string().min(1, 'ADO_WEBHOOK_SECRET is required'),
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  PREVIEW_URL_TEMPLATE: z.string().optional(),
+  PR_URL_TEMPLATE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
