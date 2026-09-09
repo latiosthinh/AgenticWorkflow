@@ -9,6 +9,8 @@ import {
   buildRepairExhaustedPatch,
   buildContractConflictPatch,
 } from '../test-runner/evidence.js';
+import { buildDevDoneAcceptancePatch } from '../accept/packet.js';
+import { buildEscalationPatch } from '../accept/breaker.js';
 
 export interface WorkItemDetails {
   id: number;
@@ -194,4 +196,23 @@ export async function flagTicketBlocked(
   }
   return adoClient.updateWorkItem(workItemId, patchDoc);
 }
+
+export async function transitionToDevDoneWithPacket(
+  workItemId: number,
+  htmlComment: string
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  const patchDoc = buildDevDoneAcceptancePatch(htmlComment, details.tags);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
+}
+
+export async function escalateReworkToBlocked(
+  workItemId: number,
+  bounceCount: number
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  const patchDoc = buildEscalationPatch(workItemId, bounceCount, details.tags);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
+}
+
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2
