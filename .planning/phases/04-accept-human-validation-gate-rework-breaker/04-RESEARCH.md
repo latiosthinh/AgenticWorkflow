@@ -578,11 +578,11 @@ export function buildEscalationPatch(
 | A2 | Preview URL template can use `{workItemId}` interpolation token. | URL Resolvers | Low: standard pattern for dev environments. |
 | A3 | PR link can be constructed via `PR_URL_TEMPLATE` or point to branch compare URL prior to Phase 5 PR automation. | URL Resolvers | Low: ACCP-01 requires PR link where available; Phase 5 implements full PR creation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How should review comments be fetched if human rejects by dragging the card without adding a comment?**
+1. **How should review comments be fetched if human rejects by dragging the card without adding a comment?** — RESOLVED: If `System.History` is empty on `Dev Done` → `In Dev` transition, check `witApi.getComments()` for the latest non-bot comment; if still empty, default feedback to `"Rejected from Dev Done without specific comments. Please review acceptance criteria and test results."`
    - What we know: ADO allows state transitions without comments.
-   - Recommendation: If `System.History` is empty on `Dev Done` → `In Dev` transition, check `witApi.getComments()` for the latest non-bot comment; if still empty, default feedback to `"Rejected from Dev Done without specific comments. Please review acceptance criteria and test results."`
+   - Recommendation: Default feedback text prevents empty prompt context during rework.
 
 ## Environment Availability
 
