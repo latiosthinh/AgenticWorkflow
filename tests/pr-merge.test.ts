@@ -214,6 +214,39 @@ describe('PR Merge Handling & Ready for QA Transition (MRG-05)', () => {
       const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
       expect(historyOp.value).toContain('<code>fedcba98</code>');
     });
+
+    it('defaults policy gates to false (fail-closed) when policy verification throws', async () => {
+      mockPolicyApi.getPolicyEvaluations.mockRejectedValue(new Error('Policy API timeout'));
+
+      const payload = {
+        eventType: 'git.pullrequest.merged',
+        resource: {
+          pullRequestId: 99,
+          title: 'AB#801 - Implement User Registration',
+          url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/99',
+          targetRefName: 'refs/heads/main',
+          lastMergeCommit: {
+            commitId: 'abcdef0123456789',
+          },
+          repository: {
+            id: 'repo-uuid',
+            project: { id: 'proj-uuid' },
+          },
+        },
+      };
+
+      await handlePullRequestEvent(payload);
+
+      expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+      const callArgs = mockWitApi.updateWorkItem.mock.calls[0];
+      const patchDoc = callArgs.find((a: any) => Array.isArray(a));
+      const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+
+      // Verify fail-closed behavior: gates report N/A instead of Passed
+      expect(historyOp.value).toContain('<strong>L2 Code Review Gate:</strong> N/A');
+      expect(historyOp.value).toContain('<strong>L3 Build Validation Gate:</strong> N/A');
+      expect(historyOp.value).toContain('<strong>L4 Security &amp; SAST Gate:</strong> N/A');
+    });
   });
 
   describe('Fastify Webhook Routing for PR Events', () => {

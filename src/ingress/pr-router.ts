@@ -137,15 +137,16 @@ export async function handlePullRequestEvent(
     let policyStatus;
     try {
       policyStatus = await verifyBranchPolicies(projectId, pullRequestId);
-    } catch {
+    } catch (err: any) {
+      console.error(`[pr-router] Policy verification failed for PR #${pullRequestId}:`, err);
       policyStatus = {
-        allApproved: true,
+        allApproved: false,
         pendingCount: 0,
         failedCount: 0,
-        l2ReviewersPassed: true,
-        l3BuildPassed: true,
-        l4SecurityPassed: true,
-        summary: [],
+        l2ReviewersPassed: false,
+        l3BuildPassed: false,
+        l4SecurityPassed: false,
+        summary: ['Policy verification API unavailable; gates unverified'],
       };
     }
 
