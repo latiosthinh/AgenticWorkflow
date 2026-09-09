@@ -357,5 +357,8 @@ describe('Rework Execution Integration & Router Workflow', () => {
     expect(stateOp?.value).toBe('Blocked');
     const tagOp = lastPatch.find((op: any) => op.path === '/fields/System.Tags');
     expect(tagOp?.value).toContain('[diff-ceiling-exceeded]');
+
+    const dedup = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).get();
+    expect(dedup?.status).toBe('completed');
   });
 });

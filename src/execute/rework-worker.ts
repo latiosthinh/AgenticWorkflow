@@ -49,6 +49,18 @@ export async function processWorkItemRework(
 ): Promise<void> {
   let worktreePath: string | undefined;
 
+  const markEventCompleted = () => {
+    db.update(dedupEvents)
+      .set({ status: 'completed' })
+      .where(
+        and(
+          eq(dedupEvents.workItemId, workItemId),
+          eq(dedupEvents.revId, revId)
+        )
+      )
+      .run();
+  };
+
   try {
     const workItem = await getWorkItemDetails(workItemId, revId);
 
@@ -118,6 +130,7 @@ export async function processWorkItemRework(
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
       worktreePath = undefined;
+      markEventCompleted();
       return;
     }
 
@@ -159,6 +172,7 @@ export async function processWorkItemRework(
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
       worktreePath = undefined;
+      markEventCompleted();
       return;
     }
 
@@ -173,6 +187,7 @@ export async function processWorkItemRework(
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
       worktreePath = undefined;
+      markEventCompleted();
       return;
     }
 
@@ -188,6 +203,7 @@ export async function processWorkItemRework(
           );
           await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
           worktreePath = undefined;
+          markEventCompleted();
           return;
         }
       }
@@ -221,6 +237,7 @@ export async function processWorkItemRework(
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
       worktreePath = undefined;
+      markEventCompleted();
       return;
     }
 
@@ -281,15 +298,7 @@ export async function processWorkItemRework(
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
     worktreePath = undefined;
 
-    db.update(dedupEvents)
-      .set({ status: 'completed' })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    markEventCompleted();
   } catch (err: any) {
     if (worktreePath) {
       await cleanupWorktree(process.cwd(), worktreePath).catch(() => {});
