@@ -1,5 +1,6 @@
 import {
   CommentThreadStatus,
+  CommentType,
   type GitPullRequestCommentThread,
 } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
 import { adoClient, withRetry } from './client.js';
@@ -29,7 +30,8 @@ export async function extractActiveReviewComments(
       thread.isDeleted ||
       thread.status === CommentThreadStatus.Fixed ||
       thread.status === CommentThreadStatus.Closed ||
-      thread.status === CommentThreadStatus.ByDesign
+      thread.status === CommentThreadStatus.ByDesign ||
+      thread.status === CommentThreadStatus.WontFix
     ) {
       continue;
     }
@@ -40,7 +42,7 @@ export async function extractActiveReviewComments(
       thread.threadContext?.leftFileStart?.line;
 
     for (const comment of thread.comments || []) {
-      if (comment.isDeleted) {
+      if (comment.isDeleted || comment.commentType === CommentType.System) {
         continue;
       }
 

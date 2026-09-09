@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PolicyEvaluationStatus } from 'azure-devops-node-api/interfaces/PolicyInterfaces.js';
-import { CommentThreadStatus } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
+import { CommentThreadStatus, CommentType } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
 import { adoClient } from '../src/ado/client.js';
 import {
   verifyBranchPolicies,
@@ -394,7 +394,7 @@ describe('Branch Policies & Merge Readiness (MRG-02 & MRG-03)', () => {
       });
     });
 
-    it('filters out resolved threads (Fixed, Closed, ByDesign) and deleted threads/comments', async () => {
+    it('filters out resolved threads (Fixed, Closed, ByDesign, WontFix) and deleted threads/comments or system comments', async () => {
       const mockGitApi = {
         getThreads: vi.fn().mockResolvedValue([
           {
@@ -417,16 +417,28 @@ describe('Branch Policies & Merge Readiness (MRG-02 & MRG-03)', () => {
           },
           {
             id: 204,
-            isDeleted: true,
-            status: CommentThreadStatus.Active,
-            threadContext: { filePath: '/src/deleted-thread.ts' },
-            comments: [{ id: 4, content: 'Thread was deleted.' }],
+            status: CommentThreadStatus.WontFix,
+            threadContext: { filePath: '/src/wontfix.ts' },
+            comments: [{ id: 4, content: 'Wont fix.' }],
           },
           {
             id: 205,
+            isDeleted: true,
+            status: CommentThreadStatus.Active,
+            threadContext: { filePath: '/src/deleted-thread.ts' },
+            comments: [{ id: 5, content: 'Thread was deleted.' }],
+          },
+          {
+            id: 206,
             status: CommentThreadStatus.Active,
             threadContext: { filePath: '/src/deleted-comment.ts' },
-            comments: [{ id: 5, isDeleted: true, content: 'Comment was deleted.' }],
+            comments: [{ id: 6, isDeleted: true, content: 'Comment was deleted.' }],
+          },
+          {
+            id: 207,
+            status: CommentThreadStatus.Active,
+            threadContext: { filePath: '/src/system-comment.ts' },
+            comments: [{ id: 7, commentType: CommentType.System, content: 'Build succeeded.' }],
           },
         ]),
       };
