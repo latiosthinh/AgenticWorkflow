@@ -148,7 +148,12 @@ Plans:
   2. 2-strike filter: consecutive identical failures required before bounce.
   3. QA fail → "In Dev" with reproduction logs + diagnostics (bounce cap 2, then human escalation).
   4. QA pass → "Ready to Deploy" + QA evidence summary.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 06-01-PLAN.md — Schema verification, atomic state store, bounce cap circuit breaker & SHA-256 failure fingerprinting.
+- [x] 06-02-PLAN.md — Staging health pre-flight check, subprocess runner & deterministic 2-strike filter.
+- [x] 06-03-PLAN.md — Reproduction markdown diagnostics, evidence summaries, CLI loop harness & full orchestrator.
 
 ### Phase 7: DEPLOY — Native Environment Approval & Telemetry Monitor
 **Goal**: Human-gated deployment via native ADO Environments (L5) and post-deploy telemetry confidence (L6).
@@ -183,7 +188,7 @@ Plans:
 | 2. EXECUTE Foundation: Sandbox, MCP & Plan | 3/3 | Complete | 2026-09-08 |
 | 3. EXECUTE + CHECK: Implement & Test | 3/3 | Complete | 2026-09-08 |
 | 4. ACCEPT: Human Validation Gate | 3/3 | Complete | 2026-09-09 |
-| 5. MERGE: PR & Native CI Gates | 2/3 | In progress | - |
-| 6. QA: Verification Loop | 0/TBD | Not started | - |
+| 5. MERGE: PR & Native CI Gates | 3/3 | Complete | 2026-09-09 |
+| 6. QA: Verification Loop | 3/3 | Complete | 2026-09-09 |
 | 7. DEPLOY: Environment Approval & Monitor | 0/TBD | Not started | - |
 | 8. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |

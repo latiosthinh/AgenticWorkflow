@@ -46,10 +46,10 @@
 
 ### 6. QA — Verification Loop (L3 integration evidence)
 
-- [ ] **QA-01**: Merge into target branch triggers QA validation stage on "Ready for QA" (human tester and/or QA agent).
-- [ ] **QA-02**: QA validation executes integration/e2e test suites with 2-strike deterministic flake filtering.
-- [ ] **QA-03**: QA failure moves ticket back to "In Dev" with reproduction logs and diagnostic report in discussion (QA bounce cap 2, then human escalation).
-- [ ] **QA-04**: QA pass transitions ticket to "Ready to Deploy" and posts QA evidence summary.
+- [x] **QA-01**: Merge into target branch triggers QA validation stage on "Ready for QA" (human tester and/or QA agent).
+- [x] **QA-02**: QA validation executes integration/e2e test suites with 2-strike deterministic flake filtering.
+- [x] **QA-03**: QA failure moves ticket back to "In Dev" with reproduction logs and diagnostic report in discussion (QA bounce cap 2, then human escalation).
+- [x] **QA-04**: QA pass transitions ticket to "Ready to Deploy" and posts QA evidence summary.
 
 ### 7. DEPLOY — Native Approval Gate & Monitoring (L5, L6)
 
@@ -110,10 +110,10 @@
 | MRG-03 | Phase 5 | Complete |
 | MRG-04 | Phase 5 | Complete |
 | MRG-05 | Phase 5 | Complete |
-| QA-01 | Phase 6 | Pending |
-| QA-02 | Phase 6 | Pending |
-| QA-03 | Phase 6 | Pending |
-| QA-04 | Phase 6 | Pending |
+| QA-01 | Phase 6 | Complete |
+| QA-02 | Phase 6 | Complete |
+| QA-03 | Phase 6 | Complete |
+| QA-04 | Phase 6 | Complete |
 | DPLY-01 | Phase 7 | Pending |
 | DPLY-02 | Phase 7 | Pending |
 | DPLY-03 | Phase 7 | Pending |
