@@ -182,7 +182,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
 
     // 1. Verify prompt envelope received feedback
     expect(promptReceived).toContain('<reviewer_feedback>');
-    expect(promptReceived).toContain('Input <= 0 must return 400.');
+    expect(promptReceived).toContain('Input &lt;= 0 must return 400.');
 
     // 2. Verify circuit breaker recorded bounce 1
     const breakerRow = db.select().from(reworkCycles).where(eq(reworkCycles.workItemId, workItemId)).get();

@@ -7,15 +7,24 @@ export interface CumulativeReworkEnvelope {
   remainingLocBudget: number;
 }
 
+export function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export function formatReworkPrompt(envelope: CumulativeReworkEnvelope): string {
   const feedbackItems = envelope.reviewFeedback
-    .map((f, i) => `Feedback #${i + 1}:\n${f}`)
+    .map((f, i) => `Feedback #${i + 1}:\n${escapeXml(f)}`)
     .join('\n\n');
 
-  return `You are performing an iterative rework turn on ticket #${envelope.workItemId}: "${envelope.title}".
+  return `You are performing an iterative rework turn on ticket #${envelope.workItemId}: "${escapeXml(envelope.title)}".
 
 <original_acceptance_criteria>
-${envelope.originalAcceptanceCriteria}
+${escapeXml(envelope.originalAcceptanceCriteria)}
 </original_acceptance_criteria>
 
 <prior_cumulative_diff>
