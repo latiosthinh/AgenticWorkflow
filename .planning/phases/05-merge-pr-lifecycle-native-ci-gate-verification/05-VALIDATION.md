@@ -38,10 +38,12 @@ created: 2026-09-09
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 5-01-01 | 01 | 1 | MRG-01 | T-5-01 | Create PR with AB#<id> header and link ArtifactLink relation to work item | integration | `npx vitest run tests/pr-lifecycle.test.ts -t "create"` | ❌ W0 | ⬜ pending |
-| 5-01-02 | 01 | 1 | MRG-03 | T-5-02 | Query native policy evaluations and block merge when policies are pending/failed | unit | `npx vitest run tests/branch-policy.test.ts` | ❌ W0 | ⬜ pending |
-| 5-02-01 | 02 | 2 | MRG-02, MRG-04 | T-5-03 | Detect review vote, extract active thread comments, increment shared breaker, push to task branch | integration | `npx vitest run tests/pr-review.test.ts` | ❌ W0 | ⬜ pending |
-| 5-02-02 | 02 | 2 | MRG-05 | T-5-04 | Handle PR merge event, patch state to Ready for QA, and post [Merge Summary] HTML comment | integration | `npx vitest run tests/pr-merge.test.ts` | ❌ W0 | ⬜ pending |
+| 5-01-01 | 01 | 1 | MRG-01 | T-5-01 | Add Git/PR APIs to ADO client, build Markdown/HTML formatters with AB# and loop shields | unit | `npx vitest run tests/pr-lifecycle.test.ts -t "format"` | ❌ W0 | ⬜ pending |
+| 5-01-02 | 01 | 1 | MRG-01 | T-5-01 | Create PR targeting main and link ArtifactLink relation to ADO work item | integration | `npx vitest run tests/pr-lifecycle.test.ts -t "create"` | ❌ W0 | ⬜ pending |
+| 5-02-01 | 02 | 2 | MRG-03 | T-5-02 | Query native policy evaluations and block merge when L2/L3/L4 policies pending/failed | unit | `npx vitest run tests/branch-policies.test.ts -t "evaluations"` | ❌ W0 | ⬜ pending |
+| 5-02-02 | 02 | 2 | MRG-02, MRG-03 | T-5-02 | Two-key merge authorization check ([acceptance-approved] + human vote >= 5) and PR thread extraction | unit | `npx vitest run tests/branch-policies.test.ts -t "gate"` | ❌ W0 | ⬜ pending |
+| 5-03-01 | 03 | 3 | MRG-04 | T-5-03 | PR review rejection router, shared max-2 breaker, cumulative rework envelope, task branch push | integration | `npx vitest run tests/pr-rework.test.ts` | ❌ W0 | ⬜ pending |
+| 5-03-02 | 03 | 3 | MRG-05 | T-5-04 | Handle git.pullrequest.merged webhook, transition to Ready for QA, post [Merge Summary] HTML comment | integration | `npx vitest run tests/pr-merge.test.ts` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,8 +52,8 @@ created: 2026-09-09
 ## Wave 0 Requirements
 
 - [ ] `tests/pr-lifecycle.test.ts` — Tests for PR creation, description formatting, and ArtifactLink work item attachment
-- [ ] `tests/branch-policy.test.ts` — Tests for native ADO policy evaluation reading and merge blockage
-- [ ] `tests/pr-review.test.ts` — Tests for PR review rejection detection, thread comment extraction, and shared breaker increment
+- [ ] `tests/branch-policies.test.ts` — Tests for native ADO policy evaluation reading, merge blockage, and thread comment parsing
+- [ ] `tests/pr-rework.test.ts` — Tests for PR review rejection detection, cumulative rework prompt assembly, and shared breaker increment
 - [ ] `tests/pr-merge.test.ts` — Tests for PR merge webhook handling, Ready for QA transition, and Merge Summary comment
 
 ---

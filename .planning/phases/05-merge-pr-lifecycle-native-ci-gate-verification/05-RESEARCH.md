@@ -544,12 +544,11 @@ export function formatMergeSummaryComment(options: MergeSummaryCommentOptions): 
 | A1 | Pull request policy evaluations use `vstfs:///CodeReview/CodeReviewId/{projectId}/{pullRequestId}` as artifact ID in ADO REST API. | Architecture Patterns / Pitfalls | [VERIFIED: learn.microsoft.com/en-us/rest/api/azure/devops/policy/evaluations/list] High risk if wrong, but verified in official Microsoft API docs. |
 | A2 | Human approval vote in ADO PR reviewer list is represented by `vote >= 5` (`5`: approved with suggestions, `10`: approved). | Architecture Patterns / MRG-02 | [VERIFIED: azure-devops-node-api GitInterfaces.d.ts line 2874]. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Auto-Complete vs Human UI Merge:**
+   - RESOLVED: Support both! Webhook listener handles `git.pullrequest.merged` seamlessly for UI merges, while an API completion helper is available when automated merge is requested.
    - What we know: In typical setups, developers click "Complete" in the ADO UI after reviewing, which fires `git.pullrequest.merged`. Alternatively, an automated agent can complete the PR via `updatePullRequest` if auto-complete or API completion is desired.
-   - What's unclear: Does the team prefer humans to always click Merge in ADO UI, or can the agent complete the PR once reviewer vote is approved and all policies are green?
-   - Recommendation: Support both! Webhook listener handles `git.pullrequest.merged` seamlessly for UI merges, while an API completion helper is available when automated merge is requested.
 
 ## Environment Availability
 
