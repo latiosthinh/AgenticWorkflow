@@ -38,7 +38,7 @@
 
 ### 5. MERGE — PR Review & Native CI Gates (L2, L3, L4)
 
-- [ ] **MRG-01**: Agent pushes task branch and creates Azure Repos PR linked via `AB#<id>` with L1/L3 evidence summary in PR description.
+- [x] **MRG-01**: Agent pushes task branch and creates Azure Repos PR linked via `AB#<id>` with L1/L3 evidence summary in PR description.
 - [ ] **MRG-02**: Human reviewer conducts code review and renders PR merge verdict (◆); merge blocked until acceptance (ACCP-02) passed.
 - [ ] **MRG-03**: System verifies native ADO branch policy gate status before merge: build validation green (L3 re-run), code quality scans (L2), security/SAST scans (L4). No custom CI orchestration — branch policies are the enforcement; system reads status only.
 - [ ] **MRG-04**: PR review rejection moves ticket back to "In Dev" and re-triggers rework agent with cumulative envelope (original AC + prior diff + review comments); shares ACCP-03 breaker.
@@ -105,7 +105,7 @@
 | ACCP-01 | Phase 4 | Complete |
 | ACCP-02 | Phase 4 | Complete |
 | ACCP-03 | Phase 4 | Complete |
-| MRG-01 | Phase 5 | Pending |
+| MRG-01 | Phase 5 | Complete |
 | MRG-02 | Phase 5 | Pending |
 | MRG-03 | Phase 5 | Pending |
 | MRG-04 | Phase 5 | Pending |

@@ -132,7 +132,12 @@ Plans:
   3. System reads branch-policy status (build, quality scan, SAST) — merge only when green; no custom CI code.
   4. Review rejection → "In Dev" rework (shared breaker); new commits land on existing PR.
   5. Merge → ticket "Ready for QA" + merge summary comment.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 05-01-PLAN.md — PR Creation, Evidence Description Formatting, ArtifactLink & ADO Git Client Foundation (MRG-01)
+- [ ] 05-02-PLAN.md — Native CI Branch Policy Verification & Two-Key Merge Gate (MRG-02, MRG-03)
+- [ ] 05-03-PLAN.md — PR Review Rejection Rework Loop, Webhook Routing & Ready for QA Transition (MRG-04, MRG-05)
 
 ### Phase 6: QA — Verification Loop
 **Goal**: Post-merge integration verification with deterministic failure handling.
@@ -177,8 +182,8 @@ Plans:
 | 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
 | 2. EXECUTE Foundation: Sandbox, MCP & Plan | 3/3 | Complete | 2026-09-08 |
 | 3. EXECUTE + CHECK: Implement & Test | 3/3 | Complete | 2026-09-08 |
-| 4. ACCEPT: Human Validation Gate | 0/3 | In Progress | - |
-| 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
+| 4. ACCEPT: Human Validation Gate | 3/3 | Complete | 2026-09-09 |
+| 5. MERGE: PR & Native CI Gates | 0/3 | Not started | - |
 | 6. QA: Verification Loop | 0/TBD | Not started | - |
 | 7. DEPLOY: Environment Approval & Monitor | 0/TBD | Not started | - |
 | 8. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |
