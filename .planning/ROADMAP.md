@@ -115,7 +115,12 @@ Plans:
   2. Approve verdict unlocks PR merge path; reject moves ticket to "In Dev" with comments.
   3. Reject re-triggers rework agent with cumulative envelope (AC + prior diff + feedback).
   4. Shared breaker caps automated bounces at 2, then escalates to tech lead.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Acceptance Packet formatting, preview/PR URL resolvers, and ADO Dev Done transition patch builder.
+- [ ] 04-02-PLAN.md — Shared rework circuit breaker schema, persistence service, and tech lead escalation patch builder.
+- [ ] 04-03-PLAN.md — Human acceptance verdict detection, cumulative rework context envelope, task branch resumption, and end-to-end rework execution pipeline.
 
 ### Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification
 **Goal**: PR review orchestration with native branch-policy enforcement (L2/L3/L4) and merge transition.
@@ -172,7 +177,7 @@ Plans:
 | 1. CONTRACT: Ingress & L1 Auditor | 3/3 | Complete | 2026-09-08 |
 | 2. EXECUTE Foundation: Sandbox, MCP & Plan | 3/3 | Complete | 2026-09-08 |
 | 3. EXECUTE + CHECK: Implement & Test | 3/3 | Complete | 2026-09-08 |
-| 4. ACCEPT: Human Validation Gate | 0/TBD | Not started | - |
+| 4. ACCEPT: Human Validation Gate | 0/3 | In Progress | - |
 | 5. MERGE: PR & Native CI Gates | 0/TBD | Not started | - |
 | 6. QA: Verification Loop | 0/TBD | Not started | - |
 | 7. DEPLOY: Environment Approval & Monitor | 0/TBD | Not started | - |
