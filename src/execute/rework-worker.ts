@@ -80,19 +80,28 @@ export async function processWorkItemRework(
 
     // 2. Fetch cumulative diff against base commit
     let baseRef = options?.baseBranch || 'origin/main';
+    let baseRefResolved = false;
     try {
       await git.raw(['rev-parse', '--verify', baseRef]);
+      baseRefResolved = true;
     } catch {
-      const candidates = ['origin/master', 'main', 'master', 'HEAD'];
+      const candidates = ['origin/main', 'origin/master', 'main', 'master'];
       for (const candidate of candidates) {
         try {
           await git.raw(['rev-parse', '--verify', candidate]);
           baseRef = candidate;
+          baseRefResolved = true;
           break;
         } catch {
           // continue
         }
       }
+    }
+
+    if (!baseRefResolved) {
+      throw new Error(
+        `Unable to resolve valid base branch reference for cumulative diff. Checked: ${baseRef}, origin/main, origin/master, main, master`
+      );
     }
 
     let baseCommit: string;
