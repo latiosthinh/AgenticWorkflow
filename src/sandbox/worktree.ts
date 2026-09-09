@@ -55,6 +55,11 @@ export function unprotectFiles(filePaths: string[]): void {
   }
 }
 
+export interface CreateWorktreeOptions {
+  baseBranch?: string;
+  checkoutExistingBranch?: boolean;
+}
+
 /**
  * Creates an isolated ephemeral git worktree for a ticket on a dedicated task branch.
  */
@@ -62,7 +67,7 @@ export async function createWorktree(
   repoRoot: string,
   workItemId: number,
   title: string,
-  baseBranch = 'origin/main'
+  options?: CreateWorktreeOptions | string
 ): Promise<WorktreeResult> {
   const git: SimpleGit = simpleGit(repoRoot);
   const slug = slugify(title);
@@ -70,6 +75,11 @@ export async function createWorktree(
   const worktreeDir = path.join(repoRoot, '.worktrees');
   const worktreePath = normalizePath(path.join(worktreeDir, dirName));
   const branchName = `task/ticket-${workItemId}-${slug}`;
+
+  const resolvedOptions: CreateWorktreeOptions =
+    typeof options === 'string' ? { baseBranch: options } : options || {};
+  const baseBranch = resolvedOptions.baseBranch || 'origin/main';
+  const checkoutExisting = resolvedOptions.checkoutExistingBranch ?? false;
 
   // Prune dangling worktrees first
   try {
@@ -85,29 +95,37 @@ export async function createWorktree(
 
   // If worktree path already exists from previous run, clean it up first
   if (fs.existsSync(worktreePath)) {
-    await cleanupWorktree(repoRoot, worktreePath, { deleteBranch: true, branchName });
+    await cleanupWorktree(repoRoot, worktreePath, {
+      deleteBranch: !checkoutExisting,
+      branchName,
+    });
   }
 
-  // If local branch already exists, remove it cleanly first
-  try {
-    const branchSummary = await git.branchLocal();
-    if (branchSummary.all.includes(branchName)) {
-      await git.raw(['branch', '-D', branchName]);
+  if (checkoutExisting) {
+    // Resumption: attach worktree to existing task branch without deleting branch
+    await git.raw(['worktree', 'add', worktreePath, branchName]);
+  } else {
+    // If local branch already exists, remove it cleanly first
+    try {
+      const branchSummary = await git.branchLocal();
+      if (branchSummary.all.includes(branchName)) {
+        await git.raw(['branch', '-D', branchName]);
+      }
+    } catch {
+      // Ignore branch deletion errors
     }
-  } catch {
-    // Ignore branch deletion errors
-  }
 
-  // Fallback to HEAD if baseBranch cannot be resolved
-  let targetBase = baseBranch;
-  try {
-    await git.raw(['rev-parse', '--verify', baseBranch]);
-  } catch {
-    targetBase = 'HEAD';
-  }
+    // Fallback to HEAD if baseBranch cannot be resolved
+    let targetBase = baseBranch;
+    try {
+      await git.raw(['rev-parse', '--verify', baseBranch]);
+    } catch {
+      targetBase = 'HEAD';
+    }
 
-  // Add git worktree
-  await git.raw(['worktree', 'add', '-b', branchName, worktreePath, targetBase]);
+    // Add git worktree
+    await git.raw(['worktree', 'add', '-b', branchName, worktreePath, targetBase]);
+  }
 
   // Recursively protect test files
   const testFilesProtected = protectTestFiles(worktreePath);
