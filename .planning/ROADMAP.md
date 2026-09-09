@@ -12,7 +12,7 @@ Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidenc
 | — triage | CONTRACT | `Ready to Dev` → `In Dev` | human assigns domain tags | — |
 | 2. Plan (Q→human) | EXECUTE | 3/3 | Complete    | 2026-09-08 |
 | 3. Implement | EXECUTE | 3/3 | Complete    | 2026-09-08 |
-| 4. Test + verify | CHECK | `In Dev` → `Dev Done` | agent runs, self-repairs | **L3 local** |
+| 4. Test + verify | CHECK | 3/3 | Complete    | 2026-09-09 |
 | 5. Accept | ACCEPT | `Dev Done` | human verdict ◆ (packet: tests + diff + preview) | acceptance |
 | 6. PR review | MERGE | `Dev Done` | human verdict ◆ (reject → `In Dev`, breaker ≤2) | — |
 | 7. CI gates | MERGE | merge blocked until green | native branch policy (pipeline re-runs) | **L2, L3, L4** |
