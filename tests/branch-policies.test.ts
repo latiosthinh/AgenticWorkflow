@@ -490,5 +490,30 @@ describe('Branch Policies & Merge Readiness (MRG-02 & MRG-03)', () => {
         content: 'Please fix the memory leak on line 10.',
       });
     });
+
+    it('filters out empty or whitespace-only comments', async () => {
+      const mockGitApi = {
+        getThreads: vi.fn().mockResolvedValue([
+          {
+            id: 401,
+            status: CommentThreadStatus.Active,
+            threadContext: { filePath: '/src/main.ts', rightFileStart: { line: 1 } },
+            comments: [
+              { id: 1, content: '   ' },
+              { id: 2, content: '' },
+              { id: 3, content: undefined },
+              { id: 4, content: 'Actual actionable feedback' },
+            ],
+          },
+        ]),
+      };
+
+      adoClient.setGitApi(mockGitApi as any);
+
+      const comments = await extractActiveReviewComments('repo-1', 5, 'proj-1');
+
+      expect(comments).toHaveLength(1);
+      expect(comments[0].content).toBe('Actual actionable feedback');
+    });
   });
 });

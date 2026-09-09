@@ -52,7 +52,7 @@ export async function extractActiveReviewComments(
       }
 
       const content = comment.content?.trim() || '';
-      if (content.includes('<!-- [automated-agent] -->')) {
+      if (!content || content.includes('<!-- [automated-agent] -->')) {
         continue;
       }
 
