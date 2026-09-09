@@ -3,6 +3,7 @@ import {
   JsonPatchOperation,
   Operation,
 } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
+import type { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces.js';
 import { adoClient } from './client.js';
 import {
   buildDevDonePatch,
@@ -242,7 +243,7 @@ export function buildMergeReadyForQaPatch(
 export async function transitionToReadyForQa(
   workItemId: number,
   htmlComment: string
-): Promise<any> {
+): Promise<WorkItem> {
   const details = await getWorkItemDetails(workItemId);
   const patchDoc = buildMergeReadyForQaPatch(htmlComment, details.tags);
   return adoClient.updateWorkItem(workItemId, patchDoc);
