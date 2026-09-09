@@ -118,7 +118,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Acceptance Packet formatting, preview/PR URL resolvers, and ADO Dev Done transition patch builder.
+- [x] 04-01-PLAN.md — Acceptance Packet formatting, preview/PR URL resolvers, and ADO Dev Done transition patch builder.
 - [ ] 04-02-PLAN.md — Shared rework circuit breaker schema, persistence service, and tech lead escalation patch builder.
 - [ ] 04-03-PLAN.md — Human acceptance verdict detection, cumulative rework context envelope, task branch resumption, and end-to-end rework execution pipeline.
 
