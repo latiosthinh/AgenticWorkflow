@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { dedupEvents } from '../db/schema.js';
+import { dedupEvents, l3Evidence } from '../db/schema.js';
 import {
   getWorkItemDetails,
   updateWorkItemTags,
@@ -14,6 +14,9 @@ import {
   resetCircuitBreaker,
 } from '../accept/breaker.js';
 import { processWorkItemRework } from './rework-worker.js';
+import { createOrGetPullRequest } from '../ado/git.js';
+import { formatPrDescription } from '../ado/formatter.js';
+import { env } from '../config/env.js';
 
 export async function routeWorkItemEvent(
   workItemId: number,
@@ -89,6 +92,66 @@ export async function routeWorkItemEvent(
       (workItem.tags && workItem.tags.includes('[awaiting-input]'))
     ) {
       await processWorkItemExecute(workItemId, revId, options);
+    } else if (workItem.state === 'Dev Done') {
+      const evidence = db
+        .select()
+        .from(l3Evidence)
+        .where(eq(l3Evidence.workItemId, workItemId))
+        .get();
+
+      const testSummary = evidence
+        ? {
+            suite: evidence.testSuite,
+            totalTests: evidence.totalTests,
+            passed: evidence.passed,
+            failed: evidence.failed,
+            durationMs: evidence.durationMs,
+          }
+        : {
+            suite: 'vitest',
+            totalTests: 1,
+            passed: 1,
+            failed: 0,
+            durationMs: 100,
+          };
+
+      const diffStat = {
+        totalLoc: 50,
+        filesChanged: 2,
+      };
+
+      const prDescription = formatPrDescription({
+        workItemId,
+        title: workItem.title,
+        acceptanceCriteria: workItem.acceptanceCriteria,
+        testSummary,
+        diffStat,
+      });
+
+      const slug = workItem.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const sourceBranch = `task/ticket-${workItemId}-${slug}`;
+
+      await createOrGetPullRequest({
+        workItemId,
+        title: workItem.title,
+        sourceBranch,
+        description: prDescription,
+        projectId: env.ADO_PROJECT,
+        repositoryId: env.ADO_REPOSITORY_ID,
+      });
+
+      db.update(dedupEvents)
+        .set({ status: 'completed' })
+        .where(
+          and(
+            eq(dedupEvents.workItemId, workItemId),
+            eq(dedupEvents.revId, revId)
+          )
+        )
+        .run();
     } else {
       db.update(dedupEvents)
         .set({

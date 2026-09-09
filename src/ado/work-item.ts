@@ -215,4 +215,37 @@ export async function escalateReworkToBlocked(
   return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 
+export function buildMergeReadyForQaPatch(
+  htmlComment: string,
+  currentTags?: string
+): JsonPatchDocument {
+  const tagPatches = buildTagPatch(
+    currentTags,
+    '[pr-merged]',
+    '[awaiting-acceptance]'
+  );
+  return [
+    ...tagPatches,
+    {
+      op: Operation.Replace,
+      path: '/fields/System.State',
+      value: 'Ready for QA',
+    },
+    {
+      op: Operation.Add,
+      path: '/fields/System.History',
+      value: htmlComment,
+    },
+  ] as unknown as JsonPatchDocument;
+}
+
+export async function transitionToReadyForQa(
+  workItemId: number,
+  htmlComment: string
+): Promise<any> {
+  const details = await getWorkItemDetails(workItemId);
+  const patchDoc = buildMergeReadyForQaPatch(htmlComment, details.tags);
+  return adoClient.updateWorkItem(workItemId, patchDoc);
+}
+
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2
