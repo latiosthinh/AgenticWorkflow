@@ -1,4 +1,7 @@
-import type { GitPullRequest } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
+import {
+  PullRequestStatus,
+  type GitPullRequest,
+} from 'azure-devops-node-api/interfaces/GitInterfaces.js';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { adoClient, withRetry } from './client.js';
 import { env } from '../config/env.js';
@@ -32,7 +35,7 @@ export async function createOrGetPullRequest(params: {
       {
         sourceRefName,
         targetRefName,
-        status: 1, // Active
+        status: PullRequestStatus.Active,
       },
       params.projectId
     )
