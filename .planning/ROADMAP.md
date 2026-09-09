@@ -13,7 +13,7 @@ Implements the **Golden Path Standard (ten steps, seven columns, L1–L6 evidenc
 | 2. Plan (Q→human) | EXECUTE | 3/3 | Complete    | 2026-09-08 |
 | 3. Implement | EXECUTE | 3/3 | Complete    | 2026-09-08 |
 | 4. Test + verify | CHECK | 3/3 | Complete    | 2026-09-09 |
-| 5. Accept | ACCEPT | `Dev Done` | human verdict ◆ (packet: tests + diff + preview) | acceptance |
+| 5. Accept | ACCEPT | 3/3 | Complete    | 2026-09-09 |
 | 6. PR review | MERGE | `Dev Done` | human verdict ◆ (reject → `In Dev`, breaker ≤2) | — |
 | 7. CI gates | MERGE | merge blocked until green | native branch policy (pipeline re-runs) | **L2, L3, L4** |
 | QA verify | QA | merge → `Ready for QA`; fail → `In Dev` (bounce ≤2); pass → `Ready to Deploy` | tester / QA agent | **L3 integration** |
