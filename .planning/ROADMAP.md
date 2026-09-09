@@ -46,7 +46,7 @@ flowchart LR
 - [x] **Phase 2: EXECUTE Foundation — Sandbox, Dynamic MCP & Plan Checkpoint** — Ephemeral worktree manager, secret-scrubbing process runner, tag-scoped MCP dispatch, interactive plan Q→human with release/re-trigger lifecycle. (completed 2026-09-08)
 - [x] **Phase 3: EXECUTE + CHECK — Bounded Implementation & Self-Repair Verification** — <250 LOC diff budget, read-only test guards, local unit test loop with self-repair, L3 evidence capture, `In Dev` → `Dev Done`. (completed 2026-09-08)
 - [x] **Phase 4: ACCEPT — Human Validation Gate & Rework Breaker** — Acceptance packet assembly, verdict handling at `Dev Done`, reject → `In Dev` rework envelope, shared max-2 breaker. (completed 2026-09-09)
-- [ ] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`.
+- [x] **Phase 5: MERGE — PR Lifecycle & Native CI Gate Verification** — PR creation with `AB#` link, review verdict listener, branch-policy status reader (L2/L3/L4), review-reject rework loop, merge → `Ready for QA`. (completed 2026-09-09)
 - [ ] **Phase 6: QA — Verification Loop** — Integration/e2e suite runner, 2-strike flake filter, failure diagnostics → `In Dev` (bounce ≤2), pass → `Ready to Deploy`.
 - [ ] **Phase 7: DEPLOY — Native Environment Approval & Telemetry Monitor** — ADO Environments approval wiring (L5), Azure Monitor/App Insights evaluation window (L6), Done marking with evidence index.
 - [ ] **Phase 8: LEARN — Skills Feedback Loop** — Lifecycle analysis, pattern/postmortem extraction, PR-based skills submission (human merge).
@@ -137,7 +137,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — PR Creation, Evidence Description Formatting, ArtifactLink & ADO Git Client Foundation (MRG-01)
 - [x] 05-02-PLAN.md — Native CI Branch Policy Verification & Two-Key Merge Gate (MRG-02, MRG-03)
-- [ ] 05-03-PLAN.md — PR Review Rejection Rework Loop, Webhook Routing & Ready for QA Transition (MRG-04, MRG-05)
+- [x] 05-03-PLAN.md — PR Review Rejection Rework Loop, Webhook Routing & Ready for QA Transition (MRG-04, MRG-05)
 
 ### Phase 6: QA — Verification Loop
 **Goal**: Post-merge integration verification with deterministic failure handling.
