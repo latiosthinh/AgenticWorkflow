@@ -93,6 +93,51 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
       expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
     });
 
+    it('ignores PR updated event when commit author matches ADO_BOT_ID', async () => {
+      const payload = {
+        eventType: 'git.pullrequest.updated',
+        resource: {
+          pullRequestId: 10,
+          title: 'AB#701 - Implement Auth feature',
+          reviewers: [{ id: 'rev-1', vote: -10 }],
+          lastMergeSourceCommit: {
+            committer: { id: env.ADO_BOT_ID },
+          },
+        },
+      };
+
+      await handlePullRequestEvent(payload);
+
+      expect(processWorkItemRework).not.toHaveBeenCalled();
+      expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
+    });
+
+    it('ignores PR updated event when work item is already in Blocked state', async () => {
+      mockWitApi.getWorkItem.mockResolvedValue({
+        id: 701,
+        rev: 3,
+        fields: {
+          'System.Title': 'Implement Auth feature',
+          'System.State': 'Blocked',
+          'System.Tags': '[rework-escalated]',
+        },
+      });
+
+      const payload = {
+        eventType: 'git.pullrequest.updated',
+        resource: {
+          pullRequestId: 10,
+          title: 'AB#701 - Implement Auth feature',
+          reviewers: [{ id: 'rev-1', vote: -10 }],
+        },
+      };
+
+      await handlePullRequestEvent(payload);
+
+      expect(processWorkItemRework).not.toHaveBeenCalled();
+      expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
+    });
+
     it('triggers rework when reviewer votes -10 (rejected) and bounce count <= 2', async () => {
       const workItemId = 701;
       const pullRequestId = 10;

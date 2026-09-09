@@ -79,6 +79,28 @@ export async function handlePullRequestEvent(
       return;
     }
 
+    let details: any;
+    try {
+      details = await getWorkItemDetails(workItemId);
+    } catch {
+      // Fall back
+    }
+
+    if (details?.state === 'Blocked') {
+      return;
+    }
+
+    // Check if update was triggered by the bot's own commit push
+    const lastCommitAuthor =
+      resource.lastMergeSourceCommit?.committer?.id ||
+      resource.lastMergeSourceCommit?.author?.id;
+    if (
+      lastCommitAuthor &&
+      lastCommitAuthor.toLowerCase() === env.ADO_BOT_ID.toLowerCase()
+    ) {
+      return;
+    }
+
     const breaker = await evaluateCircuitBreaker(workItemId, 'pr_review');
     if (!breaker.allowed) {
       await escalateReworkToBlocked(workItemId, breaker.currentCount);
@@ -111,15 +133,7 @@ export async function handlePullRequestEvent(
       feedback = `<pr_review_feedback>\nReviewer requested changes / rejected PR. Please inspect PR review status and resolve.\n</pr_review_feedback>`;
     }
 
-    let revId = 1;
-    try {
-      const details = await getWorkItemDetails(workItemId);
-      if (details?.rev) {
-        revId = details.rev;
-      }
-    } catch {
-      // Fall back to revId 1
-    }
+    const revId = details?.rev || 1;
 
     await processWorkItemRework(workItemId, revId, feedback, options);
   } else if (eventType === 'git.pullrequest.merged') {
