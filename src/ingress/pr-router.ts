@@ -1,4 +1,3 @@
-import sanitizeHtml from 'sanitize-html';
 import {
   getWorkItemDetails,
   escalateReworkToBlocked,
@@ -44,10 +43,11 @@ export function extractWorkItemId(resource: any): number | undefined {
 }
 
 function sanitizeComment(text: string): string {
-  return sanitizeHtml(text, {
-    allowedTags: [],
-    allowedAttributes: {},
-  }).trim();
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<img\b[^>]*\/?>/gi, '')
+    .trim();
 }
 
 export async function handlePullRequestEvent(

@@ -204,6 +204,47 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
       expect(feedback).toContain('</pr_review_feedback>');
     });
 
+    it('preserves generic type parameters and JSX while sanitizing dangerous script tags in review comments', async () => {
+      const workItemId = 701;
+      const pullRequestId = 11;
+
+      mockGitApi.getThreads.mockResolvedValue([
+        {
+          id: 1,
+          status: CommentThreadStatus.Active,
+          threadContext: { filePath: '/src/service.ts', rightFileStart: { line: 15 } },
+          comments: [
+            {
+              id: 201,
+              content:
+                'Use Map<string, number> instead of Record<string, any>. Also wrap with <script>alert(1)</script><Component prop="x" />.',
+              author: { id: 'reviewer-guid', displayName: 'Type Reviewer' },
+            },
+          ],
+        },
+      ]);
+
+      const payload = {
+        eventType: 'git.pullrequest.updated',
+        resource: {
+          pullRequestId,
+          title: `AB#${workItemId} - Implement Auth feature`,
+          repository: { id: 'repo-1', project: { id: 'proj-1' } },
+          reviewers: [{ id: 'rev-1', vote: -10 }],
+        },
+      };
+
+      await handlePullRequestEvent(payload);
+
+      expect(processWorkItemRework).toHaveBeenCalledTimes(1);
+      const [, , feedback] = (processWorkItemRework as any).mock.calls[0];
+
+      expect(feedback).toContain('Map<string, number>');
+      expect(feedback).toContain('<Component prop="x" />');
+      expect(feedback).not.toContain('<script>');
+      expect(feedback).not.toContain('alert(1)');
+    });
+
     it('triggers rework when reviewer votes -5 (waiting for author)', async () => {
       const workItemId = 701;
       const pullRequestId = 12;
