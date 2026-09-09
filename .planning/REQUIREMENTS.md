@@ -34,7 +34,7 @@
 
 - [x] **ACCP-01**: System transitions work item to "Dev Done" with acceptance packet attached: test run summary, diff stat, PR link, and preview/staging URL where available.
 - [ ] **ACCP-02**: Human renders functional acceptance verdict (◆): approve proceeds to PR review/merge; reject moves ticket back to "In Dev" with comments.
-- [ ] **ACCP-03**: System enforces a shared rework circuit breaker (max 2 automated bounces across Accept + PR review) before escalating to human tech lead.
+- [x] **ACCP-03**: System enforces a shared rework circuit breaker (max 2 automated bounces across Accept + PR review) before escalating to human tech lead.
 
 ### 5. MERGE — PR Review & Native CI Gates (L2, L3, L4)
 
@@ -104,7 +104,7 @@
 | TEST-02 | Phase 3 | Complete |
 | ACCP-01 | Phase 4 | Complete |
 | ACCP-02 | Phase 4 | Pending |
-| ACCP-03 | Phase 4 | Pending |
+| ACCP-03 | Phase 4 | Complete |
 | MRG-01 | Phase 5 | Pending |
 | MRG-02 | Phase 5 | Pending |
 | MRG-03 | Phase 5 | Pending |
