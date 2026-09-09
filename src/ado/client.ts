@@ -1,4 +1,6 @@
 import * as azdev from 'azure-devops-node-api';
+import type { IGitApi } from 'azure-devops-node-api/GitApi.js';
+import type { IPolicyApi } from 'azure-devops-node-api/PolicyApi.js';
 import type { IWorkItemTrackingApi } from 'azure-devops-node-api/WorkItemTrackingApi.js';
 import type { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces.js';
 import type { JsonPatchDocument } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
@@ -60,6 +62,8 @@ export async function withRetry<T>(
 export class AdoClient {
   private connection: azdev.WebApi | null = null;
   private witApi: IWorkItemTrackingApi | null = null;
+  private gitApi: IGitApi | null = null;
+  private policyApi: IPolicyApi | null = null;
 
   getConnection(): azdev.WebApi {
     if (!this.connection) {
@@ -67,6 +71,28 @@ export class AdoClient {
       this.connection = new azdev.WebApi(env.ADO_ORG_URL, authHandler);
     }
     return this.connection;
+  }
+
+  async getGitApi(): Promise<IGitApi> {
+    if (!this.gitApi) {
+      this.gitApi = await this.getConnection().getGitApi();
+    }
+    return this.gitApi;
+  }
+
+  setGitApi(mockGitApi: IGitApi | null): void {
+    this.gitApi = mockGitApi;
+  }
+
+  async getPolicyApi(): Promise<IPolicyApi> {
+    if (!this.policyApi) {
+      this.policyApi = await this.getConnection().getPolicyApi();
+    }
+    return this.policyApi;
+  }
+
+  setPolicyApi(mockPolicyApi: IPolicyApi | null): void {
+    this.policyApi = mockPolicyApi;
   }
 
   async getWorkItemTrackingApi(): Promise<IWorkItemTrackingApi> {

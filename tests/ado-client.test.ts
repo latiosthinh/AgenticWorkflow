@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { withRetry, adoClient } from '../src/ado/client.js';
-import { formatL1AuditComment } from '../src/ado/formatter.js';
+import {
+  formatL1AuditComment,
+  formatPrDescription,
+  formatMergeSummaryComment,
+} from '../src/ado/formatter.js';
 import {
   buildReadyToDevPatch,
   buildFeedbackPatch,
@@ -147,6 +151,124 @@ describe('Azure DevOps Client & Work Item Integration', () => {
       expect(html).not.toContain('onclick');
       expect(html).toContain('Unsanitized reason');
       expect(html).toContain('<!-- [automated-agent] -->');
+    });
+  });
+
+  describe('formatPrDescription', () => {
+    it('generates markdown with AB# header, L1 checklist, L3 results, and bot loop shield', () => {
+      const md = formatPrDescription({
+        workItemId: 101,
+        title: 'Add User Auth',
+        acceptanceCriteria: 'Given valid credentials, return JWT token',
+        testSummary: {
+          suite: 'auth.test.ts',
+          totalTests: 10,
+          passed: 10,
+          failed: 0,
+          durationMs: 450,
+        },
+        diffStat: {
+          totalLoc: 120,
+          filesChanged: 3,
+        },
+      });
+
+      expect(md).toContain('## AB#101 - Add User Auth');
+      expect(md).toContain('<250 LOC');
+      expect(md).toContain('`120` LOC across 3 files');
+      expect(md).toContain('> Given valid credentials, return JWT token');
+      expect(md).toContain('10/10 passed');
+      expect(md).toContain('auth.test.ts');
+      expect(md).toContain('450ms');
+      expect(md.endsWith('<!-- [automated-agent] -->')).toBe(true);
+    });
+
+    it('falls back to standard DoD when acceptanceCriteria is omitted', () => {
+      const md = formatPrDescription({
+        workItemId: 102,
+        title: 'Refactor Logger',
+        testSummary: {
+          suite: 'logger.test.ts',
+          totalTests: 5,
+          passed: 5,
+          failed: 0,
+          durationMs: 120,
+        },
+        diffStat: {
+          totalLoc: 45,
+          filesChanged: 1,
+        },
+      });
+
+      expect(md).toContain('> Standard Definition of Done');
+      expect(md.endsWith('<!-- [automated-agent] -->')).toBe(true);
+    });
+  });
+
+  describe('formatMergeSummaryComment', () => {
+    it('generates sanitized HTML with merge commit, policies, and bot loop shield', () => {
+      const html = formatMergeSummaryComment({
+        pullRequestId: 42,
+        prUrl: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/42',
+        mergeCommitSha: 'abcdef1234567890',
+        targetBranch: 'main',
+        policies: {
+          l2Reviewers: true,
+          l3Build: true,
+          l4Security: true,
+        },
+      });
+
+      expect(html).toContain('[Merge Summary]');
+      expect(html).toContain('Pull Request <a href="https://dev.azure.com/org/proj/_git/repo/pullrequest/42">#42</a>');
+      expect(html).toContain('abcdef12');
+      expect(html).toContain('<strong>L2 Code Review Gate:</strong> Passed');
+      expect(html).toContain('<strong>L3 Build Validation Gate:</strong> Passed');
+      expect(html).toContain('<strong>L4 Security &amp; SAST Gate:</strong> Passed');
+      expect(html).toContain('Ready for QA');
+      expect(html.endsWith('<!-- [automated-agent] -->')).toBe(true);
+    });
+
+    it('sanitizes script injections in merge summary fields', () => {
+      const html = formatMergeSummaryComment({
+        pullRequestId: 42,
+        prUrl: 'javascript:alert(1)',
+        mergeCommitSha: '12345678',
+        targetBranch: 'main` <script>alert(1)</script><img src="x" onerror="alert(2)">',
+        policies: {
+          l2Reviewers: false,
+          l3Build: false,
+          l4Security: false,
+        },
+      });
+
+      expect(html).not.toContain('<script>');
+      expect(html).not.toContain('onerror');
+      expect(html).not.toContain('javascript:');
+      expect(html).toContain('<!-- [automated-agent] -->');
+    });
+  });
+
+  describe('GitApi & PolicyApi Accessors', () => {
+    beforeEach(() => {
+      adoClient.setGitApi(null);
+      adoClient.setPolicyApi(null);
+    });
+
+    it('returns configured mock GitApi when injected', async () => {
+      const mockGitApi = { getPullRequests: vi.fn() };
+      adoClient.setGitApi(mockGitApi as any);
+
+      const api = await adoClient.getGitApi();
+      expect(api).toBe(mockGitApi);
+    });
+
+    it('returns configured mock PolicyApi when injected', async () => {
+      const mockPolicyApi = { getPolicyEvaluations: vi.fn() };
+      adoClient.setPolicyApi(mockPolicyApi as any);
+
+      const api = await adoClient.getPolicyApi();
+      expect(api).toBe(mockPolicyApi);
     });
   });
 
