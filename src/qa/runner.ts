@@ -38,7 +38,10 @@ export async function checkStagingHealth(
 ): Promise<{ healthy: boolean; status?: number; error?: string }> {
   const targetUrl = url || env.STAGING_HEALTH_URL;
   if (!targetUrl) {
-    return { healthy: true };
+    // ponytail: absent STAGING_HEALTH_URL skips the staging pre-flight (healthy by default);
+    // fine for local/test. Ceiling: production could deploy without a health probe.
+    // v2: require STAGING_HEALTH_URL via config validation when NODE_ENV=production.
+    return { healthy: true, error: undefined };
   }
 
   try {
