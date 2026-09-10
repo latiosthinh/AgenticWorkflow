@@ -7,6 +7,7 @@ import type {
 } from './types.js';
 import {
   type JsonPatchDocument,
+  type JsonPatchOperation,
 } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 
 export function assessMigrationRisk(filesModified: string[] = []): MigrationRiskAssessment {
@@ -144,6 +145,8 @@ export function formatL5ReadinessComment(packet: L5ReadinessPacket): string {
   return `${sanitized}\n<!-- [automated-agent] -->`;
 }
 
-export function buildDeployingPatch(currentTags?: string): JsonPatchDocument {
+export function buildDeployingPatch(
+  currentTags?: string
+): JsonPatchOperation[] & JsonPatchDocument {
   return buildTagPatch(currentTags, '[deploying]');
 }
