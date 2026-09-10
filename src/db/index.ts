@@ -165,6 +165,21 @@ CREATE TABLE IF NOT EXISTS evidence_indices (
   completed_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS skills_prs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  skill_name TEXT NOT NULL,
+  branchName TEXT NOT NULL,
+  pull_request_id INTEGER,
+  pr_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending_review',
+  summary TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_prs_work_item ON skills_prs(work_item_id);
+
+
 
 `);
 

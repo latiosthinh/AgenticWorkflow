@@ -188,6 +188,24 @@ export const evidenceIndices = sqliteTable('evidence_indices', {
     .$defaultFn(() => new Date()),
 });
 
+export const skillsPrs = sqliteTable('skills_prs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workItemId: integer('work_item_id').notNull(),
+  skillName: text('skill_name').notNull(),
+  branchName: text('branch_name').notNull(),
+  pullRequestId: integer('pull_request_id'),
+  prUrl: text('pr_url'),
+  status: text('status', { enum: ['pending_review', 'merged', 'closed'] })
+    .notNull()
+    .default('pending_review'),
+  summary: text('summary').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+}, (table) => [
+  index('idx_skills_prs_work_item').on(table.workItemId),
+]);
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -210,3 +228,5 @@ export type TelemetryEvaluation = typeof telemetryEvaluations.$inferSelect;
 export type InsertTelemetryEvaluation = typeof telemetryEvaluations.$inferInsert;
 export type EvidenceIndex = typeof evidenceIndices.$inferSelect;
 export type InsertEvidenceIndex = typeof evidenceIndices.$inferInsert;
+export type SkillsPr = typeof skillsPrs.$inferSelect;
+export type InsertSkillsPr = typeof skillsPrs.$inferInsert;
