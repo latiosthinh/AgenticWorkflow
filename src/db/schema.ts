@@ -139,6 +139,55 @@ export const qaEvidence = sqliteTable('qa_evidence', {
     .$defaultFn(() => new Date()),
 });
 
+export const deploymentRecords = sqliteTable('deployment_records', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workItemId: integer('work_item_id').notNull(),
+  pipelineRunId: text('pipeline_run_id'),
+  stageName: text('stage_name').notNull(),
+  environmentName: text('environment_name').notNull(),
+  commitSha: text('commit_sha').notNull(),
+  status: text('status', { enum: ['pending_approval', 'deployed', 'failed', 'rejected'] }).notNull(),
+  releaseNotes: text('release_notes'),
+  rollbackPlan: text('rollback_plan'),
+  migrationRisk: text('migration_risk'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  deployedAt: integer('deployed_at', { mode: 'timestamp' }),
+}, (table) => [
+  index('idx_deployment_records_work_item').on(table.workItemId),
+]);
+
+export const telemetryEvaluations = sqliteTable('telemetry_evaluations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workItemId: integer('work_item_id').notNull(),
+  windowMinutes: integer('window_minutes').notNull().default(30),
+  errorRate: text('error_rate').notNull(),
+  p95LatencyMs: integer('p95_latency_ms').notNull(),
+  baselineErrorRate: text('baseline_error_rate'),
+  baselineP95Ms: integer('baseline_p95_ms'),
+  breached: integer('breached').notNull().default(0),
+  breachReasons: text('breach_reasons'),
+  evaluatedAt: integer('evaluated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+}, (table) => [
+  index('idx_telemetry_evaluations_work_item').on(table.workItemId),
+]);
+
+export const evidenceIndices = sqliteTable('evidence_indices', {
+  workItemId: integer('work_item_id').primaryKey(),
+  l1Summary: text('l1_summary').notNull(),
+  l2Summary: text('l2_summary').notNull(),
+  l3Summary: text('l3_summary').notNull(),
+  l4Summary: text('l4_summary').notNull(),
+  l5Summary: text('l5_summary').notNull(),
+  l6Summary: text('l6_summary').notNull(),
+  completedAt: integer('completed_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -155,3 +204,9 @@ export type QaBounce = typeof qaBounces.$inferSelect;
 export type InsertQaBounce = typeof qaBounces.$inferInsert;
 export type QaEvidence = typeof qaEvidence.$inferSelect;
 export type InsertQaEvidence = typeof qaEvidence.$inferInsert;
+export type DeploymentRecord = typeof deploymentRecords.$inferSelect;
+export type InsertDeploymentRecord = typeof deploymentRecords.$inferInsert;
+export type TelemetryEvaluation = typeof telemetryEvaluations.$inferSelect;
+export type InsertTelemetryEvaluation = typeof telemetryEvaluations.$inferInsert;
+export type EvidenceIndex = typeof evidenceIndices.$inferSelect;
+export type InsertEvidenceIndex = typeof evidenceIndices.$inferInsert;

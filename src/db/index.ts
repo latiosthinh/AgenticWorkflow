@@ -122,6 +122,50 @@ CREATE TABLE IF NOT EXISTS qa_evidence (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS deployment_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  pipeline_run_id TEXT,
+  stage_name TEXT NOT NULL,
+  environment_name TEXT NOT NULL,
+  commit_sha TEXT NOT NULL,
+  status TEXT NOT NULL,
+  release_notes TEXT,
+  rollback_plan TEXT,
+  migration_risk TEXT,
+  created_at INTEGER NOT NULL,
+  deployed_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_deployment_records_work_item ON deployment_records(work_item_id);
+
+CREATE TABLE IF NOT EXISTS telemetry_evaluations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  window_minutes INTEGER NOT NULL DEFAULT 30,
+  error_rate TEXT NOT NULL,
+  p95_latency_ms INTEGER NOT NULL,
+  baseline_error_rate TEXT,
+  baseline_p95_ms INTEGER,
+  breached INTEGER NOT NULL DEFAULT 0,
+  breach_reasons TEXT,
+  evaluated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_evaluations_work_item ON telemetry_evaluations(work_item_id);
+
+CREATE TABLE IF NOT EXISTS evidence_indices (
+  work_item_id INTEGER PRIMARY KEY,
+  l1_summary TEXT NOT NULL,
+  l2_summary TEXT NOT NULL,
+  l3_summary TEXT NOT NULL,
+  l4_summary TEXT NOT NULL,
+  l5_summary TEXT NOT NULL,
+  l6_summary TEXT NOT NULL,
+  completed_at INTEGER NOT NULL
+);
+
+
 `);
 
 export const db = drizzle(sqlite, { schema });
