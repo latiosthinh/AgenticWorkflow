@@ -164,7 +164,12 @@ Plans:
   2. Post-deploy monitor reads Azure Monitor/App Insights for 30-min window: error-rate + p95-latency checks.
   3. Threshold breach → alert + owner notification + release bounce path documented.
   4. Window passed → work item marked Done with L1–L6 evidence index attached.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 07-01-PLAN.md — Schema extensions, migration risk assessment & L5 deployment readiness packet.
+- [x] 07-02-PLAN.md — Azure Monitor telemetry client, threshold evaluation & regression breach alerter.
+- [x] 07-03-PLAN.md — Unified L1–L6 evidence index, deployment orchestrator worker & Done state transition.
 
 ### Phase 8: LEARN — Skills Feedback Loop
 **Goal**: Convert completed lifecycles into reviewed, persistent agent skills.
@@ -190,5 +195,5 @@ Plans:
 | 4. ACCEPT: Human Validation Gate | 3/3 | Complete | 2026-09-09 |
 | 5. MERGE: PR & Native CI Gates | 3/3 | Complete | 2026-09-09 |
 | 6. QA: Verification Loop | 3/3 | Complete | 2026-09-09 |
-| 7. DEPLOY: Environment Approval & Monitor | 0/TBD | Not started | - |
+| 7. DEPLOY: Environment Approval & Monitor | 3/3 | Complete | 2026-09-09 |
 | 8. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |

@@ -53,9 +53,9 @@
 
 ### 7. DEPLOY — Native Approval Gate & Monitoring (L5, L6)
 
-- [ ] **DPLY-01**: Deployment gated by native ADO Environment approval (human ◆): reviewer validates release notes, migration safety, and rollback readiness (L5 Evidence). No custom approval UI.
-- [ ] **DPLY-02**: Post-deployment monitor reads Azure Monitor / Application Insights telemetry for a defined evaluation window (default 30 min): error-rate spike and p95-latency regression checks (L6 Prod Confidence); alert bounces release and notifies owner.
-- [ ] **DPLY-03**: Monitor window passing marks work item workflow complete ("Done") with L1–L6 evidence index attached.
+- [x] **DPLY-01**: Deployment gated by native ADO Environment approval (human ◆): reviewer validates release notes, migration safety, and rollback readiness (L5 Evidence). No custom approval UI.
+- [x] **DPLY-02**: Post-deployment monitor reads Azure Monitor / Application Insights telemetry for a defined evaluation window (default 30 min): error-rate spike and p95-latency regression checks (L6 Prod Confidence); alert bounces release and notifies owner.
+- [x] **DPLY-03**: Monitor window passing marks work item workflow complete ("Done") with L1–L6 evidence index attached.
 
 ### 8. LEARN — Skills Feedback Loop
 
@@ -114,9 +114,9 @@
 | QA-02 | Phase 6 | Complete |
 | QA-03 | Phase 6 | Complete |
 | QA-04 | Phase 6 | Complete |
-| DPLY-01 | Phase 7 | Pending |
-| DPLY-02 | Phase 7 | Pending |
-| DPLY-03 | Phase 7 | Pending |
+| DPLY-01 | Phase 7 | Complete |
+| DPLY-02 | Phase 7 | Complete |
+| DPLY-03 | Phase 7 | Complete |
 | LRN-01 | Phase 8 | Pending |
 | LRN-02 | Phase 8 | Pending |
 
