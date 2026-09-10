@@ -18,6 +18,11 @@ export const EnvSchema = z.object({
   QA_TEST_COMMAND: z.string().default('npm run test:integration'),
   STAGING_HEALTH_URL: z.string().url().optional(),
   QA_TIMEOUT_MS: z.coerce.number().default(300_000),
+  AZURE_APP_INSIGHTS_APP_ID: z.string().optional(),
+  AZURE_APP_INSIGHTS_API_KEY: z.string().optional(),
+  TELEMETRY_WINDOW_MINUTES: z.coerce.number().default(30),
+  TELEMETRY_ERROR_THRESHOLD_PERCENT: z.coerce.number().default(1.0),
+  TELEMETRY_P95_LATENCY_THRESHOLD_MS: z.coerce.number().default(500),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
