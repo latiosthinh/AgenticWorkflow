@@ -15,6 +15,9 @@ export const EnvSchema = z.object({
   ADO_DEFAULT_BRANCH: z.string().default('main'),
   PREVIEW_URL_TEMPLATE: z.string().optional(),
   PR_URL_TEMPLATE: z.string().optional(),
+  QA_TEST_COMMAND: z.string().default('npm run test:integration'),
+  STAGING_HEALTH_URL: z.string().url().optional(),
+  QA_TIMEOUT_MS: z.coerce.number().default(300_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

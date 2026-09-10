@@ -87,6 +87,41 @@ CREATE TABLE IF NOT EXISTS rework_cycles (
 );
 
 CREATE INDEX IF NOT EXISTS idx_rework_cycles_lookup ON rework_cycles(work_item_id, bounce_count);
+
+CREATE TABLE IF NOT EXISTS qa_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_item_id INTEGER NOT NULL,
+  run_index INTEGER NOT NULL,
+  strike_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  failed_test_signatures TEXT,
+  stdout TEXT,
+  stderr TEXT,
+  duration_ms INTEGER,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_qa_runs_work_item ON qa_runs(work_item_id);
+
+CREATE TABLE IF NOT EXISTS qa_bounces (
+  work_item_id INTEGER PRIMARY KEY,
+  bounce_count INTEGER NOT NULL DEFAULT 0,
+  last_bounced_at INTEGER,
+  escalated INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS qa_evidence (
+  work_item_id INTEGER PRIMARY KEY,
+  total_tests INTEGER NOT NULL,
+  passed_count INTEGER NOT NULL,
+  failed_count INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  commit_sha TEXT NOT NULL,
+  staging_url TEXT,
+  flake_cleared INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
 `);
 
 export const db = drizzle(sqlite, { schema });

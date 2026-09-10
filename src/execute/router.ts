@@ -16,6 +16,7 @@ import {
 import { processWorkItemRework } from './rework-worker.js';
 import { createOrGetPullRequest } from '../ado/git.js';
 import { formatPrDescription } from '../ado/formatter.js';
+import { processQaVerification } from '../qa/worker.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
 
@@ -170,6 +171,17 @@ export async function routeWorkItemEvent(
         repositoryId: env.ADO_REPOSITORY_ID,
       });
 
+      db.update(dedupEvents)
+        .set({ status: 'completed' })
+        .where(
+          and(
+            eq(dedupEvents.workItemId, workItemId),
+            eq(dedupEvents.revId, revId)
+          )
+        )
+        .run();
+    } else if (workItem.state === 'Ready for QA') {
+      await processQaVerification(workItemId, options);
       db.update(dedupEvents)
         .set({ status: 'completed' })
         .where(

@@ -9,6 +9,9 @@ import { workItemQueueManager } from '../queue/lane-manager.js';
 import { env } from '../config/env.js';
 import { processWorkItemAudit } from '../auditor/worker.js';
 import { handlePullRequestEvent, extractWorkItemId } from './pr-router.js';
+import { processQaVerification } from '../qa/worker.js';
+
+export { processQaVerification };
 
 export type WorkItemHandler = (workItemId: number, revId: number) => Promise<void>;
 export type PullRequestHandler = (payload: any) => Promise<void>;

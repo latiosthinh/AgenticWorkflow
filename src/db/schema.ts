@@ -101,6 +101,44 @@ export const reworkCycles = sqliteTable(
   ]
 );
 
+export const qaRuns = sqliteTable('qa_runs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workItemId: integer('work_item_id').notNull(),
+  runIndex: integer('run_index').notNull(),
+  strikeCount: integer('strike_count').notNull().default(0),
+  status: text('status', { enum: ['passed', 'failed', 'flaked'] }).notNull(),
+  failedTestSignatures: text('failed_test_signatures'),
+  stdout: text('stdout'),
+  stderr: text('stderr'),
+  durationMs: integer('duration_ms'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+}, (table) => [
+  index('idx_qa_runs_work_item').on(table.workItemId),
+]);
+
+export const qaBounces = sqliteTable('qa_bounces', {
+  workItemId: integer('work_item_id').primaryKey(),
+  bounceCount: integer('bounce_count').notNull().default(0),
+  lastBouncedAt: integer('last_bounced_at', { mode: 'timestamp' }),
+  escalated: integer('escalated').notNull().default(0),
+});
+
+export const qaEvidence = sqliteTable('qa_evidence', {
+  workItemId: integer('work_item_id').primaryKey(),
+  totalTests: integer('total_tests').notNull(),
+  passedCount: integer('passed_count').notNull(),
+  failedCount: integer('failed_count').notNull(),
+  durationMs: integer('duration_ms').notNull(),
+  commitSha: text('commit_sha').notNull(),
+  stagingUrl: text('staging_url'),
+  flakeCleared: integer('flake_cleared').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type DedupEvent = typeof dedupEvents.$inferSelect;
 export type InsertDedupEvent = typeof dedupEvents.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -111,3 +149,9 @@ export type L3Evidence = typeof l3Evidence.$inferSelect;
 export type InsertL3Evidence = typeof l3Evidence.$inferInsert;
 export type ReworkCycle = typeof reworkCycles.$inferSelect;
 export type InsertReworkCycle = typeof reworkCycles.$inferInsert;
+export type QaRun = typeof qaRuns.$inferSelect;
+export type InsertQaRun = typeof qaRuns.$inferInsert;
+export type QaBounce = typeof qaBounces.$inferSelect;
+export type InsertQaBounce = typeof qaBounces.$inferInsert;
+export type QaEvidence = typeof qaEvidence.$inferSelect;
+export type InsertQaEvidence = typeof qaEvidence.$inferInsert;
