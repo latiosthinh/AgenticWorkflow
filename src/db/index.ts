@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS skills_prs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   work_item_id INTEGER NOT NULL,
   skill_name TEXT NOT NULL,
-  branchName TEXT NOT NULL,
+  branch_name TEXT NOT NULL,
   pull_request_id INTEGER,
   pr_url TEXT,
   status TEXT NOT NULL DEFAULT 'pending_review',

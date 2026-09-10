@@ -9,7 +9,7 @@ export function inferSkillDomain(title: string, description: string): 'backend' 
   if (/docker|pipeline|k8s|infra|deploy|terraform|cloud/i.test(text)) {
     return 'infra';
   }
-  if (/api|db|database|sqlite|sql|service|auth|jwt|token|route/i.test(text)) {
+  if (/api|db|database|sqlite|sql|service|auth|jwt|token|route|redis|cache/i.test(text)) {
     return 'backend';
   }
   return 'common';
