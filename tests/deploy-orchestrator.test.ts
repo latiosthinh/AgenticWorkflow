@@ -9,6 +9,7 @@ import {
   qaEvidence,
 } from '../src/db/schema.js';
 import { adoClient } from '../src/ado/client.js';
+import { env } from '../src/config/env.js';
 import {
   compileL1L6EvidenceIndex,
   formatEvidenceIndexComment,
@@ -269,6 +270,37 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
           }),
         ])
       );
+    });
+
+    it('blocks the Done transition and rethrows when telemetry evaluation fails (fail-closed)', async () => {
+      const workItemId = 7203;
+      const originalNodeEnv = env.NODE_ENV;
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 5,
+        fields: {
+          'System.Title': 'Release with broken telemetry creds',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      try {
+        // No App Insights creds configured + non-test env → queryAzureMonitorMetrics must throw.
+        env.NODE_ENV = 'production';
+        await expect(processTelemetryEvaluation(workItemId)).rejects.toThrow(
+          /credentials missing/i
+        );
+      } finally {
+        env.NODE_ENV = originalNodeEnv;
+      }
+
+      expect(updateSpy).not.toHaveBeenCalled();
     });
   });
 

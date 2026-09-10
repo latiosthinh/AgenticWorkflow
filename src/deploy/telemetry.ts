@@ -30,7 +30,14 @@ export async function queryAzureMonitorMetrics(
   const effectiveApiKey = apiKey || env.AZURE_APP_INSIGHTS_API_KEY;
 
   if (!effectiveAppId || !effectiveApiKey) {
-    // Return baseline offline/healthy mock values if credentials are not configured
+    if (env.NODE_ENV !== 'test') {
+      throw new Error(
+        '[telemetry] App Insights credentials missing (AZURE_APP_INSIGHTS_APP_ID / AZURE_APP_INSIGHTS_API_KEY); refusing to fabricate L6 metrics'
+      );
+    }
+    // ponytail: deterministic offline baseline in test env only (convention shared with
+    // auditor/evaluator, execute/repair, plan/planner). Ceiling: no L6 evidence without real
+    // creds. v2: provision App Insights creds in staging CI so the live path is exercised.
     return {
       errorRatePercent: 0.05,
       p95LatencyMs: 145,
@@ -40,39 +47,60 @@ export async function queryAzureMonitorMetrics(
     };
   }
 
-  try {
-    const timespan = `PT${windowMinutes}M`;
-    const url = `https://api.applicationinsights.io/v1/apps/${effectiveAppId}/metrics/requests/duration?timespan=${timespan}&aggregation=avg,percentile95`;
-
+  const fetchMetric = async (metricPath: string, query: string): Promise<any> => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(
+        `https://api.applicationinsights.io/v1/apps/${effectiveAppId}/metrics/${metricPath}?timespan=PT${windowMinutes}M${query}`,
+        {
+          method: 'GET',
+          headers: {
+            'x-api-key': effectiveApiKey,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        }
+      );
+      if (!res.ok) {
+        throw new Error(`Azure Monitor API returned HTTP ${res.status}`);
+      }
+      return await res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
 
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'x-api-key': effectiveApiKey,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+  try {
+    const [countData, durationData] = await Promise.all([
+      fetchMetric('requests/count,requests/failed', ''),
+      fetchMetric('requests/duration', '&aggregation=avg,percentile95'),
+    ]);
 
-    if (!res.ok) {
-      throw new Error(`Azure Monitor API returned HTTP ${res.status}`);
+    if (!countData?.value || !durationData?.value) {
+      throw new Error('Azure Monitor returned an unrecognized response shape');
     }
 
-    const data = (await res.json()) as any;
-    const p95 = data?.value?.['requests/duration']?.percentile95 ?? 150;
+    const totalRequests = Number(countData.value['requests/count']?.value ?? 0);
+    const failedRequests = Number(countData.value['requests/failed']?.value ?? 0);
+    const p95 = Number(durationData.value['requests/duration']?.percentile95 ?? 0);
+    // ponytail: empty window (count=0) yields 0% error rate; missing fields default to 0.
+    // Ceiling: a malformed-but-200 response under-reports. v2: zod-parse the metrics payload.
+    const errorRatePercent = totalRequests > 0 ? (failedRequests / totalRequests) * 100 : 0;
 
     return {
-      errorRatePercent: 0.1,
+      errorRatePercent,
       p95LatencyMs: Math.round(p95),
-      totalRequests: 5000,
-      failedRequests: 5,
+      totalRequests,
+      failedRequests,
       windowMinutes,
     };
   } catch (err: any) {
-    console.warn('[telemetry] Live query failed; using fallback evaluation:', err?.message);
+    if (env.NODE_ENV !== 'test') {
+      // Fail closed: no fabricated healthy metrics outside test env.
+      throw err;
+    }
+    console.warn('[telemetry] Live query failed in test env; using baseline fallback:', err?.message);
     return {
       errorRatePercent: 0.0,
       p95LatencyMs: 120,

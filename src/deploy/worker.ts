@@ -93,11 +93,22 @@ export async function processTelemetryEvaluation(
 ): Promise<{ result: TelemetryEvaluationResult; summary?: L1L6EvidenceSummary }> {
   const details = await getWorkItemDetails(workItemId);
 
-  const evalResult = await evaluateProductionTelemetry({
-    workItemId,
-    windowMinutes: options?.windowMinutes,
-    mockMetrics: options?.mockMetrics,
-  });
+  let evalResult: TelemetryEvaluationResult;
+  try {
+    evalResult = await evaluateProductionTelemetry({
+      workItemId,
+      windowMinutes: options?.windowMinutes,
+      mockMetrics: options?.mockMetrics,
+    });
+  } catch (err: any) {
+    // Fail closed: without L6 telemetry evidence the ticket must NOT transition to Done.
+    // Leave state untouched; router records the failure and the lane queue catches it.
+    console.warn(
+      `[deploy-worker] Telemetry evaluation failed for #${workItemId}; blocking Done transition (fail-closed):`,
+      err?.message
+    );
+    throw err;
+  }
 
   const commitSha = options?.commitSha || 'main';
   const rollbackCommand =
