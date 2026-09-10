@@ -59,8 +59,8 @@
 
 ### 8. LEARN — Skills Feedback Loop
 
-- [ ] **LRN-01**: Post-completion learning agent analyzes ticket lifecycle (rework cycles, review comments, test fixes, telemetry) and extracts reusable patterns and failure postmortems.
-- [ ] **LRN-02**: Learnings are submitted as a Pull Request to the skills repository — never direct-committed; human merges before skills affect future runs.
+- [x] **LRN-01**: Post-completion learning agent analyzes ticket lifecycle (rework cycles, review comments, test fixes, telemetry) and extracts reusable patterns and failure postmortems.
+- [x] **LRN-02**: Learnings are submitted as a Pull Request to the skills repository — never direct-committed; human merges before skills affect future runs.
 
 ## v2 Requirements
 
@@ -117,8 +117,8 @@
 | DPLY-01 | Phase 7 | Complete |
 | DPLY-02 | Phase 7 | Complete |
 | DPLY-03 | Phase 7 | Complete |
-| LRN-01 | Phase 8 | Pending |
-| LRN-02 | Phase 8 | Pending |
+| LRN-01 | Phase 8 | Complete |
+| LRN-02 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total

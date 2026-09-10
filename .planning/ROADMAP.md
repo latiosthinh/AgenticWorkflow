@@ -179,7 +179,11 @@ Plans:
   1. Learning agent analyzes rework cycles, review comments, test fixes, telemetry of completed ticket.
   2. Extracted patterns/postmortems submitted as PR to skills repo — never direct commit.
   3. Human merge required before skills affect subsequent runs.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [x] 08-01-PLAN.md — Schema, harvester, prompt-injection defense & SKILL.md generator.
+- [x] 08-02-PLAN.md — Skills branch staging, PR creation & orchestrator worker.
 
 ---
 
@@ -196,4 +200,4 @@ Plans:
 | 5. MERGE: PR & Native CI Gates | 3/3 | Complete | 2026-09-09 |
 | 6. QA: Verification Loop | 3/3 | Complete | 2026-09-09 |
 | 7. DEPLOY: Environment Approval & Monitor | 3/3 | Complete | 2026-09-09 |
-| 8. LEARN: Skills Feedback Loop | 0/TBD | Not started | - |
+| 8. LEARN: Skills Feedback Loop | 2/2 | Complete | 2026-09-09 |
