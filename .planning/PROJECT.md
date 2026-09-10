@@ -8,6 +8,10 @@ An autonomous, human-in-the-loop SDLC automation system implementing the **Golde
 
 Deterministic, evidence-backed software delivery where AI agents autonomously plan, implement, and self-repair code while humans retain verdict gates (Contract, Plan Q&A, Accept, PR Merge, QA, Deploy Approval), CI/security enforcement stays native to ADO, and every stage leaves auditable L1–L6 evidence on the work item.
 
+## Current State
+
+v1.0 shipped 2026-09-09 (git tag `v1.0`): all 8 Golden Path phases and 31 requirements complete, 277 tests passing.
+
 ## The Adapted Golden Path (8 stages)
 
 1. **CONTRACT** (Step 1): Ticket + AC authored by human ◇, audited by agent → **L1**
@@ -31,14 +35,14 @@ Authoritative state matrix: `.planning/ROADMAP.md`.
 
 Full list with REQ-IDs: `.planning/REQUIREMENTS.md` (31 v1 requirements, 8 phases).
 
-- [ ] **CONTRACT**: Webhook ingress (HMAC, dedup, echo shield) + L1 AC auditor.
-- [ ] **EXECUTE**: Plan checkpoint (`Q→human`, non-blocking), dynamic MCP dispatch by tag, ephemeral worktree sandbox, secret scrubbing, bounded implementation.
-- [ ] **CHECK**: Local unit tests + self-repair loop with L3 evidence capture.
-- [ ] **ACCEPT**: Human validation gate at `Dev Done` with acceptance packet + shared max-2 rework breaker.
-- [ ] **MERGE**: PR lifecycle with `AB#` linking, native branch-policy gate reading (no custom CI), review-reject rework loop, merge → `Ready for QA`.
-- [ ] **QA**: Integration verification loop with 2-strike flake filter and failure diagnostics.
-- [ ] **DEPLOY**: Native Environment approval (L5) + Azure Monitor/App Insights evaluation window (L6) + Done marking with evidence index.
-- [ ] **LEARN**: Lifecycle analysis → skills PR (never direct commit; human merge required).
+- [x] **CONTRACT**: Webhook ingress (HMAC, dedup, echo shield) + L1 AC auditor.
+- [x] **EXECUTE**: Plan checkpoint (`Q→human`, non-blocking), dynamic MCP dispatch by tag, ephemeral worktree sandbox, secret scrubbing, bounded implementation.
+- [x] **CHECK**: Local unit tests + self-repair loop with L3 evidence capture.
+- [x] **ACCEPT**: Human validation gate at `Dev Done` with acceptance packet + shared max-2 rework breaker.
+- [x] **MERGE**: PR lifecycle with `AB#` linking, native branch-policy gate reading (no custom CI), review-reject rework loop, merge → `Ready for QA`.
+- [x] **QA**: Integration verification loop with 2-strike flake filter and failure diagnostics.
+- [x] **DEPLOY**: Native Environment approval (L5) + Azure Monitor/App Insights evaluation window (L6) + Done marking with evidence index.
+- [x] **LEARN**: Lifecycle analysis → skills PR (never direct commit; human merge required).
 
 ### Out of Scope
 
