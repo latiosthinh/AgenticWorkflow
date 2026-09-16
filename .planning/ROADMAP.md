@@ -120,7 +120,14 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
   4. File-based operation reaches v1.0 parity: watchdog/poller scans (`readdir` + frontmatter parse, O(active tickets)) locate pending/aged items exactly as the old table queries did; ticket state files have an archive/TTL lifecycle preventing unbounded growth; cross-ticket reads (L7/DORA trend source) work over the file tree.
   5. The full v1.0 suite (277 tests) is ported from `:memory:` SQLite to per-test `mkdtemp` file dirs and stays green — every failing test classified BEFORE editing (intentional migration change + REQ-ID in commit vs accidental breakage → fix code, never weaken the assertion); v1.0 lifecycle behavior is unchanged.
 **Threat notes**: The five file-backed hazards all live here: (a) **single-writer-is-a-convention** — an off-lane write = lost update; enforce via the `StateStore` API surface + regression test (STATE-03); (b) **Windows atomic-rename quirk** — rename-over-existing fails on win32; rm-then-rename ordering must stay crash-safe; (c) **O(n) scans + unbounded growth** — watchdog/trend scans are `readdir`+frontmatter parse; archive/TTL lifecycle is mandatory (STATE-04); (d) **dedup atomicity** — `wx` create-if-absent is the only safe primitive under concurrent identical webhooks; (e) **277-test parity** after the `mkdtemp` harness port — classify-before-edit, never weaken (Pitfall 2 pattern). `ponytail:` ceiling recorded — single orchestrator machine load-bearing; STORE-01 (Postgres swap behind the same interface) deferred, NOT this milestone. Research Pitfall #1 (drizzle migration) is VOID — no DB, no migration; no phase may reintroduce SQLite/Drizzle/tables/DDL.
-**Plans**: 5 plans (estimated — largest phase: store core, dedup, consumer migration, lifecycle/scans, harness port)
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — StateStore core types, strict JSON frontmatter codec, path traversal defense, and ephemeral mkdtemp test harness
+- [ ] 01-02-PLAN.md — Atomic ingress deduplication via wx markers, gateway migration, and 7-day TTL retention purge
+- [ ] 01-03-PLAN.md — Single-writer invariant enforcement via AsyncLocalStorage lane context and Windows crash-atomic writes
+- [ ] 01-04-PLAN.md — Checkpoint persistence, watchdog directory scans, circuit breakers, and archive lifecycle
+- [ ] 01-05-PLAN.md — Execution, deploy, and learn workers migration, SQLite/Drizzle removal, and 286-test harness port
 **Parallelizable**: No — Wave A; blocks every later phase. Phase 2 follows sequentially (both edit `execute/router.ts` state calls — sequential avoids conflicting router edits).
 
 ### Phase 2: Taxonomy Foundation
