@@ -95,30 +95,30 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STATE-01 | — | Pending |
-| STATE-02 | — | Pending |
-| STATE-03 | — | Pending |
-| STATE-04 | — | Pending |
-| TAX-01 | — | Pending |
-| TAX-02 | — | Pending |
-| TAX-03 | — | Pending |
-| SCOPE-01 | — | Pending |
-| SCOPE-02 | — | Pending |
-| SCOPE-03 | — | Pending |
-| EVID-01 | — | Pending |
-| EVID-02 | — | Pending |
-| EVID-03 | — | Pending |
-| SMOKE-01 | — | Pending |
-| SMOKE-02 | — | Pending |
-| SMOKE-03 | — | Pending |
-| RETRO-01 | — | Pending |
-| RETRO-02 | — | Pending |
-| RETRO-03 | — | Pending |
+| STATE-01 | Phase 1 | Pending |
+| STATE-02 | Phase 1 | Pending |
+| STATE-03 | Phase 1 | Pending |
+| STATE-04 | Phase 1 | Pending |
+| TAX-01 | Phase 2 | Pending |
+| TAX-02 | Phase 7 | Pending |
+| TAX-03 | Phase 2 | Pending |
+| SCOPE-01 | Phase 3 | Pending |
+| SCOPE-02 | Phase 3 | Pending |
+| SCOPE-03 | Phase 3 | Pending |
+| EVID-01 | Phase 6 | Pending |
+| EVID-02 | Phase 4 | Pending |
+| EVID-03 | Phase 4 | Pending |
+| SMOKE-01 | Phase 5 | Pending |
+| SMOKE-02 | Phase 5 | Pending |
+| SMOKE-03 | Phase 5 | Pending |
+| RETRO-01 | Phase 6 | Pending |
+| RETRO-02 | Phase 6 | Pending |
+| RETRO-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 19 total (6 categories: STATE, TAX, SCOPE, EVID, SMOKE, RETRO)
-- Mapped to phases: 0 (roadmapper fills this)
-- Unmapped: 19
+- Mapped to phases: 19 (each to exactly one phase — no orphans, no double-maps)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-09-16 for milestone v2.0 (Golden Path v2), rev 2 — file-backed StateStore replaces SQLite*

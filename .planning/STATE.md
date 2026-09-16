@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: roadmap_complete
-stopped_at: v2.0 roadmap created — 6 phases, 15/15 requirements mapped, ready for Phase 1 planning
+stopped_at: v2.0 roadmap RE-PLANNED around the file-backed StateStore — 7 phases, 19/19 requirements mapped, ready for Phase 1 planning
 last_updated: "2026-09-16T00:00:00.000Z"
 last_activity: 2026-09-16
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,18 +21,18 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 **Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts.
-**Current focus:** Milestone v2.0 — full restructure to the v2 model (5 columns / 9 steps / L1–L7).
+**Current focus:** Milestone v2.0 — full restructure to the v2 model (5 columns / 9 steps / L1–L7) on a **file-backed `StateStore`** (SQLite removed — binding post-research owner decision).
 
 ## Current Position
 
-Phase: 1 — Taxonomy & Schema Foundation (not started)
-Plan: — (no plans created yet; 15 estimated across 6 phases)
-Status: Roadmap complete — awaiting Phase 1 discuss/plan
-Last activity: 2026-09-16 — v2.0 roadmap created (6 phases, 15/15 requirements mapped)
+Phase: 1 — StateStore Migration (not started)
+Plan: — (no plans created yet; 19 estimated across 7 phases)
+Status: Roadmap complete (RE-PLANNED around the file-backed StateStore) — awaiting Phase 1 discuss/plan
+Last activity: 2026-09-16 — v2.0 roadmap re-planned (7 phases, 19/19 requirements mapped)
 
-Progress: [          ] 0% (0/6 phases)
+Progress: [          ] 0% (0/7 phases)
 
-**Phase structure (v2.0):** Wave A: 1 Taxonomy & Schema Foundation → Wave B (parallel): 2 PM Scope-Lock Gate ∥ 3 L7 Evidence Index Extension ∥ 4 Prod Smoke Suite → Wave C: 5 Retro & L7 Output → Wave D: 6 Docs Realignment & E2E Proof. Critical path: 1 → 3 → 5 → 6.
+**Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Progress: [          ] 0% (0/6 phases)
 | 6. QA: Verification Loop | 3 | 16m | 5.3m |
 | 7. DEPLOY: Environment Approval & Monitor | 3 | 16m | 5.3m |
 | 8. LEARN: Skills Feedback Loop | 2 | 11m | 5.5m |
+
+*(v1.0 history — v2.0 phases start at 0.)*
 
 **Recent Trend:**
 
@@ -157,39 +159,48 @@ Recent decisions affecting current work:
 - [08-02]: Implemented stageAndPublishSkillPr opening Pull Requests with AB#<id> titles targeting main (never direct-committed).
 - [08-02]: Attached sanitized HTML discussion comments with PR links and loop shield <!-- [automated-agent] --> to work items.
 - [08-02]: Wired post-Done trigger in deploy worker to dispatch continuous learning feedback loop.
-- [Roadmap]: v2.0 = 6 phases; Wave A (1) → Wave B 3-way parallel (2 ∥ 3 ∥ 4) → Wave C (5) → Wave D (6); critical path 1 → 3 → 5 → 6; 15/15 requirements mapped exactly once.
-- [Roadmap]: Schema/migration grouped WITH taxonomy in Phase 1 — both serial Wave-A foundation (no parallelism lost), migration harness must precede every Wave-B writer, and the DDL deliverables are named inside consumer-phase requirements (scope_locks→SCOPE-02, smoke_runs→SMOKE-03, retro_records/l7_summary→EVID-01/02), so a standalone schema phase would own zero requirements.
-- [Roadmap]: Scope-gate park state = `New` + `[awaiting-scope-lock]` (SCOPE-01 wording authoritative — resolves research Open Decision #1 Axis B); Pitfall-6 second auditor guard (tag/row check before any LLM call) + triple-rev idempotency test are NON-optional.
-- [Roadmap]: TAX-02 → Phase 6 (docs must describe the BUILT system); the behavior-preserving router refactor lands in Phase 1 under TAX-01 and is verified end-to-end in Phase 6.
-- [Roadmap]: Resolved Conflict #3 binding — retro awaited BEFORE Done (fail-closed, single post-retro L1–L7 compile); human PR merge async, never gates Done; fire-and-forget learn call removed in Phase 5.
-- [Roadmap]: Resolved Conflict #2 binding — raw idempotent DDL + guarded ALTER (NO drizzle-kit in v2.0); permanent v1-fixture upgrade test in Phase 1; `l7_summary` nullable.
-- [Roadmap]: Open Decision #2 resolved — v1.0 hardcoded L2/L4 index defaults stay as logged backlog debt; do NOT extend the fabrication pattern to L7 (grep-asserted in Phase 3).
-- [Roadmap]: Phase 4 touches deploy/worker.ts for smoke→telemetry sequencing only; Phase 5 owns the final Done-patch re-sequencing (avoids conflicting edit).
+
+*(v1.0 [01-01]…[08-02] entries above are historical; SQLite/Drizzle-specific mechanics they describe are superseded by the file-backed StateStore decision below.)*
+
+- [Roadmap] (SUPERSEDED by 2026-09-16 re-plan): v2.0 = 6 phases on a SQLite schema/migration foundation; 15/15 requirements. Replaced by the 7-phase / 19-requirement roadmap below.
+- [Roadmap] (SUPERSEDED — VOID per ⚠ DECISION OVERRIDE): "Schema/migration grouped with taxonomy in Phase 1" and "raw idempotent DDL + guarded ALTER, no drizzle-kit, nullable l7_summary, permanent v1-fixture upgrade test" (old Resolved Conflict #2). There is no DB, no DDL, and no migration — Pitfall #1 is VOID. Replacement: additive `l7` field/section on the ticket state file; the StateStore migration IS the new Phase 1.
+- [Roadmap]: Scope-gate park state = `New` + `[awaiting-scope-lock]` (SCOPE-01 wording authoritative — resolves research Open Decision #1 Axis B); Pitfall-6 second auditor guard (tag/record check before any LLM call) + triple-rev idempotency test are NON-optional. (Now Phase 3.)
+- [Roadmap]: TAX-02 → Phase 7 (docs must describe the BUILT system); the behavior-preserving router refactor lands in Phase 2 under TAX-01 and is verified end-to-end in Phase 7.
+- [Roadmap]: Resolved Conflict #3 binding — retro awaited BEFORE Done (fail-closed, single post-retro L1–L7 compile); human PR merge async, never gates Done; fire-and-forget learn call removed in Phase 6.
+- [Roadmap]: Open Decision #2 resolved — v1.0 hardcoded L2/L4 index defaults stay as logged backlog debt; do NOT extend the fabrication pattern to L7 (grep-asserted in Phase 4).
+- [Roadmap]: `deploy/worker.ts` edit split preserved under new numbering — Phase 5 (smoke) owns the smoke→telemetry sequencing insertion ONLY; Phase 6 (retro) owns the FINAL Done re-sequencing (smoke → telemetry → await retro → persist L7 → compile L1–L7 → Done) to avoid a conflicting edit.
+- [Roadmap]: v2.0 RE-PLANNED (2026-09-16) around the binding ⚠ DECISION OVERRIDE — SQLite/Drizzle REMOVED; all orchestrator state on a file-backed `StateStore` (per-ticket markdown+frontmatter `data/state/tickets/<id>.md`; 12 tables → 1 file/ticket; workers backend-agnostic). New 7-phase roadmap replaces the stale 6-phase draft; 19/19 rev-2 requirements (new STATE-01..04 category) mapped exactly once.
+- [Roadmap]: Wave structure — A (serial): 1 StateStore Migration → 2 Taxonomy Foundation (sequential: both edit router state calls) · B (3-way parallel): 3 Scope ∥ 4 L7 Index ∥ 5 Smoke (mutually independent file sets) · C: 6 Retro & L7 Output (needs 4 + 5) · D: 7 Docs & E2E. Critical path: 1 → 2 → 4 → 6 → 7. Total plan estimate: 19.
+- [Roadmap]: Safety linchpin VERIFIED — `lane-manager.ts:9` `concurrency:1` ⇒ single-writer per ticket; ALL mutations (workers + watchdog + poller) route through `getLane(id)`; ingress dedup = atomic `wx` markers `data/state/dedup/<id>-<rev>` (EEXIST ⇒ duplicate) with TTL sweep mirroring the 7-day purge; writes crash-atomic (temp + rename, rm-then-rename on win32); watchdog scans + L7/DORA trends = `readdir` + frontmatter parse (O(active tickets)); ticket files get archive/TTL lifecycle; 277 tests port from `:memory:` SQLite to per-test `mkdtemp` dirs.
+- [Roadmap]: `ponytail:` ceiling recorded — single orchestrator machine is load-bearing for local files; enterprise multi-instance swaps the `StateStore` impl → Postgres behind the same interface (STORE-01, deferred, NOT v2.0).
+- [Roadmap]: Binding for every phase — no reintroduction of SQLite/Drizzle/tables/DDL; zero new deps AND dep reduction (`better-sqlite3`/`drizzle-orm`/`drizzle-kit` removed in Phase 1); research Pitfalls 2, 5–12 remain binding with storage wording read as the StateStore file equivalent.
 
 ### Pending Todos
 
 Plan-phase validation items (from research flags — resolve during discuss/plan of the owning phase):
-- [Phase 2]: Validate ADO org permits bot tag-writes on `New`/`Ready to Dev` items; check tag collisions for `[awaiting-scope-lock]`/`[scope-locked]`; decide PM notification mechanism (comment vs @mention/System.AssignedTo).
-- [Phase 4]: Security-review the wider prod egress allowance (PRODUCTION_SMOKE_URL); decide smoke-suite authorship (target repo vs orchestrator-owned — changes worktree need).
-- [Phase 5]: Decide runbook destination (`.claude/skills/<name>/RUNBOOK.md` vs top-level `runbooks/`); confirm Step 9 needs no new human verdict token (skills-PR merge is the gate).
+- [Phase 1]: Decide frontmatter codec approach (hand-rolled parse/serialize — zero new deps), archive/TTL policy location (e.g. `data/state/archive/`) + sweep cadence, and the win32 rm-then-rename crash-safe ordering; StateStore root via zod env (default `data/state/`).
+- [Phase 3]: Validate ADO org permits bot tag-writes on `New`/`Ready to Dev` items; check tag collisions for `[awaiting-scope-lock]`/`[scope-locked]`; decide PM notification mechanism (comment vs @mention/System.AssignedTo).
+- [Phase 5]: Security-review the wider prod egress allowance (PRODUCTION_SMOKE_URL); decide smoke-suite authorship (target repo vs orchestrator-owned — changes worktree need).
+- [Phase 6]: Decide runbook destination (`.claude/skills/<name>/RUNBOOK.md` vs top-level `runbooks/`); confirm Step 9 needs no new human verdict token (skills-PR merge is the gate).
 - [Backlog]: L2/L4 hardcoded evidence-index defaults — wire to `ado/policy.ts:verifyBranchPolicies` post-v2.0 (Open Decision #2, leave-and-log).
+- [Backlog]: STORE-01 — swap `StateStore` file backend → Postgres when multi-instance is needed (the `ponytail:` ceiling).
 
 ### Blockers/Concerns
 
-- None blocking. MEDIUM-confidence assumptions flagged for phase-level validation (see Pending Todos): ADO tag-write permissions (Phase 2), prod smoke egress under security posture (Phase 4).
+- None blocking. MEDIUM-confidence assumptions flagged for phase-level validation (see Pending Todos): ADO tag-write permissions (Phase 3), prod smoke egress under security posture (Phase 5).
+- Design constraint (not a blocker): single-machine persistence ceiling is load-bearing for the file-backed `StateStore` — recorded as `ponytail:` with STORE-01 deferred.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Research | Windows container vs execa process isolation tradeoff | Resolve in Phase 2 planning | 2026-09-07 |
-| Research | AST-based multi-file patching approach | Resolve in Phase 3 planning | 2026-09-07 |
+| Research | Windows container vs execa process isolation tradeoff | Resolve in Phase 3 planning (v2 numbering) | 2026-09-07 |
+| Research | AST-based multi-file patching approach | Resolve in Phase 3 planning (v2 numbering) | 2026-09-07 |
 | Infra | Local dev webhook tunnel (cloudflared/ngrok) vs polling fallback | Resolved in 01-01 via poller helper | 2026-09-07 |
+| Persistence | Multi-instance shared store (Postgres swap behind StateStore interface) | Deferred — STORE-01, `ponytail:` ceiling | 2026-09-16 |
 
 ## Session Continuity
 
 Last session: 2026-09-16
-Stopped at: v2.0 roadmap created — ROADMAP.md rewritten (6 phases, state matrix + flow + coverage 15/15), REQUIREMENTS.md traceability filled; NOT yet committed (orchestrator commits after user approval)
-Resume: Next step `/gsd-plan-phase 1` (Taxonomy & Schema Foundation) — or `/gsd-discuss-phase 1` first; Wave B (phases 2/3/4) can be planned in any order after Phase 1 completes
-
-(End of file - total 170 lines)
+Stopped at: v2.0 roadmap RE-PLANNED — ROADMAP.md replaced (7 phases on the file-backed StateStore; state matrix + flow + locked constraints incl. single-machine ceiling + coverage 19/19), REQUIREMENTS.md traceability filled for all 19 rev-2 requirements; NOT yet committed (orchestrator commits after user approval)
+Resume: Next step `/gsd-plan-phase 1` (StateStore Migration — critical blocker; everything persists on it) — or `/gsd-discuss-phase 1` first; Wave B (phases 3/4/5) can be planned in any order after Phase 2 completes
