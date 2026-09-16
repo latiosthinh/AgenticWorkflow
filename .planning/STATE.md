@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Completed Phase 8 (08-02-PLAN.md)
-last_updated: "2026-09-09T18:35:00.000Z"
-last_activity: 2026-09-09
+milestone: v2.0
+milestone_name: Golden Path v2
+status: planning
+stopped_at: Milestone v2.0 started — defining requirements
+last_updated: "2026-09-16T00:00:00.000Z"
+last_activity: 2026-09-16
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-09-07 post-audit)
+See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
-**Core value:** Deterministic, evidence-backed delivery across the adapted Golden Path (Contract → Execute → Check → Accept → Merge → QA → Deploy → Learn) with L1–L6 evidence, native ADO gates, and human verdicts.
-**Current focus:** All 8 Golden Path phases completed; ready for Milestone Lifecycle
+**Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts.
+**Current focus:** Milestone v2.0 — full restructure to the v2 model (5 columns / 9 steps / L1–L7).
 
 ## Current Position
 
-Phase: 8 of 8 (learn — skills feedback loop)
-Plan: Complete
-Status: Complete
-Last activity: 2026-09-09
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-09-16 — Milestone v2.0 started
 
-Progress: [██████████] 100% (All phases complete)
+Progress: [          ] 0% (defining requirements)
 
 ## Performance Metrics
 
@@ -162,7 +162,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- None. All 8 milestone phases completed.
+- None. Milestone v2.0 kickoff — requirements definition in progress.
 
 ## Deferred Items
 
@@ -174,8 +174,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-09
-Stopped at: Completed Phase 8 (LEARN — Skills Feedback Loop)
-Resume file: Ready for Milestone Lifecycle (audit -> complete -> cleanup)
+Last session: 2026-09-16
+Stopped at: Milestone v2.0 (Golden Path v2) started — PROJECT.md + STATE.md updated
+Resume file: Defining v2.0 requirements → roadmap (full restructure to 5 columns / 9 steps / L1–L7)
 
 (End of file - total 170 lines)

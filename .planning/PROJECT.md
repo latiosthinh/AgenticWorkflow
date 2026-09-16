@@ -2,17 +2,48 @@
 
 ## What This Is
 
-An autonomous, human-in-the-loop SDLC automation system implementing the **Golden Path Standard (ten steps, seven columns, L1–L6 evidence)** adapted for Azure DevOps: CONTRACT audit (L1) → EXECUTE plan/implement with interactive `Q→human` checkpoint → CHECK local test self-repair (L3) → ACCEPT human verdict at `Dev Done` → MERGE PR review + native branch-policy CI gates (L2/L3/L4) → QA integration loop → DEPLOY via native ADO Environment approval (L5) with telemetry monitoring (L6) → LEARN skills feedback through reviewed PRs.
+An autonomous, human-in-the-loop SDLC automation system for Azure DevOps implementing the **Golden Path** standard. Shipped v1.0 used an 8-stage / L1–L6 model (CONTRACT → EXECUTE → CHECK → ACCEPT → MERGE → QA → DEPLOY → LEARN). Milestone **v2.0** restructures it to the **Golden Path v2** model: **5 columns, 9 actor-assigned steps, L1–L7 evidence**, adding a human PM scope gate, automated production smoke tests, retro/runbook output, and an L7 Continuous-Feedback evidence level.
 
 ## Core Value
 
-Deterministic, evidence-backed software delivery where AI agents autonomously plan, implement, and self-repair code while humans retain verdict gates (Contract, Plan Q&A, Accept, PR Merge, QA, Deploy Approval), CI/security enforcement stays native to ADO, and every stage leaves auditable L1–L6 evidence on the work item.
+Deterministic, evidence-backed software delivery where AI agents autonomously plan, implement, and self-repair code while humans retain verdict gates (PM Scope Lock, Plan Q&A, Dev Accept, PR Merge, QA, Release Approval), CI/security enforcement stays native to ADO, and every stage leaves auditable **L1–L7** evidence on the work item.
 
 ## Current State
 
-v1.0 shipped 2026-09-09 (git tag `v1.0`): all 8 Golden Path phases and 31 requirements complete, 277 tests passing.
+v1.0 shipped 2026-09-09 (git tag `v1.0`): all 8 Golden Path phases and 31 requirements complete, 277 tests passing. **Milestone v2.0 started** — full restructure to the Golden Path v2 model (5 columns / 9 steps / L1–L7).
 
-## The Adapted Golden Path (8 stages)
+## Current Milestone: v2.0 — Golden Path v2
+
+**Goal:** Restructure the pipeline to the v2 model — 5 columns (Refinement, Execution, Acceptance, Release, Retro), 9 actor-assigned steps, 7 evidence levels (L1–L7) — adding the 4 capabilities v1.0 lacks.
+
+**The v2 model (5 columns, 9 steps):**
+
+| Column | Step | Actor | Evidence |
+|---|---|---|---|
+| 1. REFINEMENT | 1. Ticket & AC verify | ⚡ AI Agent | L1 |
+| | 2. Scope review & verify | 👤 Human PM | L1 |
+| 2. EXECUTION | 3. Loop: Plan-Code-Test | ⚡ AI Agent | L2, L3 |
+| | 4. Dev validate & PR | 👤 Human Dev | L2, L3 |
+| 3. ACCEPTANCE | 5. PR review & CI deploy | 👤 Human TechLead/SA | L3, L4 |
+| | 6. QA staging verify | 👤 Human QA | L3, L5 |
+| 4. RELEASE | 7. Release approval + deploy | 👤 Human QA/SA/Lead/PM | L5 |
+| | 8. Smoke test & monitor | ⚡ AI / Automation | L6 |
+| 5. RETRO | 9. Retro takeaways, docs, skill enhancement | ⚡ AI Agent & Team | L7 |
+
+**Evidence levels (L1–L7):** L1 Requirement · L2 Code Quality · L3 Functional · L4 Security · L5 Deploy Safety · L6 Prod Confidence · **L7 Continuous Feedback (new)**.
+
+**Target features:**
+- **Taxonomy restructure** — 8 stages → 5 columns / 9 steps with explicit actors (⚡ AI / 👤 Human) + governance hand-offs; state matrix, evidence index, and docs realigned.
+- **L7 Continuous-Feedback evidence** — new schema + unified evidence index extended L1–L6 → **L1–L7**.
+- **PM scope-review gate (Step 2)** — human 👤 PM scope-lock verdict in REFINEMENT before EXECUTION (v1.0 auto-transitions `New→Ready to Dev` with no human gate).
+- **Prod smoke-test suite (Step 8)** — automated ⚡ smoke runner in RELEASE alongside the existing telemetry monitor (L6).
+- **Retro output (Step 9)** — retro takeaways + runbook updates + skill enhancement captured as **L7** evidence (v1.0 only emits SKILL.md).
+
+**Preserved from v1.0:** native ADO gates (branch policies L2/L3/L4, Environments L5); security posture (prompt-injection defenses, secret scrubbing, loop shields, shared rework breaker ≤2); ADO Boards as single source of truth.
+
+## v1.0 Baseline — Adapted Golden Path (8 stages, shipped)
+
+> Superseded by the v2.0 model above for the current milestone. Retained for historical context; v1.0 details live in `.planning/milestones/v1.0-*`.
 
 1. **CONTRACT** (Step 1): Ticket + AC authored by human ◇, audited by agent → **L1**
 2. **EXECUTE** (Steps 2–3): Plan with `Q→human` ◇ (sandbox released while waiting), bounded implement (<250 LOC, test files locked)
@@ -29,33 +60,32 @@ Authoritative state matrix: `.planning/ROADMAP.md`.
 
 ### Validated
 
-(None yet — ship to validate)
+v1.0 shipped (git tag `v1.0`, 2026-09-09): all 31 Golden Path requirements complete and validated across 8 phases, 277 tests passing.
 
 ### Active
 
-Full list with REQ-IDs: `.planning/REQUIREMENTS.md` (31 v1 requirements, 8 phases).
+Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planning/REQUIREMENTS.md`):
 
-- [x] **CONTRACT**: Webhook ingress (HMAC, dedup, echo shield) + L1 AC auditor.
-- [x] **EXECUTE**: Plan checkpoint (`Q→human`, non-blocking), dynamic MCP dispatch by tag, ephemeral worktree sandbox, secret scrubbing, bounded implementation.
-- [x] **CHECK**: Local unit tests + self-repair loop with L3 evidence capture.
-- [x] **ACCEPT**: Human validation gate at `Dev Done` with acceptance packet + shared max-2 rework breaker.
-- [x] **MERGE**: PR lifecycle with `AB#` linking, native branch-policy gate reading (no custom CI), review-reject rework loop, merge → `Ready for QA`.
-- [x] **QA**: Integration verification loop with 2-strike flake filter and failure diagnostics.
-- [x] **DEPLOY**: Native Environment approval (L5) + Azure Monitor/App Insights evaluation window (L6) + Done marking with evidence index.
-- [x] **LEARN**: Lifecycle analysis → skills PR (never direct commit; human merge required).
+- [ ] **RESTRUCTURE**: Re-taxonomize the pipeline into 5 columns / 9 steps with actor roles (⚡/👤) + governance hand-offs; realign state matrix, evidence index, and docs.
+- [ ] **L7 EVIDENCE**: Add L7 Continuous-Feedback schema and extend the unified evidence index L1–L6 → L1–L7.
+- [ ] **PM SCOPE GATE**: Add human PM scope-review & verify (scope-lock) gate in REFINEMENT (Step 2) before EXECUTION begins.
+- [ ] **PROD SMOKE**: Add automated production smoke-test suite in RELEASE (Step 8) alongside the existing telemetry monitor (L6).
+- [ ] **RETRO OUTPUT**: Emit retro takeaways + runbook updates + skill enhancement as L7 evidence in RETRO (Step 9).
 
 ### Out of Scope
 
-- Jira / GitHub Issues integrations — Azure DevOps only for v1.
+- Jira / GitHub Issues integrations — Azure DevOps only.
 - Custom CI orchestration — native ADO branch policies enforce L2/L3/L4; system reads status only.
 - Custom deploy approval UI — native ADO Environments enforce L5.
 - Unattended production deployments — human Environment approval mandatory.
 - Direct-commit skill updates — prompt-injection persistence guard; learning writes go through PR review.
 - Multi-tenant billing / enterprise org management — single-team runner first.
+- Multi-tracker (Jira/GitHub), canary traffic shifting, multi-tenant runner pool — future backlog (`MULTI-*`, `GOV-*`), NOT in v2.0 model-restructure scope.
 
 ## Context
 
 - Golden Path Standard source sketch: `.idea/draft.md` (7 columns, 10 steps, L1–L6 cards).
+- **Golden Path v2 source sketch: `.idea/v2.md`** (5 columns, 9 steps, L1–L7 cards, actor roles + governance hand-offs) — authoritative model for milestone v2.0.
 - Research: `.planning/research/` (stack, features, architecture, pitfalls) — SUMMARY.md carries a post-audit addendum; queue/persistence = SQLite WAL + p-queue (not Redis/BullMQ).
 - Azure DevOps Boards/Repos/Pipelines is the only UI; no custom dashboard.
 - MCP for tool dispatch; skills repository for learned context.
@@ -81,6 +111,10 @@ Full list with REQ-IDs: `.planning/REQUIREMENTS.md` (31 v1 requirements, 8 phase
 | Learning via PR only (post-audit) | Prevents self-modifying prompt-injection persistence in skills | ✓ Applied |
 | Interactive Plan Checkpoint (Q→human) | Clarifies ambiguity before codegen; prevents wasted tokens/rework | — Pending |
 | Shared rework breaker ≤2 | Bounds LLM cost and review ping-pong across Accept + PR review | — Pending |
+| **Golden Path v2 model (5 cols / 9 steps / L1–L7)** | v2.0 restructure aligns pipeline to `.idea/v2.md`; explicit actor roles + governance hand-offs | ✓ v2.0 active |
+| **L7 Continuous-Feedback evidence** | Retro/skill output becomes a first-class audited evidence level, not just a skills PR | ✓ v2.0 active |
+| **Human PM scope-lock gate (Step 2)** | v1.0 auto-transitioned `New→Ready to Dev`; v2.0 adds a human scope verdict before EXECUTION | ✓ v2.0 active |
+| **Automated prod smoke tests (Step 8)** | Telemetry alone (L6) is reactive; active smoke suite confirms deploy health in RELEASE | ✓ v2.0 active |
 
 ## Evolution
 
@@ -100,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-07 after Golden Path audit decisions applied*
+*Last updated: 2026-09-16 — milestone v2.0 (Golden Path v2 restructure) started*
