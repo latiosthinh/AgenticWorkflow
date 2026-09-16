@@ -33,8 +33,9 @@ v1.0 shipped 2026-09-09 (git tag `v1.0`): all 8 Golden Path phases and 31 requir
 **Evidence levels (L1–L7):** L1 Requirement · L2 Code Quality · L3 Functional · L4 Security · L5 Deploy Safety · L6 Prod Confidence · **L7 Continuous Feedback (new)**.
 
 **Target features:**
+- **Persistence migration (foundation)** — replace v1.0 SQLite/Drizzle with a file-backed `StateStore` (per-ticket markdown+frontmatter, lane-serialized, atomic `wx` dedup); workers call a backend-agnostic interface. Removes the drizzle-migration hazard entirely.
 - **Taxonomy restructure** — 8 stages → 5 columns / 9 steps with explicit actors (⚡ AI / 👤 Human) + governance hand-offs; state matrix, evidence index, and docs realigned.
-- **L7 Continuous-Feedback evidence** — new schema + unified evidence index extended L1–L6 → **L1–L7**.
+- **L7 Continuous-Feedback evidence** — extend the unified evidence record + index L1–L6 → **L1–L7** (additive field on the ticket state file).
 - **PM scope-review gate (Step 2)** — human 👤 PM scope-lock verdict in REFINEMENT before EXECUTION (v1.0 auto-transitions `New→Ready to Dev` with no human gate).
 - **Prod smoke-test suite (Step 8)** — automated ⚡ smoke runner in RELEASE alongside the existing telemetry monitor (L6).
 - **Retro output (Step 9)** — retro takeaways + runbook updates + skill enhancement captured as **L7** evidence (v1.0 only emits SKILL.md).
@@ -92,7 +93,8 @@ Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planni
 
 ## Constraints
 
-- **Tech Stack**: Node.js 24 LTS + TypeScript, Fastify webhook gateway, SQLite (better-sqlite3 + Drizzle, WAL), Vercel AI SDK + MCP SDK, azure-devops-node-api, simple-git + execa.
+- **Tech Stack**: Node.js 24 LTS + TypeScript, Fastify webhook gateway, **file-backed `StateStore`** (per-ticket markdown+frontmatter under `data/state/`, lane-serialized writes, atomic `wx` dedup markers — replaces v1.0's better-sqlite3 + Drizzle), Vercel AI SDK + MCP SDK, azure-devops-node-api, simple-git + execa.
+- **Persistence ceiling**: single orchestrator machine is load-bearing (local files). Multi-instance enterprise re-introduces a shared store — swap the `StateStore` impl (e.g. Postgres) behind the same interface; workers stay backend-agnostic. `ponytail:` upgrade path, not solved in v2.0.
 - **Security**: Non-root ephemeral execution, credential scrubbing, egress restrictions, read-only test assertions, mandatory L4 scan gate.
 - **Governance**: Human verdict gates at Accept, PR Merge, QA escalation, Deploy. Shared rework breaker ≤2 automated bounces per stage family.
 - **Native-first**: ADO branch policies (CI), ADO Environments (deploy approval) — extend, don't reimplement.
@@ -115,6 +117,8 @@ Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planni
 | **L7 Continuous-Feedback evidence** | Retro/skill output becomes a first-class audited evidence level, not just a skills PR | ✓ v2.0 active |
 | **Human PM scope-lock gate (Step 2)** | v1.0 auto-transitioned `New→Ready to Dev`; v2.0 adds a human scope verdict before EXECUTION | ✓ v2.0 active |
 | **Automated prod smoke tests (Step 8)** | Telemetry alone (L6) is reactive; active smoke suite confirms deploy health in RELEASE | ✓ v2.0 active |
+| **Remove SQLite → file-backed `StateStore`** | Orchestrator is an agent layer; per-ticket markdown checkpoint-memory the agent reads directly is simpler than querying a DB. Viable because the per-work-item lane (`concurrency:1`) already serializes writes → single-writer per ticket; ingress dedup uses atomic `wx` create. Collapses 12 tables → 1 file/ticket. `StateStore` interface keeps workers backend-agnostic. | ✓ v2.0 active |
+| **Single-machine persistence ceiling** | Local files don't share across instances; enterprise multi-machine swaps `StateStore` → network store (Postgres). Recorded as `ponytail:` ceiling, deferred. | ✓ v2.0 active |
 
 ## Evolution
 

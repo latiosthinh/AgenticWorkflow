@@ -9,6 +9,22 @@
 
 ---
 
+## ⚠ DECISION OVERRIDE (2026-09-16, post-research) — SQLite REMOVED
+
+After research completed, the owner decided to **remove SQLite/Drizzle entirely** and back all orchestrator state with a **file-based `StateStore`** (per-ticket markdown+frontmatter under `data/state/`). Rationale: the orchestrator is an agent layer; checkpoint-markdown the agent reads directly beats querying a DB. This is viable because the **per-work-item lane (`lane-manager.ts:9`, `concurrency:1`) already serializes all worker writes → single-writer per ticket**; the only concurrent write (ingress dedup) uses atomic `fs.writeFileSync(path,'',{flag:'wx'})` create-if-absent. **This addendum supersedes any storage wording below and in STACK/ARCHITECTURE/PITFALLS.**
+
+Overrides in effect:
+- **"ZERO new deps, keep better-sqlite3 + Drizzle"** → superseded. v2.0 **DROPS** `better-sqlite3`, `drizzle-orm`, `drizzle-kit` (dep *reduction*); state lives in files (`node:fs`/`node:path`, built-in). Still zero NEW deps. Workers call a backend-agnostic `StateStore` interface.
+- **"3 new DB tables + 1 nullable `l7_summary` column" / raw-DDL migration** → superseded. No tables. Scope-lock, smoke, retro, L7 evidence are **sections of the per-ticket state file**. The 12 v1.0 tables collapse into 1 file/ticket.
+- **Pitfall #1 (no drizzle migration path; `CREATE TABLE IF NOT EXISTS` won't ALTER live DB)** → **VOID.** There is no DB and no migration. Replaced by NEW hazards the plan must own: (a) **single-writer is now a convention** — every ticket write (workers + watchdog/poller) MUST route through `getLane(id)` or updates are lost; enforce via `StateStore` API + test. (b) **Windows atomic rename** — crash-safe write = temp file + rename; rename-over-existing needs rm-then-rename on win32. (c) **O(n) scans + file lifecycle** — watchdog "pending > 24h" and cross-ticket L7/DORA trends become `readdir`+parse; ticket state files need archive/TTL (unbounded growth otherwise). (d) **test harness** — 277 tests move from `:memory:` SQLite to per-test `mkdtemp` file dirs.
+- **Pitfall #2 (fail-open fabricated evidence)** → UNCHANGED and still binding: L7 must gate `Done` on a real persisted retro record and throw if missing (now a real section in the ticket file, not a fabricated default).
+- **Build order** → new **Phase 1 = StateStore migration** (foundation; replaces the old "schema/migration" work) and precedes taxonomy-driven persistence, scope gate, L7, smoke, retro. `deploy/worker.ts`, `auditor/worker.ts`, `qa/*`, `learn/*`, `accept/breaker.ts`, `ingress/routes.ts` all change to call `StateStore`.
+- **Enterprise ceiling** → single-machine local files are load-bearing; multi-instance enterprise swaps the `StateStore` impl → network store (Postgres) behind the same interface. Recorded as a `ponytail:` ceiling, deferred out of v2.0.
+
+Everything below remains valid EXCEPT where it names SQLite/Drizzle/tables/DDL — read those as "the `StateStore` file equivalent".
+
+---
+
 ## Executive Summary
 
 Milestone v2.0 restructures the shipped 8-stage / L1–L6 pipeline into the Golden Path v2 model (5 columns, 9 actor-assigned steps, L1–L7 evidence) by adding five capabilities: **(A)** taxonomy restructure, **(B)** human PM scope-lock gate at Refinement Step 2, **(C)** L7 Continuous-Feedback evidence + index extension L1–L6 → L1–L7, **(D)** automated prod smoke suite at Release Step 8, **(E)** retro takeaways + runbook output at Retro Step 9. The headline stack finding is **ZERO new dependencies** — every capability is covered by the 17 installed runtime deps + 7 dev deps, and each has a shipped v1.0 pattern to clone. The only `package.json`-adjacent change is new zod-validated env vars.
