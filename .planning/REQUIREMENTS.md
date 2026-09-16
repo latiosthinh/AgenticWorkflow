@@ -81,26 +81,27 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TAX-01 | — | Pending |
-| TAX-02 | — | Pending |
-| TAX-03 | — | Pending |
-| SCOPE-01 | — | Pending |
-| SCOPE-02 | — | Pending |
-| SCOPE-03 | — | Pending |
-| EVID-01 | — | Pending |
-| EVID-02 | — | Pending |
-| EVID-03 | — | Pending |
-| SMOKE-01 | — | Pending |
-| SMOKE-02 | — | Pending |
-| SMOKE-03 | — | Pending |
-| RETRO-01 | — | Pending |
-| RETRO-02 | — | Pending |
-| RETRO-03 | — | Pending |
+| TAX-01 | Phase 1 | Pending |
+| TAX-02 | Phase 6 | Pending |
+| TAX-03 | Phase 1 | Pending |
+| SCOPE-01 | Phase 2 | Pending |
+| SCOPE-02 | Phase 2 | Pending |
+| SCOPE-03 | Phase 2 | Pending |
+| EVID-01 | Phase 5 | Pending |
+| EVID-02 | Phase 3 | Pending |
+| EVID-03 | Phase 3 | Pending |
+| SMOKE-01 | Phase 4 | Pending |
+| SMOKE-02 | Phase 4 | Pending |
+| SMOKE-03 | Phase 4 | Pending |
+| RETRO-01 | Phase 5 | Pending |
+| RETRO-02 | Phase 5 | Pending |
+| RETRO-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 15 total (5 categories)
-- Mapped to phases: 0 (roadmapper fills this)
-- Unmapped: 15
+- Mapped to phases: 15/15 ✓ (roadmap created 2026-09-16 — each requirement in exactly one phase)
+- Unmapped: 0
+- Phase distribution: P1: 2 (TAX-01/03) · P2: 3 (SCOPE-*) · P3: 2 (EVID-02/03) · P4: 3 (SMOKE-*) · P5: 4 (RETRO-* + EVID-01) · P6: 1 (TAX-02)
 
 ---
 *Requirements defined: 2026-09-16 for milestone v2.0 (Golden Path v2)*

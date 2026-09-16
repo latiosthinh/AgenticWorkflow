@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: planning
-stopped_at: Milestone v2.0 started — defining requirements
+status: roadmap_complete
+stopped_at: v2.0 roadmap created — 6 phases, 15/15 requirements mapped, ready for Phase 1 planning
 last_updated: "2026-09-16T00:00:00.000Z"
 last_activity: 2026-09-16
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,12 +25,14 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-16 — Milestone v2.0 started
+Phase: 1 — Taxonomy & Schema Foundation (not started)
+Plan: — (no plans created yet; 15 estimated across 6 phases)
+Status: Roadmap complete — awaiting Phase 1 discuss/plan
+Last activity: 2026-09-16 — v2.0 roadmap created (6 phases, 15/15 requirements mapped)
 
-Progress: [          ] 0% (defining requirements)
+Progress: [          ] 0% (0/6 phases)
+
+**Phase structure (v2.0):** Wave A: 1 Taxonomy & Schema Foundation → Wave B (parallel): 2 PM Scope-Lock Gate ∥ 3 L7 Evidence Index Extension ∥ 4 Prod Smoke Suite → Wave C: 5 Retro & L7 Output → Wave D: 6 Docs Realignment & E2E Proof. Critical path: 1 → 3 → 5 → 6.
 
 ## Performance Metrics
 
@@ -155,14 +157,26 @@ Recent decisions affecting current work:
 - [08-02]: Implemented stageAndPublishSkillPr opening Pull Requests with AB#<id> titles targeting main (never direct-committed).
 - [08-02]: Attached sanitized HTML discussion comments with PR links and loop shield <!-- [automated-agent] --> to work items.
 - [08-02]: Wired post-Done trigger in deploy worker to dispatch continuous learning feedback loop.
+- [Roadmap]: v2.0 = 6 phases; Wave A (1) → Wave B 3-way parallel (2 ∥ 3 ∥ 4) → Wave C (5) → Wave D (6); critical path 1 → 3 → 5 → 6; 15/15 requirements mapped exactly once.
+- [Roadmap]: Schema/migration grouped WITH taxonomy in Phase 1 — both serial Wave-A foundation (no parallelism lost), migration harness must precede every Wave-B writer, and the DDL deliverables are named inside consumer-phase requirements (scope_locks→SCOPE-02, smoke_runs→SMOKE-03, retro_records/l7_summary→EVID-01/02), so a standalone schema phase would own zero requirements.
+- [Roadmap]: Scope-gate park state = `New` + `[awaiting-scope-lock]` (SCOPE-01 wording authoritative — resolves research Open Decision #1 Axis B); Pitfall-6 second auditor guard (tag/row check before any LLM call) + triple-rev idempotency test are NON-optional.
+- [Roadmap]: TAX-02 → Phase 6 (docs must describe the BUILT system); the behavior-preserving router refactor lands in Phase 1 under TAX-01 and is verified end-to-end in Phase 6.
+- [Roadmap]: Resolved Conflict #3 binding — retro awaited BEFORE Done (fail-closed, single post-retro L1–L7 compile); human PR merge async, never gates Done; fire-and-forget learn call removed in Phase 5.
+- [Roadmap]: Resolved Conflict #2 binding — raw idempotent DDL + guarded ALTER (NO drizzle-kit in v2.0); permanent v1-fixture upgrade test in Phase 1; `l7_summary` nullable.
+- [Roadmap]: Open Decision #2 resolved — v1.0 hardcoded L2/L4 index defaults stay as logged backlog debt; do NOT extend the fabrication pattern to L7 (grep-asserted in Phase 3).
+- [Roadmap]: Phase 4 touches deploy/worker.ts for smoke→telemetry sequencing only; Phase 5 owns the final Done-patch re-sequencing (avoids conflicting edit).
 
 ### Pending Todos
 
-None yet.
+Plan-phase validation items (from research flags — resolve during discuss/plan of the owning phase):
+- [Phase 2]: Validate ADO org permits bot tag-writes on `New`/`Ready to Dev` items; check tag collisions for `[awaiting-scope-lock]`/`[scope-locked]`; decide PM notification mechanism (comment vs @mention/System.AssignedTo).
+- [Phase 4]: Security-review the wider prod egress allowance (PRODUCTION_SMOKE_URL); decide smoke-suite authorship (target repo vs orchestrator-owned — changes worktree need).
+- [Phase 5]: Decide runbook destination (`.claude/skills/<name>/RUNBOOK.md` vs top-level `runbooks/`); confirm Step 9 needs no new human verdict token (skills-PR merge is the gate).
+- [Backlog]: L2/L4 hardcoded evidence-index defaults — wire to `ado/policy.ts:verifyBranchPolicies` post-v2.0 (Open Decision #2, leave-and-log).
 
 ### Blockers/Concerns
 
-- None. Milestone v2.0 kickoff — requirements definition in progress.
+- None blocking. MEDIUM-confidence assumptions flagged for phase-level validation (see Pending Todos): ADO tag-write permissions (Phase 2), prod smoke egress under security posture (Phase 4).
 
 ## Deferred Items
 
@@ -175,7 +189,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-09-16
-Stopped at: Milestone v2.0 (Golden Path v2) started — PROJECT.md + STATE.md updated
-Resume file: Defining v2.0 requirements → roadmap (full restructure to 5 columns / 9 steps / L1–L7)
+Stopped at: v2.0 roadmap created — ROADMAP.md rewritten (6 phases, state matrix + flow + coverage 15/15), REQUIREMENTS.md traceability filled; NOT yet committed (orchestrator commits after user approval)
+Resume: Next step `/gsd-plan-phase 1` (Taxonomy & Schema Foundation) — or `/gsd-discuss-phase 1` first; Wave B (phases 2/3/4) can be planned in any order after Phase 1 completes
 
 (End of file - total 170 lines)
