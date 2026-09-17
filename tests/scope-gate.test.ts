@@ -605,8 +605,11 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
 
     // 2. Verify ADO call
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
-    const [calledId, patchDoc] = mockWitApi.updateWorkItem.mock.calls[0];
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    const calledId = updateArgs[2];
     expect(calledId).toBe(workItemId);
+    expect(patchDoc).toBeDefined();
 
     // State -> Ready to Dev
     const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
@@ -655,8 +658,11 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
 
     // Verify ADO call with escalation patch
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
-    const [calledId, patchDoc] = mockWitApi.updateWorkItem.mock.calls[0];
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    const calledId = updateArgs[2];
     expect(calledId).toBe(workItemId);
+    expect(patchDoc).toBeDefined();
 
     // State -> Blocked
     const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
@@ -681,6 +687,53 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
     const ticket = await stateStore.getTicketState(workItemId);
     expect(ticket?.scopeLock?.status).toBe('blocked');
     expect(ticket?.scopeLock?.iterationCount).toBe(3);
+    expect(ticket?.reworkCycles).toBeUndefined();
+  });
+
+  it('SCOPE-03 breaker feedback: handleScopeRejection on 1st bounce posts feedback comment with loop shield and keeps status rejected', async () => {
+    const workItemId = 3006;
+    const initialTags = 'payments; [awaiting-scope-lock]';
+
+    const mockWitApi = {
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await handleScopeRejection(
+      workItemId,
+      'Please refine acceptance criteria for error responses.',
+      initialTags,
+      'pm-reviewer@example.com'
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.iterationCount).toBe(1);
+
+    // Verify ADO call for feedback comment
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    const calledId = updateArgs[2];
+    expect(calledId).toBe(workItemId);
+
+    // History contains feedback comment and loop shield marker
+    const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp).toBeDefined();
+    expect(historyOp.value).toContain('[Scope Rejected]');
+    expect(historyOp.value).toContain('Please refine acceptance criteria for error responses.');
+    expect(historyOp.value).toContain('<!-- [automated-agent] -->');
+
+    // System.State must NOT be modified
+    const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp).toBeUndefined();
+
+    // Verify StateStore state
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('rejected');
+    expect(ticket?.scopeLock?.iterationCount).toBe(1);
+    expect(ticket?.scopeLock?.feedback).toBe(
+      'Please refine acceptance criteria for error responses.'
+    );
     expect(ticket?.reworkCycles).toBeUndefined();
   });
 });

@@ -257,4 +257,9 @@ export async function transitionToReadyForQa(
   return adoClient.updateWorkItem(workItemId, patchDoc);
 }
 
+export {
+  buildScopeApprovedPatch,
+  buildScopeEscalationPatch,
+} from '../scope/gate.js';
+
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2
