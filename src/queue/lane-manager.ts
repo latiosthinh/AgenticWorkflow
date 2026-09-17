@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import PQueue from 'p-queue';
+
+export const laneContext = new AsyncLocalStorage<{ workItemId: number }>();
 
 export class WorkItemQueueManager {
   private lanes = new Map<number, PQueue>();
@@ -10,6 +13,11 @@ export class WorkItemQueueManager {
       this.lanes.set(workItemId, lane);
     }
     return lane;
+  }
+
+  public async runInLane<T>(workItemId: number, fn: () => Promise<T>): Promise<T> {
+    const lane = this.getLane(workItemId);
+    return (await lane.add(() => laneContext.run({ workItemId }, fn))) as T;
   }
 
   public clearLane(workItemId: number): void {
