@@ -160,7 +160,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Scope-Lock State Types, Review Packet, and Auditor Parking Interception
+- [x] 03-01-PLAN.md — Scope-Lock State Types, Review Packet, and Auditor Parking Interception
 - [ ] 03-02-PLAN.md — Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation
 - [ ] 03-03-PLAN.md — Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring
 **Parallelizable**: Yes — Wave B, parallel with Phases 4 & 5 (mutually independent file sets: this phase owns `src/scope/` NEW + `auditor/worker.ts` + the `execute/router.ts` scope-guard + `accept/breaker.ts` + `ado/work-item.ts` patch builders + `src/index.ts` watchdog start — Phases 4/5 must not touch the router).

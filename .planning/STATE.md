@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-09-17T12:00:00.000Z"
-last_activity: 2026-09-17 — completed Plan 02-02 (Taxonomy-driven router refactor and full lifecycle replay parity test)
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-09-17T12:40:00.000Z"
+last_activity: 2026-09-17 — completed Plan 03-01 (Scope-Lock State Types, Review Packet, and Auditor Parking Interception)
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_plans: 19
+  completed_plans: 8
+  percent: 42
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 2 — Taxonomy Foundation (complete)
-Plan: 02-02 (completed) — taxonomy-driven router refactor and full lifecycle replay parity test
-Status: Phase 2 complete — Ready for Wave B (Phases 3, 4, 5)
-Last activity: 2026-09-17 — completed Plan 02-02 (Taxonomy-driven router refactor and full lifecycle replay parity test)
+Phase: 3 — PM Scope-Lock Gate (executing)
+Plan: 03-01 (completed) — Scope-Lock State Types, Review Packet, and Auditor Parking Interception
+Status: Plan 03-01 complete — Next: Plan 03-02 (Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation)
+Last activity: 2026-09-17 — completed Plan 03-01 (Scope-Lock State Types, Review Packet, and Auditor Parking Interception)
 
-Progress: [██████████] 100% (Wave A complete: Phases 1 & 2)
+Progress: [████░░░░░░] 42% (Wave B executing: Phase 3 Plan 01 complete)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -69,6 +69,7 @@ Progress: [██████████] 100% (Wave A complete: Phases 1 & 2)
 | Phase 01 P05 | 15m | 3 tasks | 15 files |
 | Phase 02 P01 | 3m | 2 tasks | 2 files |
 | Phase 02 P02 | 6m | 2 tasks | 2 files |
+| Phase 03 P01 | 8m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -200,6 +201,8 @@ Recent decisions affecting current work:
 - [02-01]: Support both string and string-array formats for tags in resolveRoutingStep to maintain compatibility with ADO work item models
 - [02-02]: Router state dispatch delegates to resolveRoutingStep from pipeline taxonomy using a step.step switch table
 - [02-02]: Bound routeWorkItemEvent inside workItemQueueManager.runInLane to guarantee ambient lane context for all direct and routed state store mutations
+- [03-01]: Park audit-passed tickets in 'New' with tags '[awaiting-scope-lock]; [audit-passed]' and post scope review packet instead of auto-transitioning to 'Ready to Dev'
+- [03-01]: Pre-LLM idempotency guard checks ADO tags and StateStore scopeLock status early, skipping re-audit with dedup 'skipped' to eliminate token burns and duplicate transitions
 
 ### Pending Todos
 
@@ -228,6 +231,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T12:00:00.000Z
-Stopped at: Completed Phase 2 (02-02-PLAN.md)
-Resume: Next phase: Wave B (Phase 3: PM Scope-Lock Gate, Phase 4: L7 Evidence Index Extension, Phase 5: Prod Smoke Suite)
+Last session: 2026-09-17T12:40:00.000Z
+Stopped at: Completed Phase 3 Plan 01 (03-01-PLAN.md)
+Resume: Next plan: Wave B (03-02-PLAN.md: Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation)
