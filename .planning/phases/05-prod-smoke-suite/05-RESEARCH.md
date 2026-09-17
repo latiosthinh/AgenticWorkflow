@@ -552,12 +552,12 @@ export function formatSmokeAlertComment(options: {
 
 *Note:* All other technical specifications, schemas, and requirements in this document are [VERIFIED: codebase inspection] or [CITED: official planning documents].
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Target-Repo vs Orchestrator-Owned Smoke Scripts**
    - What we know: `sandbox/runner.ts` can execute any command in any working directory.
    - What's unclear: Does the target application repo contain its own `npm run test:smoke` script, or does the orchestrator execute a standard HTTP probe suite?
-   - Recommendation: Default to native HTTP probe + version check directly in orchestrator; if `SMOKE_TEST_COMMAND` is specified and a worktree path is provided, execute sandboxed command in worktree.
+   - RESOLVED: Default to native HTTP probe + version check directly in orchestrator; if `SMOKE_TEST_COMMAND` is specified and a worktree path is provided, execute sandboxed command in worktree.
 
 ## Environment Availability
 
