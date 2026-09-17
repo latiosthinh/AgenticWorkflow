@@ -230,6 +230,7 @@ export class FileStateStore implements StateStore {
         deploymentRecords: [],
         telemetryEvaluations: [],
         skillsPrs: [],
+        smokeRuns: [],
       };
     }
 

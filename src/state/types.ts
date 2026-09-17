@@ -96,6 +96,32 @@ export interface QaEvidenceState {
   createdAt: string;
 }
 
+export interface SmokeRunEntry {
+  id?: number;
+  runIndex: number;
+  strikeCount: number;
+  status: 'passed' | 'failed' | 'flaked';
+  classification?: 'INFRA' | 'APP' | 'NONE';
+  failedCheckSignatures?: string | null;
+  stdout?: string | null;
+  stderr?: string | null;
+  durationMs?: number | null;
+  createdAt: string;
+}
+
+export interface SmokeEvidenceState {
+  status: 'passed' | 'failed' | 'flaked';
+  classification?: 'INFRA' | 'APP' | 'NONE';
+  commitSha: string;
+  smokeUrl?: string | null;
+  checksTotal: number;
+  checksPassed: number;
+  checksFailed: number;
+  durationMs: number;
+  flakeCleared: boolean;
+  createdAt: string;
+}
+
 export interface DeploymentRecordEntry {
   id?: number;
   pipelineRunId?: string | null;
@@ -178,6 +204,8 @@ export interface TicketState {
   telemetryEvaluations: TelemetryEvaluationEntry[];
   evidenceIndex?: EvidenceIndexState | null;
   skillsPrs: SkillsPrEntry[];
+  smokeRuns?: SmokeRunEntry[];
+  smokeEvidence?: SmokeEvidenceState | null;
   retroRecords?: L7EvidenceState[];
   l7Evidence?: L7EvidenceState | null;
 }
