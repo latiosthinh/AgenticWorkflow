@@ -86,7 +86,7 @@ export async function routeWorkItemEvent(
         historyComment: workItem.history,
         tags: workItem.tags,
         previousTags,
-        revisedBy: (workItem as any).revisedBy,
+        revisedBy: workItem.revisedBy,
       });
 
       if (scopeVerdict.type === 'reset_scope') {

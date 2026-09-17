@@ -22,6 +22,7 @@ export interface WorkItemDetails {
   state: string;
   tags?: string;
   history?: string;
+  revisedBy?: string;
 }
 
 export function buildTagPatch(
@@ -125,6 +126,20 @@ export async function getWorkItemDetails(
     ? await adoClient.getRevision(workItemId, revId)
     : await adoClient.getWorkItem(workItemId);
   const fields = workItem.fields || {};
+  const changedBy = fields['System.ChangedBy'];
+  const changedByStr =
+    typeof changedBy === 'object' && changedBy !== null
+      ? (changedBy as any).displayName || (changedBy as any).uniqueName || (changedBy as any).name
+      : typeof changedBy === 'string'
+        ? changedBy
+        : undefined;
+
+  const revisedBy =
+    (workItem as any).revisedBy?.displayName ||
+    (workItem as any).revisedBy?.name ||
+    (workItem as any).revisedBy?.uniqueName ||
+    changedByStr;
+
   return {
     id: workItem.id ?? workItemId,
     rev: workItem.rev ?? fields['System.Rev'] ?? 1,
@@ -134,6 +149,7 @@ export async function getWorkItemDetails(
     state: fields['System.State'] || '',
     tags: fields['System.Tags'] || '',
     history: fields['System.History'] || '',
+    revisedBy,
   };
 }
 

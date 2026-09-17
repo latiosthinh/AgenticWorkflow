@@ -363,6 +363,49 @@ describe('Azure DevOps Client & Work Item Integration', () => {
       expect(mockWitApi.getWorkItem).not.toHaveBeenCalled();
     });
 
+    it('getWorkItemDetails extracts revisedBy from revisedBy or System.ChangedBy', async () => {
+      // 1. From workItem.revisedBy
+      const mockWitApi1 = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: 43,
+          rev: 1,
+          revisedBy: { displayName: 'Alice PM' },
+          fields: {},
+        }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi1 as any);
+      const details1 = await getWorkItemDetails(43);
+      expect(details1.revisedBy).toBe('Alice PM');
+
+      // 2. From fields['System.ChangedBy'] as object
+      const mockWitApi2 = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: 44,
+          rev: 2,
+          fields: {
+            'System.ChangedBy': { displayName: 'Bob Lead' },
+          },
+        }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi2 as any);
+      const details2 = await getWorkItemDetails(44);
+      expect(details2.revisedBy).toBe('Bob Lead');
+
+      // 3. From fields['System.ChangedBy'] as string
+      const mockWitApi3 = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: 45,
+          rev: 3,
+          fields: {
+            'System.ChangedBy': 'Charlie Dev',
+          },
+        }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi3 as any);
+      const details3 = await getWorkItemDetails(45);
+      expect(details3.revisedBy).toBe('Charlie Dev');
+    });
+
     it('transitionToReadyToDev dispatches JSON patch update', async () => {
       const mockWitApi = {
         getWorkItem: vi.fn(),
