@@ -118,6 +118,7 @@ describe('FileStateStore CRUD operations', () => {
     expect(created.workItemId).toBe(101);
     expect(created.revId).toBe(1);
     expect(created.auditLogs).toHaveLength(1);
+    expect(created.smokeRuns).toEqual([]);
     expect(created.createdAt).toBeDefined();
     expect(created.updatedAt).toBeDefined();
 
