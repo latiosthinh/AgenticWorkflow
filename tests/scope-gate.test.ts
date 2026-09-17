@@ -496,6 +496,26 @@ describe('PM Scope-Lock Gate - Scope Verdict Detection (Task 1)', () => {
 
     expect(verdictTagChange.type).toBe('approve');
   });
+
+  it('CR-02 safety: ignores [scope-locked] tag when previousTags is undefined or ticket is in In Dev', () => {
+    // 1. previousTags undefined with [scope-locked] tag
+    const verdictUndefinedPrev = detectScopeVerdict({
+      currentState: 'In Dev',
+      tags: 'backend; [scope-locked]',
+      previousTags: undefined,
+      revisedBy: 'dev@example.com',
+    });
+    expect(verdictUndefinedPrev.type).toBe('none');
+
+    // 2. In Dev state even if tag was added in this rev, ticket is in flight and not awaiting scope
+    const verdictInDev = detectScopeVerdict({
+      currentState: 'In Dev',
+      previousTags: 'backend',
+      tags: 'backend; [scope-locked]',
+      revisedBy: 'dev@example.com',
+    });
+    expect(verdictInDev.type).toBe('none');
+  });
 });
 
 describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', () => {

@@ -20,14 +20,23 @@ export function detectScopeVerdict(input: ScopeVerdictDetectionInput): ScopeVerd
     return { type: 'reset_scope' };
   }
 
+  const isAwaitingScope =
+    input.currentState === 'New' ||
+    Boolean(input.tags?.includes('[awaiting-scope-lock]'));
+
+  const tagJustAdded =
+    Boolean(input.tags?.includes('[scope-locked]')) &&
+    input.previousTags !== undefined &&
+    !input.previousTags.includes('[scope-locked]');
+
   // Approval triggers:
   // 1. Explicit token [approve-scope]
   // 2. State transition New -> Ready to Dev
-  // 3. Tag [scope-locked] added
+  // 3. Tag [scope-locked] added (only valid if previousTags is known and ticket is awaiting scope)
   if (
     comment.includes('[approve-scope]') ||
     (input.previousState === 'New' && input.currentState === 'Ready to Dev') ||
-    (input.tags?.includes('[scope-locked]') && !input.previousTags?.includes('[scope-locked]'))
+    (isAwaitingScope && tagJustAdded)
   ) {
     return {
       type: 'approve',
@@ -36,12 +45,17 @@ export function detectScopeVerdict(input: ScopeVerdictDetectionInput): ScopeVerd
     };
   }
 
+  const rejectTagJustAdded =
+    Boolean(input.tags?.includes('[scope-rejected]')) &&
+    input.previousTags !== undefined &&
+    !input.previousTags.includes('[scope-rejected]');
+
   // Rejection triggers:
   // 1. Explicit token [reject-scope]
   // 2. Tag [scope-rejected] added
   if (
     comment.includes('[reject-scope]') ||
-    (input.tags?.includes('[scope-rejected]') && !input.previousTags?.includes('[scope-rejected]'))
+    rejectTagJustAdded
   ) {
     const feedback = comment
       .replace(/\[reject-scope\]/g, '')
