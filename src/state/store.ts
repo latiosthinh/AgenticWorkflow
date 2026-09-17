@@ -43,11 +43,37 @@ function writeCrashAtomicSync(targetPath: string, content: string): void {
 
   fs.writeFileSync(tempPath, content, 'utf8');
 
+  let targetRenamed = false;
+  let backupPath = '';
   try {
-    if (process.platform === 'win32' && fs.existsSync(targetPath)) {
-      fs.unlinkSync(targetPath);
+    try {
+      fs.renameSync(tempPath, targetPath);
+    } catch (renameErr: any) {
+      if (process.platform === 'win32' && (renameErr.code === 'EPERM' || renameErr.code === 'EEXIST')) {
+        backupPath = `${targetPath}.bak.${Date.now()}.${crypto.randomBytes(4).toString('hex')}`;
+        if (fs.existsSync(targetPath)) {
+          fs.renameSync(targetPath, backupPath);
+          targetRenamed = true;
+        }
+        try {
+          fs.renameSync(tempPath, targetPath);
+          if (targetRenamed && fs.existsSync(backupPath)) {
+            try {
+              fs.unlinkSync(backupPath);
+            } catch {}
+          }
+        } catch (retryErr) {
+          if (targetRenamed && fs.existsSync(backupPath)) {
+            try {
+              fs.renameSync(backupPath, targetPath);
+            } catch {}
+          }
+          throw retryErr;
+        }
+      } else {
+        throw renameErr;
+      }
     }
-    fs.renameSync(tempPath, targetPath);
   } catch (err) {
     if (fs.existsSync(tempPath)) {
       try {
