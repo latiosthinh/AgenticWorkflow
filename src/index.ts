@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { webhookRoutes, registerWorkItemHandler } from './ingress/routes.js';
 import { routeWorkItemEvent } from './execute/router.js';
 import { startPlanWatchdog } from './plan/watchdog.js';
+import { startScopeWatchdog } from './scope/index.js';
 import { purgeOldDedupEvents } from './state/index.js';
 import { workItemQueueManager } from './queue/lane-manager.js';
 import { pruneOrphanedWorktrees } from './sandbox/worktree.js';
@@ -59,6 +60,7 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
   }, 24 * 60 * 60 * 1000);
 
   const watchdog = startPlanWatchdog();
+  const scopeWatchdog = startScopeWatchdog();
 
   const app = await buildApp();
 
@@ -72,6 +74,7 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
 
     clearInterval(purgeInterval);
     watchdog.stop();
+    scopeWatchdog.stop();
 
     try {
       await app.close();

@@ -20,6 +20,12 @@ import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
 import { resolveRoutingStep } from '../pipeline/taxonomy.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
+import {
+  detectScopeVerdict,
+  handleScopeApproval,
+  handleScopeRejection,
+  resetScopeBreaker,
+} from '../scope/index.js';
 
 function parseDiffStat(statStr?: string): { totalLoc: number; filesChanged: number } {
   if (!statStr) return { totalLoc: 50, filesChanged: 2 };
@@ -62,13 +68,43 @@ export async function routeWorkItemEvent(
       const workItem = await getWorkItemDetails(workItemId, revId);
 
       let previousState: string | undefined;
+      let previousTags: string | undefined;
       if (revId > 1) {
         try {
           const prevDetails = await getWorkItemDetails(workItemId, revId - 1);
           previousState = prevDetails.state;
+          previousTags = prevDetails.tags;
         } catch {
           // Ignore previous revision lookup failure
         }
+      }
+
+      const scopeVerdict = detectScopeVerdict({
+        currentState: workItem.state,
+        previousState,
+        historyComment: workItem.history,
+        tags: workItem.tags,
+        previousTags,
+        revisedBy: (workItem as any).revisedBy,
+      });
+
+      if (scopeVerdict.type === 'reset_scope') {
+        await resetScopeBreaker(workItemId);
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+        return;
+      } else if (scopeVerdict.type === 'approve') {
+        await handleScopeApproval(workItemId, workItem.tags, scopeVerdict.actor);
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+        return;
+      } else if (scopeVerdict.type === 'reject') {
+        await handleScopeRejection(
+          workItemId,
+          scopeVerdict.feedback,
+          workItem.tags,
+          scopeVerdict.actor
+        );
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+        return;
       }
 
       const verdict = detectAcceptanceVerdict({
@@ -113,9 +149,20 @@ export async function routeWorkItemEvent(
           case 1:
             await processWorkItemAudit(workItemId, revId);
             break;
-          case 3:
+          case 3: {
+            const ticket = await stateStore.getTicketState(workItemId);
+            if (ticket?.scopeLock?.status !== 'locked' && !options?.skipScopeLockCheck) {
+              stateStore.updateDedupStatus(
+                workItemId,
+                revId,
+                'skipped',
+                `In Dev dispatch refused: ticket is not scope-locked (status: ${ticket?.scopeLock?.status ?? 'none'})`
+              );
+              return;
+            }
             await processWorkItemExecute(workItemId, revId, options);
             break;
+          }
           case 4: {
             const ticket = await stateStore.getTicketState(workItemId);
             const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0

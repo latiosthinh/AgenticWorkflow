@@ -1013,33 +1013,43 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
   });
 
   it('router scope verdict: routes [approve-scope], [reject-scope], and [reset-scope] verdicts', async () => {
+    const revisions: Record<number, Record<number, any>> = {};
     const mockWitApi = {
-      getWorkItem: vi.fn(),
-      getRevision: vi.fn(),
+      getWorkItem: vi.fn().mockImplementation((id: number) => {
+        const itemRevs = revisions[id] || {};
+        const revKeys = Object.keys(itemRevs).map(Number);
+        const maxRev = revKeys.length > 0 ? Math.max(...revKeys) : 1;
+        return Promise.resolve(itemRevs[maxRev] || { id });
+      }),
+      getRevision: vi.fn().mockImplementation((id: number, rev: number) => {
+        return Promise.resolve(revisions[id]?.[rev] || { id, rev });
+      }),
       updateWorkItem: vi.fn().mockResolvedValue({ id: 5001 }),
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
     // 1. [approve-scope]
     const workItemIdApprove = 5001;
-    mockWitApi.getWorkItem.mockResolvedValueOnce({
-      id: workItemIdApprove,
-      rev: 2,
-      fields: {
-        'System.Title': 'Approve Scope Ticket',
-        'System.State': 'Ready to Dev',
-        'System.Tags': 'backend; [awaiting-scope-lock]',
-        'System.History': 'Approving scope [approve-scope]',
+    revisions[workItemIdApprove] = {
+      1: {
+        id: workItemIdApprove,
+        rev: 1,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+        },
       },
-    });
-    mockWitApi.getRevision.mockResolvedValueOnce({
-      id: workItemIdApprove,
-      rev: 1,
-      fields: {
-        'System.State': 'New',
-        'System.Tags': 'backend; [awaiting-scope-lock]',
+      2: {
+        id: workItemIdApprove,
+        rev: 2,
+        fields: {
+          'System.Title': 'Approve Scope Ticket',
+          'System.State': 'Ready to Dev',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+          'System.History': 'Approving scope [approve-scope]',
+        },
       },
-    });
+    };
 
     stateStore.recordDedupEvent(workItemIdApprove, 2, 'hash-5001');
     await routeWorkItemEvent(workItemIdApprove, 2);
@@ -1051,24 +1061,26 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
 
     // 2. [reject-scope]
     const workItemIdReject = 5002;
-    mockWitApi.getWorkItem.mockResolvedValueOnce({
-      id: workItemIdReject,
-      rev: 2,
-      fields: {
-        'System.Title': 'Reject Scope Ticket',
-        'System.State': 'New',
-        'System.Tags': 'backend; [awaiting-scope-lock]',
-        'System.History': '[reject-scope] Acceptance criteria missing performance specs.',
+    revisions[workItemIdReject] = {
+      1: {
+        id: workItemIdReject,
+        rev: 1,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+        },
       },
-    });
-    mockWitApi.getRevision.mockResolvedValueOnce({
-      id: workItemIdReject,
-      rev: 1,
-      fields: {
-        'System.State': 'New',
-        'System.Tags': 'backend; [awaiting-scope-lock]',
+      2: {
+        id: workItemIdReject,
+        rev: 2,
+        fields: {
+          'System.Title': 'Reject Scope Ticket',
+          'System.State': 'New',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+          'System.History': '[reject-scope] Acceptance criteria missing performance specs.',
+        },
       },
-    });
+    };
 
     stateStore.recordDedupEvent(workItemIdReject, 2, 'hash-5002');
     await routeWorkItemEvent(workItemIdReject, 2);
@@ -1099,24 +1111,26 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
       });
     });
 
-    mockWitApi.getWorkItem.mockResolvedValueOnce({
-      id: workItemIdReset,
-      rev: 2,
-      fields: {
-        'System.Title': 'Reset Scope Ticket',
-        'System.State': 'Blocked',
-        'System.Tags': 'backend; [scope-unresolved]',
-        'System.History': 'PM updated criteria [reset-scope] please re-evaluate',
+    revisions[workItemIdReset] = {
+      1: {
+        id: workItemIdReset,
+        rev: 1,
+        fields: {
+          'System.State': 'Blocked',
+          'System.Tags': 'backend; [scope-unresolved]',
+        },
       },
-    });
-    mockWitApi.getRevision.mockResolvedValueOnce({
-      id: workItemIdReset,
-      rev: 1,
-      fields: {
-        'System.State': 'Blocked',
-        'System.Tags': 'backend; [scope-unresolved]',
+      2: {
+        id: workItemIdReset,
+        rev: 2,
+        fields: {
+          'System.Title': 'Reset Scope Ticket',
+          'System.State': 'Blocked',
+          'System.Tags': 'backend; [scope-unresolved]',
+          'System.History': 'PM updated criteria [reset-scope] please re-evaluate',
+        },
       },
-    });
+    };
 
     stateStore.recordDedupEvent(workItemIdReset, 2, 'hash-5003');
     await routeWorkItemEvent(workItemIdReset, 2);
@@ -1141,6 +1155,15 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
           'System.Tags': 'backend',
         },
       }),
+      getRevision: vi.fn().mockResolvedValue({
+        id: workItemId,
+        rev: revId,
+        fields: {
+          'System.Title': 'Unlocked In Dev Ticket',
+          'System.State': 'In Dev',
+          'System.Tags': 'backend',
+        },
+      }),
       updateWorkItem: vi.fn(),
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
@@ -1156,7 +1179,7 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
 
   it('router Step 3 pass: dispatches to processWorkItemExecute when ticket scope is locked', async () => {
     const workItemId = 5005;
-    const revId = 1;
+    const revId = 2;
 
     await workItemQueueManager.runInLane(workItemId, async () => {
       await stateStore.updateTicketState(workItemId, (draft) => {
@@ -1185,6 +1208,27 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
           'System.State': 'In Dev',
           'System.Tags': 'backend; [scope-locked]',
         },
+      }),
+      getRevision: vi.fn().mockImplementation((id: number, rev: number) => {
+        if (rev === 1) {
+          return Promise.resolve({
+            id: workItemId,
+            rev: 1,
+            fields: {
+              'System.State': 'Ready to Dev',
+              'System.Tags': 'backend; [scope-locked]',
+            },
+          });
+        }
+        return Promise.resolve({
+          id: workItemId,
+          rev: 2,
+          fields: {
+            'System.Title': 'Locked In Dev Ticket',
+            'System.State': 'In Dev',
+            'System.Tags': 'backend; [scope-locked]',
+          },
+        });
       }),
       updateWorkItem: vi.fn(),
     };

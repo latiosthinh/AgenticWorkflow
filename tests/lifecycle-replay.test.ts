@@ -10,6 +10,7 @@ import { processQaVerification } from '../src/qa/worker.js';
 import { processDeploymentWorkflow } from '../src/deploy/worker.js';
 import { evaluateCircuitBreaker, resetCircuitBreaker } from '../src/accept/breaker.js';
 import { processWorkItemRework } from '../src/execute/rework-worker.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 
 // Mock downstream workers to verify pure router dispatch and options forwarding
 vi.mock('../src/execute/worker.js', () => ({
@@ -96,8 +97,8 @@ describe('V1 Lifecycle Replay Parity Test (TAX-03)', () => {
           'Microsoft.VSTS.Common.AcceptanceCriteria':
             'Given valid input, return 200 response and verified payload. System actor test condition.',
           'System.State': 'Ready to Dev',
-          'System.Tags': 'backend; [awaiting-scope-lock]',
-          'System.History': '',
+          'System.Tags': 'backend; [scope-locked]',
+          'System.History': 'Scope verified and locked by PM [approve-scope]',
         },
       },
       3: {
@@ -109,7 +110,7 @@ describe('V1 Lifecycle Replay Parity Test (TAX-03)', () => {
           'Microsoft.VSTS.Common.AcceptanceCriteria':
             'Given valid input, return 200 response and verified payload. System actor test condition.',
           'System.State': 'In Dev',
-          'System.Tags': 'backend',
+          'System.Tags': 'backend; [scope-locked]',
           'System.History': '',
         },
       },
@@ -204,14 +205,15 @@ describe('V1 Lifecycle Replay Parity Test (TAX-03)', () => {
     expect(ticketStateRev1?.auditLogs).toHaveLength(1);
     expect(ticketStateRev1?.auditLogs[0].verdict).toBe('passed');
 
-    // 2. Revision 2: State 'Ready to Dev' -> unhandled in router (human PM scope gate) -> marks dedup skipped
+    // 2. Revision 2: State 'Ready to Dev' -> PM scope approval -> routes to handleScopeApproval -> marks dedup completed
     currentRev = 2;
     stateStore.recordDedupEvent(workItemId, currentRev, `hash-${currentRev}`);
     await routeWorkItemEvent(workItemId, currentRev);
 
     const dedupRev2 = stateStore.getDedupEvent(workItemId, currentRev);
-    expect(dedupRev2?.status).toBe('skipped');
-    expect(dedupRev2?.errorMessage).toBe("Ticket state 'Ready to Dev' has no active handler");
+    expect(dedupRev2?.status).toBe('completed');
+    const ticketStateRev2 = await stateStore.getTicketState(workItemId);
+    expect(ticketStateRev2?.scopeLock?.status).toBe('locked');
 
     // 3. Revision 3: State 'In Dev' -> calls execution worker -> options forwarded
     currentRev = 3;
@@ -294,6 +296,24 @@ describe('V1 Lifecycle Replay Parity Test (TAX-03)', () => {
   it('routes tickets with [awaiting-input] tag to execution worker (Step 3) regardless of non-In-Dev state', async () => {
     const workItemId = 9002;
     const revId = 1;
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'locked',
+          iterationCount: 1,
+          requestedAt: now,
+          lockedAt: now,
+          lockedBy: 'pm@example.com',
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+    });
 
     const mockWitApi = {
       getWorkItem: vi.fn().mockResolvedValue({

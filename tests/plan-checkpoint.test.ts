@@ -502,6 +502,24 @@ describe('Execute Router Dispatches', () => {
     const workItemId = 6002;
     const revId = 1;
 
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'locked',
+          iterationCount: 1,
+          requestedAt: now,
+          lockedAt: now,
+          lockedBy: 'pm@example.com',
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+    });
+
     const mockWitApi = {
       getWorkItem: vi.fn().mockResolvedValue({
         id: workItemId,
