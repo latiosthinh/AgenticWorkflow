@@ -176,10 +176,21 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
       });
     });
 
+    let laneActiveDuringRead = false;
+    const origGet = stateStore.getTicketState.bind(stateStore);
+    vi.spyOn(stateStore, 'getTicketState').mockImplementation(async (id) => {
+      const { laneContext } = await import('../src/queue/lane-manager.js');
+      if (laneContext.getStore()?.workItemId === id) {
+        laneActiveDuringRead = true;
+      }
+      return origGet(id);
+    });
+
     const runInLaneSpy = vi.spyOn(workItemQueueManager, 'runInLane');
     await compileL1L7EvidenceIndex(workItemId);
 
     expect(runInLaneSpy).toHaveBeenCalledWith(workItemId, expect.any(Function));
+    expect(laneActiveDuringRead).toBe(true);
   });
 
   describe('Fail-Closed Gating (EVID-03)', () => {
