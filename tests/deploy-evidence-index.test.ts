@@ -440,6 +440,27 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
       expect(comment).toContain('[PENDING — retro in progress]');
       expect(comment).toContain('Continuous feedback collection pending completion of retrospective step.');
     });
+
+    it('safely handles undefined or non-array actionItems in formatEvidenceIndexComment', () => {
+      const partialSummary = {
+        workItemId: 8202,
+        l1: { verdict: 'PASSED', criteriaSummary: 'Done', reasons: [] },
+        l2: { reviewPassed: true, qualityNotes: 'Approved' },
+        l3: { localTestsPassed: 1, localTestsTotal: 1, qaTestsPassed: 1, qaTestsTotal: 1, flakeCleared: false },
+        l4: { securityPassed: true, policiesSummary: 'Clean' },
+        l5: { environmentName: 'Production', commitSha: '12345678', migrationRisk: 'low', status: 'deployed' },
+        l6: { errorRate: '0%', p95LatencyMs: 50, windowMinutes: 30, breached: false },
+        l7: {
+          status: 'RECORDED',
+          takeaways: 'Some takeaway',
+          actionItems: undefined as unknown as string[],
+        },
+      } as L1L7EvidenceSummary;
+
+      expect(() => formatEvidenceIndexComment(partialSummary)).not.toThrow();
+      const html = formatEvidenceIndexComment(partialSummary);
+      expect(html).toContain('Action items: <code>0</code>');
+    });
   });
 
   describe('Recompilation Freshness', () => {

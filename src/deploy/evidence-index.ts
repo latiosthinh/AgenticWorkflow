@@ -219,7 +219,7 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
     : '<span style="color: #f57c00; font-weight: bold;">[PENDING — retro in progress]</span>';
 
   const l7Details = l7
-    ? `Takeaways: ${sanitizeHtml(l7.takeaways)} | Action items: <code>${l7.actionItems.length}</code>${l7.runbookDiffPrUrl ? ` | Runbook: <a href="${sanitizeHtml(l7.runbookDiffPrUrl)}">PR</a>` : ''}${l7.skillPrUrl ? ` | Skill: <a href="${sanitizeHtml(l7.skillPrUrl)}">PR</a>` : ''}`
+    ? `Takeaways: ${sanitizeHtml(l7.takeaways)} | Action items: <code>${Array.isArray(l7.actionItems) ? l7.actionItems.length : 0}</code>${l7.runbookDiffPrUrl ? ` | Runbook: <a href="${sanitizeHtml(l7.runbookDiffPrUrl)}">PR</a>` : ''}${l7.skillPrUrl ? ` | Skill: <a href="${sanitizeHtml(l7.skillPrUrl)}">PR</a>` : ''}`
     : 'Continuous feedback collection pending completion of retrospective step.';
 
   const html = `
