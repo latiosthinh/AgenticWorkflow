@@ -8,6 +8,7 @@ import {
   buildParkScopeLockPatch,
   type ScopePacketData,
 } from '../src/scope/packet.js';
+import { detectScopeVerdict } from '../src/scope/verdict.js';
 import { processWorkItemAudit } from '../src/auditor/worker.js';
 import { adoClient } from '../src/ado/client.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
@@ -344,5 +345,135 @@ describe('PM Scope-Lock Gate - Auditor Worker & Idempotency (Task 2)', () => {
     // StateStore must have exactly 1 audit log entry
     const ticket = await stateStore.getTicketState(workItemId);
     expect(ticket?.auditLogs).toHaveLength(1);
+  });
+});
+
+describe('PM Scope-Lock Gate - Scope Verdict Detection (Task 1)', () => {
+  it('SCOPE-02 approve: detects approval when previousState is New and currentState is Ready to Dev', () => {
+    const verdict = detectScopeVerdict({
+      previousState: 'New',
+      currentState: 'Ready to Dev',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdict.type).toBe('approve');
+    if (verdict.type === 'approve') {
+      expect(verdict.actor).toBe('pm@example.com');
+    }
+  });
+
+  it('SCOPE-02 approve: detects approval when tags include [scope-locked] and previousTags did not', () => {
+    const verdict = detectScopeVerdict({
+      previousState: 'New',
+      currentState: 'New',
+      previousTags: 'backend; [awaiting-scope-lock]',
+      tags: 'backend; [awaiting-scope-lock]; [scope-locked]',
+      revisedBy: 'lead@example.com',
+    });
+
+    expect(verdict.type).toBe('approve');
+    if (verdict.type === 'approve') {
+      expect(verdict.actor).toBe('lead@example.com');
+    }
+  });
+
+  it('SCOPE-02 approve: detects approval when historyComment contains [approve-scope]', () => {
+    const verdict = detectScopeVerdict({
+      currentState: 'New',
+      historyComment: 'Looks good to me! [approve-scope]',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdict.type).toBe('approve');
+    if (verdict.type === 'approve') {
+      expect(verdict.comment).toContain('[approve-scope]');
+      expect(verdict.actor).toBe('pm@example.com');
+    }
+  });
+
+  it('SCOPE-02 reject: detects rejection when tags include [scope-rejected] or historyComment contains [reject-scope]', () => {
+    const verdictFromTag = detectScopeVerdict({
+      currentState: 'New',
+      previousTags: 'backend; [awaiting-scope-lock]',
+      tags: 'backend; [awaiting-scope-lock]; [scope-rejected]',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdictFromTag.type).toBe('reject');
+    if (verdictFromTag.type === 'reject') {
+      expect(verdictFromTag.feedback).toBe(
+        'Scope review rejected by PM without specific comments. Please clarify requirements and scope boundaries.'
+      );
+      expect(verdictFromTag.actor).toBe('pm@example.com');
+    }
+
+    const verdictFromComment = detectScopeVerdict({
+      currentState: 'New',
+      historyComment: '[reject-scope] Acceptance criteria missing error handling specs.',
+      revisedBy: 'qa-lead@example.com',
+    });
+
+    expect(verdictFromComment.type).toBe('reject');
+    if (verdictFromComment.type === 'reject') {
+      expect(verdictFromComment.feedback).toBe('Acceptance criteria missing error handling specs.');
+      expect(verdictFromComment.actor).toBe('qa-lead@example.com');
+    }
+  });
+
+  it('SCOPE-02 feedback: strips [reject-scope] tokens and <!-- ... --> HTML comments, returning clean feedback text or default message', () => {
+    const verdictWithComment = detectScopeVerdict({
+      currentState: 'New',
+      historyComment:
+        '[reject-scope] Needs rate limiting test. <!-- [automated-agent] --> <!-- internal note -->',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdictWithComment.type).toBe('reject');
+    if (verdictWithComment.type === 'reject') {
+      expect(verdictWithComment.feedback).toBe('Needs rate limiting test.');
+    }
+
+    const verdictBlank = detectScopeVerdict({
+      currentState: 'New',
+      historyComment: '[reject-scope] <!-- [automated-agent] -->',
+    });
+
+    expect(verdictBlank.type).toBe('reject');
+    if (verdictBlank.type === 'reject') {
+      expect(verdictBlank.feedback).toBe(
+        'Scope review rejected by PM without specific comments. Please clarify requirements and scope boundaries.'
+      );
+    }
+  });
+
+  it('SCOPE-02 reset: detects reset when historyComment contains [reset-scope]', () => {
+    const verdict = detectScopeVerdict({
+      currentState: 'Blocked',
+      historyComment: 'Requirements updated. [reset-scope] please re-evaluate.',
+    });
+
+    expect(verdict.type).toBe('reset_scope');
+  });
+
+  it('SCOPE-02 echo safety: detects approval from state/tag change even when historyComment contains automated agent markers', () => {
+    const verdictStateChange = detectScopeVerdict({
+      previousState: 'New',
+      currentState: 'Ready to Dev',
+      historyComment:
+        '<p>[Scope Review Packet] L1 Audit Contract Passed</p>\n<!-- [automated-agent] -->',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdictStateChange.type).toBe('approve');
+
+    const verdictTagChange = detectScopeVerdict({
+      currentState: 'New',
+      previousTags: '[awaiting-scope-lock]',
+      tags: '[awaiting-scope-lock]; [scope-locked]',
+      historyComment: '<!-- [automated-agent] -->',
+      revisedBy: 'pm@example.com',
+    });
+
+    expect(verdictTagChange.type).toBe('approve');
   });
 });
