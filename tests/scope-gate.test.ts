@@ -17,6 +17,12 @@ import {
   buildScopeApprovedPatch,
   buildScopeEscalationPatch,
 } from '../src/scope/gate.js';
+import {
+  checkScopeLockTimeouts,
+  startScopeWatchdog,
+  TWENTY_FOUR_HOURS_MS,
+  SEVENTY_TWO_HOURS_MS,
+} from '../src/scope/watchdog.js';
 import { processWorkItemAudit } from '../src/auditor/worker.js';
 import { adoClient } from '../src/ado/client.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
@@ -737,3 +743,248 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
     expect(ticket?.reworkCycles).toBeUndefined();
   });
 });
+
+describe('PM Scope-Lock Gate - Scope Watchdog & ADO Reconciler (SCOPE-02 watchdog)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
+  beforeEach(() => {
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+    adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('exports TWENTY_FOUR_HOURS_MS and SEVENTY_TWO_HOURS_MS constants correctly', () => {
+    expect(TWENTY_FOUR_HOURS_MS).toBe(24 * 60 * 60 * 1000);
+    expect(SEVENTY_TWO_HOURS_MS).toBe(72 * 60 * 60 * 1000);
+  });
+
+  it('watchdog reminder: posts 24-hour reminder comment to ADO when pending >= 24h and sets remindedAt', async () => {
+    const workItemId = 4001;
+    const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: twentyFiveHoursAgo.toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: twentyFiveHoursAgo.toISOString(),
+          updatedAt: twentyFiveHoursAgo.toISOString(),
+        };
+      });
+    });
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': '[awaiting-scope-lock]; [audit-passed]',
+        },
+      }),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkScopeLockTimeouts();
+    expect(result.reminded).toBe(1);
+    expect(result.escalated).toBe(0);
+    expect(result.reconciled).toBe(0);
+
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    expect(patchDoc).toBeDefined();
+
+    const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp).toBeDefined();
+    expect(historyOp.value).toContain('[Scope Review Reminder]');
+    expect(historyOp.value).toContain('Action Required');
+    expect(historyOp.value).toContain('<!-- [automated-agent] -->');
+
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.remindedAt).toBeDefined();
+    expect(ticket?.scopeLock?.remindedAt).not.toBeNull();
+    expect(ticket?.scopeLock?.status).toBe('pending');
+  });
+
+  it('watchdog reminder idempotency: does not post second reminder if remindedAt is already set', async () => {
+    const workItemId = 4002;
+    const thirtyHoursAgo = new Date(Date.now() - 30 * 60 * 60 * 1000);
+    const twentyNineHoursAgo = new Date(Date.now() - 29 * 60 * 60 * 1000);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: thirtyHoursAgo.toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: twentyNineHoursAgo.toISOString(),
+          escalatedAt: null,
+          createdAt: thirtyHoursAgo.toISOString(),
+          updatedAt: twentyNineHoursAgo.toISOString(),
+        };
+      });
+    });
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': '[awaiting-scope-lock]; [audit-passed]',
+        },
+      }),
+      updateWorkItem: vi.fn(),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkScopeLockTimeouts();
+    expect(result.reminded).toBe(0);
+    expect(result.escalated).toBe(0);
+    expect(result.reconciled).toBe(0);
+    expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
+  });
+
+  it('watchdog escalation: transitions ticket to Blocked with [scope-unresolved] tag when pending >= 72h and sets escalatedAt', async () => {
+    const workItemId = 4003;
+    const seventyFiveHoursAgo = new Date(Date.now() - 75 * 60 * 60 * 1000);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: seventyFiveHoursAgo.toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString(),
+          escalatedAt: null,
+          createdAt: seventyFiveHoursAgo.toISOString(),
+          updatedAt: seventyFiveHoursAgo.toISOString(),
+        };
+      });
+    });
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': 'backend; [awaiting-scope-lock]; [audit-passed]',
+        },
+      }),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkScopeLockTimeouts();
+    expect(result.escalated).toBe(1);
+    expect(result.reminded).toBe(0);
+    expect(result.reconciled).toBe(0);
+
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    expect(patchDoc).toBeDefined();
+
+    const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp).toEqual({
+      op: Operation.Replace,
+      path: '/fields/System.State',
+      value: 'Blocked',
+    });
+
+    const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp).toBeDefined();
+    expect(tagOp.value).toContain('[scope-unresolved]');
+    expect(tagOp.value).not.toContain('[awaiting-scope-lock]');
+
+    const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp).toBeDefined();
+    expect(historyOp.value).toContain('[Scope Review Escalation]');
+    expect(historyOp.value).toContain('Work Item Blocked');
+    expect(historyOp.value).toContain('<!-- [automated-agent] -->');
+
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('blocked');
+    expect(ticket?.scopeLock?.escalatedAt).toBeDefined();
+    expect(ticket?.scopeLock?.escalatedAt).not.toBeNull();
+  });
+
+  it('watchdog reconciliation: reconciles StateStore to locked when ADO state is Ready to Dev or has [scope-locked] without reminder/escalation', async () => {
+    const workItemId = 4004;
+    const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: tenHoursAgo.toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: tenHoursAgo.toISOString(),
+          updatedAt: tenHoursAgo.toISOString(),
+        };
+      });
+    });
+
+    // Case: User moved card directly on ADO board to Ready to Dev
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        fields: {
+          'System.State': 'Ready to Dev',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+        },
+      }),
+      updateWorkItem: vi.fn(),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkScopeLockTimeouts();
+    expect(result.reconciled).toBe(1);
+    expect(result.reminded).toBe(0);
+    expect(result.escalated).toBe(0);
+
+    expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
+
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('locked');
+    expect(ticket?.scopeLock?.lockedAt).toBeDefined();
+  });
+
+  it('watchdog lifecycle: startScopeWatchdog returns object with stop method that clears interval', () => {
+    vi.useFakeTimers();
+    try {
+      const watchdog = startScopeWatchdog(1000);
+      expect(watchdog).toBeDefined();
+      expect(typeof watchdog.stop).toBe('function');
+      watchdog.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
