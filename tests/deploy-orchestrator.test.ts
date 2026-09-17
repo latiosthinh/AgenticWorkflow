@@ -6,7 +6,9 @@ import { adoClient } from '../src/ado/client.js';
 import { env } from '../src/config/env.js';
 import {
   compileL1L6EvidenceIndex,
+  compileL1L7EvidenceIndex,
   formatEvidenceIndexComment,
+  MissingEvidenceError,
 } from '../src/deploy/evidence-index.js';
 import {
   processDeploymentPreparation,
@@ -333,6 +335,317 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         expect.arrayContaining([
           expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
         ])
+      );
+    });
+  });
+
+  describe('processDeploymentWorkflow fail-fast sequencing and composite L6 verification', () => {
+    it('fails fast on smoke failure without evaluating telemetry window', async () => {
+      const workItemId = 7401;
+
+      vi.spyOn(adoClient, 'getRevision').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release broken build',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release broken build',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      await processDeploymentWorkflow(workItemId, 1, {
+        skipPreparation: true,
+        mockSmokeResult: {
+          outcome: 'failed',
+          classification: 'APP',
+        },
+        mockMetrics: {
+          errorRatePercent: 0.01,
+          p95LatencyMs: 100,
+          totalRequests: 500,
+          failedRequests: 0,
+          windowMinutes: 30,
+        },
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'In Dev' }),
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[deploy-regressed]'),
+          }),
+        ])
+      );
+
+      // Verify Done transition was never triggered
+      expect(updateSpy).not.toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
+        ])
+      );
+    });
+
+    it('retains Ready to Deploy with [smoke-harness-error] on INFRA smoke failure', async () => {
+      const workItemId = 7402;
+
+      vi.spyOn(adoClient, 'getRevision').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release with network blip',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release with network blip',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      await processDeploymentWorkflow(workItemId, 1, {
+        skipPreparation: true,
+        mockSmokeResult: {
+          outcome: 'failed',
+          classification: 'INFRA',
+        },
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[smoke-harness-error]'),
+          }),
+          expect.objectContaining({
+            path: '/fields/System.History',
+            value: expect.stringContaining('[L6 Smoke Alert] Production Smoke Harness Infrastructure Error'),
+          }),
+        ])
+      );
+
+      const patch = updateSpy.mock.calls[0][1];
+      const stateOp = patch.find((op: any) => op.path === '/fields/System.State');
+      expect(stateOp).toBeUndefined();
+    });
+
+    it('completes deployment workflow to Done when both smoke and telemetry pass', async () => {
+      const workItemId = 7403;
+
+      vi.spyOn(adoClient, 'getRevision').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release rock-solid feature',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'Release rock-solid feature',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      await processDeploymentWorkflow(workItemId, 1, {
+        skipPreparation: true,
+        mockSmokeResult: {
+          outcome: 'passed',
+        },
+        mockMetrics: {
+          errorRatePercent: 0.01,
+          p95LatencyMs: 120,
+          totalRequests: 1000,
+          failedRequests: 0,
+          windowMinutes: 30,
+        },
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[golden-path-complete]'),
+          }),
+        ])
+      );
+    });
+
+    it('incorporates smoke verification into composite L6 evidence in compileL1L7EvidenceIndex', async () => {
+      const workItemId = 7404;
+
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs.push({
+            revId: 1,
+            verdict: 'passed',
+            reasons: JSON.stringify(['DoD met']),
+            criteriaSummary: 'DoD Criteria complete',
+            model: 'gpt-4o',
+            evaluatedAt: new Date().toISOString(),
+          });
+          draft.l3Evidence.push({
+            revId: 1,
+            testSuite: 'vitest',
+            totalTests: 5,
+            passed: 5,
+            failed: 0,
+            durationMs: 200,
+            coverageSummary: '90%',
+            gitDiffStat: '1 file changed',
+            createdAt: new Date().toISOString(),
+          });
+          draft.deploymentRecords.push({
+            pipelineRunId: 'run-1',
+            stageName: 'DeployToProd',
+            environmentName: 'Production',
+            commitSha: 'beefcafe1234',
+            status: 'deployed',
+            migrationRisk: 'low',
+            createdAt: new Date().toISOString(),
+          });
+          draft.telemetryEvaluations.push({
+            windowMinutes: 30,
+            errorRate: '0.02%',
+            p95LatencyMs: 140,
+            breached: 0,
+            evaluatedAt: new Date().toISOString(),
+          });
+          draft.smokeEvidence = {
+            status: 'passed',
+            classification: 'NONE',
+            commitSha: 'beefcafe1234',
+            smokeUrl: 'https://prod.app.net',
+            checksTotal: 4,
+            checksPassed: 4,
+            checksFailed: 0,
+            durationMs: 1200,
+            flakeCleared: false,
+            createdAt: new Date().toISOString(),
+          };
+          draft.retroRecords = [
+            {
+              takeaways: 'Deployment was smooth and verified',
+              actionItems: ['Monitor edge cases'],
+              createdAt: new Date().toISOString(),
+            },
+          ];
+        });
+      });
+
+      const summary = await compileL1L7EvidenceIndex(workItemId, { failClosed: true });
+
+      expect(summary.l6.smokePassed).toBe(true);
+      expect(summary.l6.smokeStatus).toBe('passed');
+      expect(summary.l6.smokeChecksPassed).toBe(4);
+      expect(summary.l6.smokeChecksTotal).toBe(4);
+
+      const html = formatEvidenceIndexComment(summary);
+      expect(html).toContain('Smoke: [PASSED] (4/4 checks)');
+      expect(html).toContain('30-min observation: Error rate <code>0.02%</code>');
+    });
+
+    it('throws MissingEvidenceError in compileL1L7EvidenceIndex when failClosed is true and smoke verification failed', async () => {
+      const workItemId = 7405;
+
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs.push({
+            revId: 1,
+            verdict: 'passed',
+            reasons: JSON.stringify(['DoD met']),
+            criteriaSummary: 'DoD Criteria complete',
+            model: 'gpt-4o',
+            evaluatedAt: new Date().toISOString(),
+          });
+          draft.l3Evidence.push({
+            revId: 1,
+            testSuite: 'vitest',
+            totalTests: 5,
+            passed: 5,
+            failed: 0,
+            durationMs: 200,
+            coverageSummary: '90%',
+            gitDiffStat: '1 file changed',
+            createdAt: new Date().toISOString(),
+          });
+          draft.deploymentRecords.push({
+            pipelineRunId: 'run-1',
+            stageName: 'DeployToProd',
+            environmentName: 'Production',
+            commitSha: 'beefcafe1234',
+            status: 'deployed',
+            migrationRisk: 'low',
+            createdAt: new Date().toISOString(),
+          });
+          draft.telemetryEvaluations.push({
+            windowMinutes: 30,
+            errorRate: '0.02%',
+            p95LatencyMs: 140,
+            breached: 0,
+            evaluatedAt: new Date().toISOString(),
+          });
+          draft.smokeEvidence = {
+            status: 'failed',
+            classification: 'APP',
+            commitSha: 'beefcafe1234',
+            checksTotal: 4,
+            checksPassed: 2,
+            checksFailed: 2,
+            durationMs: 1200,
+            flakeCleared: false,
+            createdAt: new Date().toISOString(),
+          };
+          draft.retroRecords = [
+            {
+              takeaways: 'Failed release',
+              actionItems: [],
+              createdAt: new Date().toISOString(),
+            },
+          ];
+        });
+      });
+
+      await expect(compileL1L7EvidenceIndex(workItemId, { failClosed: true })).rejects.toThrow(
+        /Failed L6 smoke verification for #7405/
       );
     });
   });

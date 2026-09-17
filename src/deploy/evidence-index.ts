@@ -58,6 +58,10 @@ export interface L1L7EvidenceSummary {
     p95LatencyMs: number;
     windowMinutes: number;
     breached: boolean;
+    smokePassed?: boolean;
+    smokeStatus?: 'passed' | 'failed' | 'flaked';
+    smokeChecksPassed?: number;
+    smokeChecksTotal?: number;
   };
   l7?: L7SummaryDetails | null;
 }
@@ -92,6 +96,8 @@ export async function compileL1L7EvidenceIndex(
       ? ticket.telemetryEvaluations[ticket.telemetryEvaluations.length - 1]
       : undefined;
 
+    const smokeRecord = ticket.smokeEvidence ?? undefined;
+
     const l7Record = (ticket.retroRecords && ticket.retroRecords.length > 0)
       ? ticket.retroRecords[ticket.retroRecords.length - 1]
       : (ticket.l7Evidence ?? undefined);
@@ -108,6 +114,9 @@ export async function compileL1L7EvidenceIndex(
       }
       if (!l6Record || l6Record.breached) {
         throw new MissingEvidenceError(`Missing or breached L6 telemetry record for #${workItemId}`, 'L6', workItemId);
+      }
+      if (smokeRecord && smokeRecord.status === 'failed') {
+        throw new MissingEvidenceError(`Failed L6 smoke verification for #${workItemId}`, 'L6', workItemId);
       }
       if (!l7Record || typeof l7Record.takeaways !== 'string' || !l7Record.takeaways.trim()) {
         throw new MissingEvidenceError(`Missing required L7 continuous feedback record for #${workItemId}`, 'L7', workItemId);
@@ -171,6 +180,10 @@ export async function compileL1L7EvidenceIndex(
         p95LatencyMs: l6Record?.p95LatencyMs || 145,
         windowMinutes: l6Record?.windowMinutes || 30,
         breached: Boolean(l6Record?.breached),
+        smokePassed: smokeRecord ? smokeRecord.status === 'passed' : true,
+        smokeStatus: smokeRecord?.status,
+        smokeChecksPassed: smokeRecord?.checksPassed,
+        smokeChecksTotal: smokeRecord?.checksTotal,
       },
       l7: l7Summary,
     };
@@ -271,7 +284,11 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
         <td><strong>L6</strong></td>
         <td>${getTaxonomyStage('L6')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[CONFIRMED]</span></td>
-        <td>${l6.windowMinutes}-min observation: Error rate <code>${sanitizeHtml(l6.errorRate)}</code>, P95 latency <code>${l6.p95LatencyMs}ms</code> (Zero regressions)</td>
+        <td>${
+          l6.smokeStatus
+            ? `Smoke: [${l6.smokeStatus.toUpperCase()}]${l6.smokeChecksTotal !== undefined ? ` (${l6.smokeChecksPassed ?? 0}/${l6.smokeChecksTotal} checks)` : ''} | ${l6.windowMinutes}-min observation: Error rate <code>${sanitizeHtml(l6.errorRate)}</code>, P95 latency <code>${l6.p95LatencyMs}ms</code> (Zero regressions)`
+            : `${l6.windowMinutes}-min observation: Error rate <code>${sanitizeHtml(l6.errorRate)}</code>, P95 latency <code>${l6.p95LatencyMs}ms</code> (Zero regressions)`
+        }</td>
       </tr>
       <tr>
         <td><strong>L7</strong></td>
