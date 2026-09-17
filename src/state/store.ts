@@ -1,55 +1,284 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import type { StateStore, TicketState, DedupRecord } from './types.js';
 
+export class OffLaneMutationError extends Error {
+  constructor(workItemId: number, activeLane?: number) {
+    super(
+      `Off-lane mutation rejected: mutation for workItemId ${workItemId} must be executed inside its dedicated lane (active lane: ${activeLane ?? 'none'}).`
+    );
+    this.name = 'OffLaneMutationError';
+  }
+}
+
+export function parseTicketDocument<T = TicketState>(raw: string): { frontmatter: T; body: string } {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!match) {
+    throw new Error('Invalid ticket document format: missing frontmatter fences');
+  }
+  const frontmatter = JSON.parse(match[1]) as T;
+  const body = (match[2] || '').trim();
+  return { frontmatter, body };
+}
+
+export function serializeTicketDocument<T = TicketState>(frontmatter: T, body: string): string {
+  const json = JSON.stringify(frontmatter, null, 2);
+  const trimmed = body.trim();
+  return trimmed ? `---\n${json}\n---\n\n${trimmed}\n` : `---\n${json}\n---\n`;
+}
+
+function writeCrashAtomicSync(targetPath: string, content: string): void {
+  const dir = path.dirname(targetPath);
+  const tempName = `.${path.basename(targetPath)}.tmp.${Date.now()}.${crypto.randomBytes(4).toString('hex')}`;
+  const tempPath = path.join(dir, tempName);
+
+  fs.writeFileSync(tempPath, content, 'utf8');
+
+  try {
+    if (process.platform === 'win32' && fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
+    }
+    fs.renameSync(tempPath, targetPath);
+  } catch (err) {
+    if (fs.existsSync(tempPath)) {
+      try {
+        fs.unlinkSync(tempPath);
+      } catch {}
+    }
+    throw err;
+  }
+}
+
 export class FileStateStore implements StateStore {
-  constructor(public baseDir: string = './data/state') {}
+  public readonly ticketsDir: string;
+  public readonly dedupDir: string;
+  public readonly archiveDir: string;
 
-  async getTicketState(_workItemId: number): Promise<TicketState | null> {
-    return null;
+  constructor(public readonly baseDir: string = './data/state') {
+    this.ticketsDir = path.join(this.baseDir, 'tickets');
+    this.dedupDir = path.join(this.baseDir, 'dedup');
+    this.archiveDir = path.join(this.baseDir, 'archive');
+
+    fs.mkdirSync(this.ticketsDir, { recursive: true });
+    fs.mkdirSync(this.dedupDir, { recursive: true });
+    fs.mkdirSync(this.archiveDir, { recursive: true });
   }
 
-  async getTicketNotes(_workItemId: number): Promise<string> {
-    return '';
+  public resolveTicketPath(workItemId: number): string {
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      throw new Error(`Invalid workItemId: expected positive integer, got ${workItemId}`);
+    }
+    const resolvedPath = path.resolve(this.ticketsDir, `${workItemId}.md`);
+    const allowedDir = path.resolve(this.ticketsDir);
+    if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
+      throw new Error(`Path traversal detected for workItemId ${workItemId}`);
+    }
+    return resolvedPath;
   }
 
-  async updateTicketState(
-    _workItemId: number,
-    _mutator: (state: TicketState) => void | Promise<void>,
-    _notesAppend?: string
+  public async getTicketState(workItemId: number): Promise<TicketState | null> {
+    const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      return null;
+    }
+    try {
+      const raw = fs.readFileSync(ticketPath, 'utf8');
+      const { frontmatter } = parseTicketDocument<TicketState>(raw);
+      return frontmatter;
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  public async getTicketNotes(workItemId: number): Promise<string> {
+    const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      return '';
+    }
+    try {
+      const raw = fs.readFileSync(ticketPath, 'utf8');
+      const { body } = parseTicketDocument<TicketState>(raw);
+      return body;
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return '';
+      }
+      throw err;
+    }
+  }
+
+  public async updateTicketState(
+    workItemId: number,
+    mutator: (state: TicketState) => void | Promise<void>,
+    notesAppend?: string
   ): Promise<TicketState> {
-    throw new Error('Not implemented');
+    const ticketPath = this.resolveTicketPath(workItemId);
+
+    let state: TicketState;
+    let body = '';
+
+    if (fs.existsSync(ticketPath)) {
+      const raw = fs.readFileSync(ticketPath, 'utf8');
+      const parsed = parseTicketDocument<TicketState>(raw);
+      state = parsed.frontmatter;
+      body = parsed.body;
+    } else {
+      const now = new Date().toISOString();
+      state = {
+        workItemId,
+        revId: 1,
+        createdAt: now,
+        updatedAt: now,
+        auditLogs: [],
+        planCheckpoints: [],
+        l3Evidence: [],
+        qaRuns: [],
+        deploymentRecords: [],
+        telemetryEvaluations: [],
+        skillsPrs: [],
+      };
+    }
+
+    await mutator(state);
+    state.updatedAt = new Date().toISOString();
+
+    if (notesAppend) {
+      const trimmedNotes = notesAppend.trim();
+      if (trimmedNotes) {
+        body = body.trim() ? `${body.trim()}\n\n${trimmedNotes}` : trimmedNotes;
+      }
+    }
+
+    const documentContent = serializeTicketDocument(state, body);
+    writeCrashAtomicSync(ticketPath, documentContent);
+
+    return state;
   }
 
-  async listTickets(): Promise<TicketState[]> {
-    return [];
+  public async listTickets(): Promise<TicketState[]> {
+    if (!fs.existsSync(this.ticketsDir)) {
+      return [];
+    }
+
+    const entries = fs.readdirSync(this.ticketsDir);
+    const tickets: TicketState[] = [];
+
+    for (const entry of entries) {
+      if (!entry.endsWith('.md') || entry.startsWith('.')) {
+        continue;
+      }
+      const fullPath = path.join(this.ticketsDir, entry);
+      try {
+        const raw = fs.readFileSync(fullPath, 'utf8');
+        const { frontmatter } = parseTicketDocument<TicketState>(raw);
+        tickets.push(frontmatter);
+      } catch {
+        // Skip corrupt or non-ticket documents
+      }
+    }
+
+    return tickets;
   }
 
-  async archiveTicket(_workItemId: number): Promise<void> {}
+  public async archiveTicket(workItemId: number): Promise<void> {
+    const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      return;
+    }
 
-  recordDedupEvent(
+    const archivePath = path.resolve(this.archiveDir, `${workItemId}.md`);
+    if (process.platform === 'win32' && fs.existsSync(archivePath)) {
+      fs.unlinkSync(archivePath);
+    }
+    fs.renameSync(ticketPath, archivePath);
+  }
+
+  public recordDedupEvent(
     workItemId: number,
     revId: number,
     payloadHash: string
   ): { isDuplicate: boolean; event: DedupRecord } {
-    return {
-      isDuplicate: false,
-      event: {
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash,
-        receivedAt: new Date().toISOString(),
-      },
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      throw new Error(`Invalid workItemId: expected positive integer, got ${workItemId}`);
+    }
+    if (!Number.isInteger(revId) || revId < 0) {
+      throw new Error(`Invalid revId: expected non-negative integer, got ${revId}`);
+    }
+
+    const markerPath = path.join(this.dedupDir, `${workItemId}-${revId}.json`);
+    const record: DedupRecord = {
+      workItemId,
+      revId,
+      status: 'pending',
+      payloadHash,
+      receivedAt: new Date().toISOString(),
     };
+
+    try {
+      fs.writeFileSync(markerPath, JSON.stringify(record, null, 2), { flag: 'wx' });
+      return { isDuplicate: false, event: record };
+    } catch (err: any) {
+      if (err?.code === 'EEXIST') {
+        try {
+          const existing = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as DedupRecord;
+          return { isDuplicate: true, event: existing };
+        } catch {
+          return { isDuplicate: true, event: record };
+        }
+      }
+      throw err;
+    }
   }
 
-  updateDedupStatus(
-    _workItemId: number,
-    _revId: number,
-    _status: DedupRecord['status'],
-    _errorMessage?: string
-  ): void {}
+  public updateDedupStatus(
+    workItemId: number,
+    revId: number,
+    status: DedupRecord['status'],
+    errorMessage?: string
+  ): void {
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      throw new Error(`Invalid workItemId: expected positive integer, got ${workItemId}`);
+    }
+    if (!Number.isInteger(revId) || revId < 0) {
+      throw new Error(`Invalid revId: expected non-negative integer, got ${revId}`);
+    }
 
-  purgeOldDedupEvents(_retentionDays?: number): { changes: number } {
-    return { changes: 0 };
+    const markerPath = path.join(this.dedupDir, `${workItemId}-${revId}.json`);
+    if (fs.existsSync(markerPath)) {
+      const record = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as DedupRecord;
+      record.status = status;
+      if (errorMessage !== undefined) {
+        record.errorMessage = errorMessage;
+      }
+      writeCrashAtomicSync(markerPath, JSON.stringify(record, null, 2));
+    }
+  }
+
+  public purgeOldDedupEvents(retentionDays = 7): { changes: number } {
+    const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    let changes = 0;
+
+    if (fs.existsSync(this.dedupDir)) {
+      const files = fs.readdirSync(this.dedupDir);
+      for (const file of files) {
+        if (!file.endsWith('.json') || file.startsWith('.')) {
+          continue;
+        }
+        const fullPath = path.join(this.dedupDir, file);
+        try {
+          const stat = fs.statSync(fullPath);
+          if (stat.mtimeMs < cutoffMs) {
+            fs.unlinkSync(fullPath);
+            changes++;
+          }
+        } catch {}
+      }
+    }
+
+    return { changes };
   }
 }
