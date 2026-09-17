@@ -37,8 +37,16 @@ export function buildTagPatch(
     : [];
 
   let updated = [...existing];
-  if (tagToAdd && !updated.includes(tagToAdd)) {
-    updated.push(tagToAdd);
+  if (tagToAdd) {
+    const toAdd = tagToAdd
+      .split(';')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    for (const tag of toAdd) {
+      if (!updated.includes(tag)) {
+        updated.push(tag);
+      }
+    }
   }
   if (tagToRemove) {
     updated = updated.filter((t) => t !== tagToRemove);

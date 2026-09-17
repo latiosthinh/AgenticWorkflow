@@ -45,6 +45,19 @@ export interface L3EvidenceEntry {
   createdAt: string;
 }
 
+export interface ScopeLockState {
+  status: 'pending' | 'locked' | 'rejected' | 'blocked';
+  iterationCount: number;
+  requestedAt: string;
+  lockedAt?: string | null;
+  lockedBy?: string | null;
+  feedback?: string | null;
+  remindedAt?: string | null;
+  escalatedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ReworkCycleState {
   bounceCount: number;
   lastBounceAt?: string | null;
@@ -138,6 +151,7 @@ export interface TicketState {
   auditLogs: AuditLogEntry[];
   planCheckpoints: PlanCheckpointState[];
   l3Evidence: L3EvidenceEntry[];
+  scopeLock?: ScopeLockState | null;
   reworkCycles?: ReworkCycleState | null;
   qaRuns: QaRunEntry[];
   qaBounces?: QaBounceState | null;
