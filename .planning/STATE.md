@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed 01-05-PLAN.md (Phase 1 complete)
-last_updated: "2026-09-17T11:15:00.000Z"
-last_activity: 2026-09-17 — completed Plan 01-05 (Complete StateStore worker migration, SQLite eradication, and full 312-test suite green)
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-09-17T11:47:00.000Z"
+last_activity: 2026-09-17 — completed Plan 02-01 (Canonical Golden Path v2 taxonomy data model with 9 steps, 5 columns, frozen immutability, and state resolution helpers)
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 7
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 1 — StateStore Migration (completed)
-Plan: 01-05 (completed) — complete worker migration, SQLite eradication, and full test suite green
-Status: Phase 1 Complete
-Last activity: 2026-09-17 — completed Plan 01-05 (Complete StateStore worker migration, SQLite eradication, and full 312-test suite green)
+Phase: 2 — Taxonomy Foundation
+Plan: 02-01 (completed) — canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
+Status: In Phase 2
+Last activity: 2026-09-17 — completed Plan 02-01 (Canonical Golden Path v2 taxonomy data model with 9 steps, 5 columns, frozen immutability, and state resolution helpers)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 86%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -38,9 +38,9 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 32
-- Average duration: 5.3 min
-- Total execution time: 1.91 hours
+- Total plans completed: 33
+- Average duration: 5.2 min
+- Total execution time: 1.96 hours
 
 **By Phase:**
 
@@ -59,7 +59,7 @@ Progress: [██████████] 100%
 
 **Recent Trend:**
 
-- Last 5 plans: 04-03 (6m), 05-01 (5m), 05-02 (4m), 05-03 (6m)
+- Last 5 plans: 05-01 (5m), 05-02 (4m), 05-03 (6m), 01-05 (15m), 02-01 (3m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 01 P03 | 6m | 2 tasks | 7 files |
 | Phase 01 P04 | 8m | 2 tasks | 10 files |
 | Phase 01 P05 | 15m | 3 tasks | 15 files |
+| Phase 02 P01 | 3m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -194,6 +195,8 @@ Recent decisions affecting current work:
 - [01-05]: Completely eliminated better-sqlite3, drizzle-orm, drizzle-kit, and src/db/ from repository
 - [01-05]: Added re-entrancy support to WorkItemQueueManager.runInLane to avoid nested lane self-deadlocks
 - [01-05]: Configured vitest test.exclude to ignore ephemeral .worktrees/** directories
+- [02-01]: Recursively freeze GOLDEN_PATH_V2 array, step definitions, and child tag/evidence collections via Object.freeze
+- [02-01]: Support both string and string-array formats for tags in resolveRoutingStep to maintain compatibility with ADO work item models
 
 ### Pending Todos
 
@@ -222,6 +225,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T11:15:00.000Z
-Stopped at: Completed 01-05-PLAN.md (Phase 1 complete)
-Resume: Next phase: Phase 2 Taxonomy Foundation (02-01-PLAN.md)
+Last session: 2026-09-17T11:47:00.000Z
+Stopped at: Completed 02-01-PLAN.md
+Resume: Next plan: 02-02-PLAN.md (Taxonomy-driven router refactor and full lifecycle replay parity test)

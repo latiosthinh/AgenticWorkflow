@@ -142,7 +142,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
+- [x] 02-01-PLAN.md — Canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
 - [ ] 02-02-PLAN.md — Taxonomy-driven router refactor and full lifecycle replay parity test
 **Parallelizable**: No — Wave A, serial; the router refactor must land before Wave B's scope-guard router edit (avoids conflicting `execute/router.ts` edits).
 
