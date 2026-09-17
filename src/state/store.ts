@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type { StateStore, TicketState, DedupRecord } from './types.js';
+import { laneContext } from '../queue/lane-manager.js';
 
 export class OffLaneMutationError extends Error {
   constructor(workItemId: number, activeLane?: number) {
@@ -9,6 +10,13 @@ export class OffLaneMutationError extends Error {
       `Off-lane mutation rejected: mutation for workItemId ${workItemId} must be executed inside its dedicated lane (active lane: ${activeLane ?? 'none'}).`
     );
     this.name = 'OffLaneMutationError';
+  }
+}
+
+function verifyLane(workItemId: number): void {
+  const current = laneContext.getStore();
+  if (!current || current.workItemId !== workItemId) {
+    throw new OffLaneMutationError(workItemId, current?.workItemId);
   }
 }
 
@@ -77,8 +85,56 @@ export class FileStateStore implements StateStore {
     return resolvedPath;
   }
 
+  private recoverOrphanTempFile(ticketPath: string, workItemId: number): boolean {
+    if (fs.existsSync(ticketPath)) {
+      return true;
+    }
+    const prefix = `.${workItemId}.md.tmp.`;
+    const dir = path.dirname(ticketPath);
+    if (!fs.existsSync(dir)) {
+      return false;
+    }
+    let entries: string[];
+    try {
+      entries = fs.readdirSync(dir);
+    } catch {
+      return false;
+    }
+    const candidates = entries
+      .filter((name) => name.startsWith(prefix))
+      .map((name) => {
+        const fullPath = path.join(dir, name);
+        try {
+          const stat = fs.statSync(fullPath);
+          return { name, fullPath, mtimeMs: stat.mtimeMs };
+        } catch {
+          return null;
+        }
+      })
+      .filter((item): item is { name: string; fullPath: string; mtimeMs: number } => item !== null)
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    for (const candidate of candidates) {
+      try {
+        const raw = fs.readFileSync(candidate.fullPath, 'utf8');
+        parseTicketDocument<TicketState>(raw);
+        if (process.platform === 'win32' && fs.existsSync(ticketPath)) {
+          fs.unlinkSync(ticketPath);
+        }
+        fs.renameSync(candidate.fullPath, ticketPath);
+        return true;
+      } catch {
+        // Skip corrupt candidate
+      }
+    }
+    return false;
+  }
+
   public async getTicketState(workItemId: number): Promise<TicketState | null> {
     const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      this.recoverOrphanTempFile(ticketPath, workItemId);
+    }
     if (!fs.existsSync(ticketPath)) {
       return null;
     }
@@ -96,6 +152,9 @@ export class FileStateStore implements StateStore {
 
   public async getTicketNotes(workItemId: number): Promise<string> {
     const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      this.recoverOrphanTempFile(ticketPath, workItemId);
+    }
     if (!fs.existsSync(ticketPath)) {
       return '';
     }
@@ -116,7 +175,12 @@ export class FileStateStore implements StateStore {
     mutator: (state: TicketState) => void | Promise<void>,
     notesAppend?: string
   ): Promise<TicketState> {
+    verifyLane(workItemId);
+
     const ticketPath = this.resolveTicketPath(workItemId);
+    if (!fs.existsSync(ticketPath)) {
+      this.recoverOrphanTempFile(ticketPath, workItemId);
+    }
 
     let state: TicketState;
     let body = '';

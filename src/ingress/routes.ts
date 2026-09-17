@@ -80,7 +80,7 @@ export async function webhookRoutes(fastify: FastifyInstance) {
         pullRequestId: resource?.pullRequestId,
       });
 
-      workItemQueueManager.getLane(workItemId).add(async () => {
+      workItemQueueManager.runInLane(workItemId, async () => {
         try {
           if (activePrHandler) {
             await activePrHandler(payload);
@@ -143,7 +143,7 @@ export async function webhookRoutes(fastify: FastifyInstance) {
     reply.code(202).send({ status: 'accepted', workItemId, revId });
 
     // Background processing in dedicated per-work-item lane
-    workItemQueueManager.getLane(workItemId).add(async () => {
+    workItemQueueManager.runInLane(workItemId, async () => {
       if (activeHandler) {
         try {
           await activeHandler(workItemId, revId);

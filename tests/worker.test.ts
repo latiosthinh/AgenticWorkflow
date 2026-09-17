@@ -51,7 +51,7 @@ describe('Background Audit Worker Pipeline', () => {
 
     stateStore.recordDedupEvent(workItemId, revId, 'hash-1001');
 
-    await processWorkItemAudit(workItemId, revId);
+    await workItemQueueManager.runInLane(workItemId, () => processWorkItemAudit(workItemId, revId));
 
     // Verify ADO update was invoked with Ready to Dev transition
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
@@ -107,7 +107,7 @@ describe('Background Audit Worker Pipeline', () => {
 
     stateStore.recordDedupEvent(workItemId, revId, 'hash-1002');
 
-    await processWorkItemAudit(workItemId, revId);
+    await workItemQueueManager.runInLane(workItemId, () => processWorkItemAudit(workItemId, revId));
 
     // Verify updateWorkItem was called with only history add, NOT state change
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
@@ -187,7 +187,9 @@ describe('Background Audit Worker Pipeline', () => {
 
     stateStore.recordDedupEvent(workItemId, revId, 'hash-1004');
 
-    await expect(processWorkItemAudit(workItemId, revId)).rejects.toThrow('Network connection timeout');
+    await expect(
+      workItemQueueManager.runInLane(workItemId, () => processWorkItemAudit(workItemId, revId))
+    ).rejects.toThrow('Network connection timeout');
 
     const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
     const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));

@@ -7,6 +7,7 @@ import {
   serializeTicketDocument,
 } from '../src/state/store.js';
 import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import type { TicketState } from '../src/state/types.js';
 
 describe('StateStore frontmatter codec', () => {
@@ -83,7 +84,8 @@ describe('FileStateStore CRUD operations', () => {
     harness = createTestStateStore();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await workItemQueueManager.drainAll();
     harness.cleanup();
   });
 
@@ -95,21 +97,23 @@ describe('FileStateStore CRUD operations', () => {
   });
 
   it('creates and updates ticket state with notes append', async () => {
-    const created = await harness.store.updateTicketState(
-      101,
-      (draft) => {
-        draft.revId = 1;
-        draft.auditLogs.push({
-          revId: 1,
-          verdict: 'passed',
-          reasons: 'All criteria met',
-          criteriaSummary: 'Passed 4/4',
-          model: 'gpt-4o',
-          evaluatedAt: new Date().toISOString(),
-        });
-      },
-      '## L1 Audit\nPassed successfully.'
-    );
+    const created = await workItemQueueManager.runInLane(101, async () => {
+      return harness.store.updateTicketState(
+        101,
+        (draft) => {
+          draft.revId = 1;
+          draft.auditLogs.push({
+            revId: 1,
+            verdict: 'passed',
+            reasons: 'All criteria met',
+            criteriaSummary: 'Passed 4/4',
+            model: 'gpt-4o',
+            evaluatedAt: new Date().toISOString(),
+          });
+        },
+        '## L1 Audit\nPassed successfully.'
+      );
+    });
 
     expect(created.workItemId).toBe(101);
     expect(created.revId).toBe(1);
@@ -128,23 +132,25 @@ describe('FileStateStore CRUD operations', () => {
     expect(notes).toContain('Passed successfully.');
 
     // Update existing ticket
-    const updated = await harness.store.updateTicketState(
-      101,
-      (draft) => {
-        draft.revId = 2;
-        draft.l3Evidence.push({
-          revId: 2,
-          testSuite: 'vitest',
-          totalTests: 5,
-          passed: 5,
-          failed: 0,
-          durationMs: 120,
-          gitDiffStat: '1 file changed',
-          createdAt: new Date().toISOString(),
-        });
-      },
-      '\n## L3 Verification\nAll 5 tests passed.'
-    );
+    const updated = await workItemQueueManager.runInLane(101, async () => {
+      return harness.store.updateTicketState(
+        101,
+        (draft) => {
+          draft.revId = 2;
+          draft.l3Evidence.push({
+            revId: 2,
+            testSuite: 'vitest',
+            totalTests: 5,
+            passed: 5,
+            failed: 0,
+            durationMs: 120,
+            gitDiffStat: '1 file changed',
+            createdAt: new Date().toISOString(),
+          });
+        },
+        '\n## L3 Verification\nAll 5 tests passed.'
+      );
+    });
 
     expect(updated.revId).toBe(2);
     expect(updated.l3Evidence).toHaveLength(1);
@@ -158,11 +164,15 @@ describe('FileStateStore CRUD operations', () => {
   it('lists all active tickets in tickets directory', async () => {
     expect(await harness.store.listTickets()).toEqual([]);
 
-    await harness.store.updateTicketState(101, (draft) => {
-      draft.revId = 1;
+    await workItemQueueManager.runInLane(101, async () => {
+      return harness.store.updateTicketState(101, (draft) => {
+        draft.revId = 1;
+      });
     });
-    await harness.store.updateTicketState(102, (draft) => {
-      draft.revId = 1;
+    await workItemQueueManager.runInLane(102, async () => {
+      return harness.store.updateTicketState(102, (draft) => {
+        draft.revId = 1;
+      });
     });
 
     const list = await harness.store.listTickets();
@@ -172,9 +182,11 @@ describe('FileStateStore CRUD operations', () => {
   });
 
   it('archives ticket by moving it to archive directory', async () => {
-    await harness.store.updateTicketState(101, (draft) => {
-      draft.revId = 1;
-    }, 'Archived notes');
+    await workItemQueueManager.runInLane(101, async () => {
+      return harness.store.updateTicketState(101, (draft) => {
+        draft.revId = 1;
+      }, 'Archived notes');
+    });
 
     expect(await harness.store.getTicketState(101)).not.toBeNull();
 
