@@ -1,6 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { reworkCycles } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 import { buildTagPatch } from '../ado/work-item.js';
 import {
   Operation,
@@ -11,77 +10,63 @@ export async function evaluateCircuitBreaker(
   workItemId: number,
   sourceGate: 'accept' | 'pr_review'
 ): Promise<{ allowed: boolean; currentCount: number }> {
-  return db.transaction((tx) => {
-    const existing = tx
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
+  let allowed = true;
+  let currentCount = 1;
 
-    const previousCount = existing ? existing.bounceCount : 0;
-    const currentCount = previousCount + 1;
-    const now = new Date();
+  const mutate = async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      const prev = draft.reworkCycles?.bounceCount ?? 0;
+      currentCount = prev + 1;
+      const now = new Date().toISOString();
 
-    if (previousCount >= 2) {
-      const escalatedAt = existing?.escalatedAt ?? now;
-      tx.insert(reworkCycles)
-        .values({
-          workItemId,
+      if (prev >= 2) {
+        allowed = false;
+        draft.reworkCycles = {
           bounceCount: currentCount,
           lastBounceAt: now,
           sourceGate,
-          escalatedAt,
-          createdAt: now,
+          escalatedAt: draft.reworkCycles?.escalatedAt ?? now,
+          createdAt: draft.reworkCycles?.createdAt ?? now,
           updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: reworkCycles.workItemId,
-          set: {
-            bounceCount: currentCount,
-            lastBounceAt: now,
-            sourceGate,
-            escalatedAt,
-            updatedAt: now,
-          },
-        })
-        .run();
-
-      return { allowed: false, currentCount };
-    }
-
-    tx.insert(reworkCycles)
-      .values({
-        workItemId,
-        bounceCount: currentCount,
-        lastBounceAt: now,
-        sourceGate,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: reworkCycles.workItemId,
-        set: {
+        };
+      } else {
+        allowed = true;
+        draft.reworkCycles = {
           bounceCount: currentCount,
           lastBounceAt: now,
           sourceGate,
+          createdAt: draft.reworkCycles?.createdAt ?? now,
           updatedAt: now,
-        },
-      })
-      .run();
+        };
+      }
+    });
+  };
 
-    return { allowed: true, currentCount };
-  });
+  if (laneContext.getStore()?.workItemId === workItemId) {
+    await mutate();
+  } else {
+    await workItemQueueManager.runInLane(workItemId, mutate);
+  }
+
+  return { allowed, currentCount };
 }
 
-export function resetCircuitBreaker(workItemId: number): void {
-  db.update(reworkCycles)
-    .set({
-      bounceCount: 0,
-      escalatedAt: null,
-      updatedAt: new Date(),
-    })
-    .where(eq(reworkCycles.workItemId, workItemId))
-    .run();
+export async function resetCircuitBreaker(workItemId: number): Promise<void> {
+  const mutate = async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      if (draft.reworkCycles) {
+        draft.reworkCycles.bounceCount = 0;
+        draft.reworkCycles.escalatedAt = null;
+        draft.reworkCycles.updatedAt = new Date().toISOString();
+      }
+    });
+  };
+
+  if (laneContext.getStore()?.workItemId === workItemId) {
+    await mutate();
+  } else {
+    await workItemQueueManager.runInLane(workItemId, mutate);
+  }
 }
 
 export function buildEscalationPatch(
@@ -114,4 +99,4 @@ export function buildEscalationPatch(
     },
   ] as unknown as JsonPatchDocument;
 }
-// ponytail: hardcoded 2-bounce cap in SQLite; support dynamic team thresholds in v2
+// ponytail: hardcoded 2-bounce cap in StateStore; support dynamic team thresholds in v2

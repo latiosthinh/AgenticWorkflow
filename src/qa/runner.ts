@@ -7,8 +7,9 @@ import {
   type TestFailure,
   type FailureFingerprint,
 } from './fingerprint.js';
-import { db } from '../db/index.js';
-import { qaRuns } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import type { QaRunEntry } from '../state/types.js';
+import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 
 export interface QaRunResult {
   passed: boolean;
@@ -136,24 +137,34 @@ export async function executeTwoStrikeQaFilter(options: {
 }): Promise<TwoStrikeResult> {
   const { workItemId, worktreePath, testCommand, runnerFn } = options;
 
+  const recordRun = async (entry: QaRunEntry) => {
+    const mutate = async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.qaRuns.push(entry);
+      });
+    };
+    if (laneContext.getStore()?.workItemId === workItemId) {
+      await mutate();
+    } else {
+      await workItemQueueManager.runInLane(workItemId, mutate);
+    }
+  };
+
   // Run 1
   const run1 = runnerFn
     ? await runnerFn(1)
     : await runQaSuite(worktreePath, testCommand);
 
-  db.insert(qaRuns)
-    .values({
-      workItemId,
-      runIndex: 1,
-      strikeCount: run1.passed ? 0 : 1,
-      status: run1.passed ? 'passed' : 'failed',
-      failedTestSignatures: JSON.stringify(run1.failures),
-      stdout: run1.stdout,
-      stderr: run1.stderr,
-      durationMs: run1.durationMs,
-      createdAt: new Date(),
-    })
-    .run();
+  await recordRun({
+    runIndex: 1,
+    strikeCount: run1.passed ? 0 : 1,
+    status: run1.passed ? 'passed' : 'failed',
+    failedTestSignatures: JSON.stringify(run1.failures),
+    stdout: run1.stdout,
+    stderr: run1.stderr,
+    durationMs: run1.durationMs,
+    createdAt: new Date().toISOString(),
+  });
 
   if (run1.passed) {
     return {
@@ -172,19 +183,16 @@ export async function executeTwoStrikeQaFilter(options: {
 
   if (run2.passed) {
     // Flake cleared! Run 1 failed, but Run 2 succeeded
-    db.insert(qaRuns)
-      .values({
-        workItemId,
-        runIndex: 2,
-        strikeCount: 1,
-        status: 'flaked',
-        failedTestSignatures: JSON.stringify([]),
-        stdout: run2.stdout,
-        stderr: run2.stderr,
-        durationMs: run2.durationMs,
-        createdAt: new Date(),
-      })
-      .run();
+    await recordRun({
+      runIndex: 2,
+      strikeCount: 1,
+      status: 'flaked',
+      failedTestSignatures: JSON.stringify([]),
+      stdout: run2.stdout,
+      stderr: run2.stderr,
+      durationMs: run2.durationMs,
+      createdAt: new Date().toISOString(),
+    });
 
     return {
       outcome: 'flaked',
@@ -199,19 +207,16 @@ export async function executeTwoStrikeQaFilter(options: {
   // Both runs failed - compare failure fingerprints
   const comparison = compareFailures(run1.failures, run2.failures);
 
-  db.insert(qaRuns)
-    .values({
-      workItemId,
-      runIndex: 2,
-      strikeCount: 2,
-      status: 'failed',
-      failedTestSignatures: JSON.stringify(run2.failures),
-      stdout: run2.stdout,
-      stderr: run2.stderr,
-      durationMs: run2.durationMs,
-      createdAt: new Date(),
-    })
-    .run();
+  await recordRun({
+    runIndex: 2,
+    strikeCount: 2,
+    status: 'failed',
+    failedTestSignatures: JSON.stringify(run2.failures),
+    stdout: run2.stdout,
+    stderr: run2.stderr,
+    durationMs: run2.durationMs,
+    createdAt: new Date().toISOString(),
+  });
 
   return {
     outcome: 'failed',

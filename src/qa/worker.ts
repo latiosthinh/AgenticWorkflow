@@ -1,5 +1,5 @@
-import { db } from '../db/index.js';
-import { qaEvidence } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 import { adoClient } from '../ado/client.js';
 import { getWorkItemDetails, buildTagPatch } from '../ado/work-item.js';
 import { createWorktree, cleanupWorktree } from '../sandbox/worktree.js';
@@ -96,32 +96,26 @@ export async function processQaVerification(
     const durationMs =
       result.firstRun.durationMs + (result.secondRun?.durationMs || 0);
 
-    db.insert(qaEvidence)
-      .values({
-        workItemId,
-        totalTests,
-        passedCount,
-        failedCount: 0,
-        durationMs,
-        commitSha,
-        stagingUrl: options?.stagingUrl,
-        flakeCleared: result.flakeCleared ? 1 : 0,
-        createdAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: qaEvidence.workItemId,
-        set: {
+    const mutate = async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.qaEvidence = {
           totalTests,
           passedCount,
           failedCount: 0,
           durationMs,
           commitSha,
-          stagingUrl: options?.stagingUrl,
+          stagingUrl: options?.stagingUrl ?? null,
           flakeCleared: result.flakeCleared ? 1 : 0,
-          createdAt: new Date(),
-        },
-      })
-      .run();
+          createdAt: new Date().toISOString(),
+        };
+      });
+    };
+
+    if (laneContext.getStore()?.workItemId === workItemId) {
+      await mutate();
+    } else {
+      await workItemQueueManager.runInLane(workItemId, mutate);
+    }
 
     await resetQaBounces(workItemId);
 

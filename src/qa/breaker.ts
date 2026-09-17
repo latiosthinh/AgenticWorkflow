@@ -1,8 +1,7 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { qaBounces } from '../db/schema.js';
 import { adoClient } from '../ado/client.js';
 import { buildTagPatch } from '../ado/work-item.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 import {
   Operation,
   type JsonPatchDocument,
@@ -17,13 +16,8 @@ export interface QaBreakerEvaluation {
 }
 
 export async function evaluateQaCircuitBreaker(workItemId: number): Promise<QaBreakerEvaluation> {
-  const record = db
-    .select()
-    .from(qaBounces)
-    .where(eq(qaBounces.workItemId, workItemId))
-    .get();
-
-  const currentCount = record ? record.bounceCount : 0;
+  const ticket = await stateStore.getTicketState(workItemId);
+  const currentCount = ticket?.qaBounces?.bounceCount ?? 0;
   const allowed = currentCount < MAX_QA_BOUNCES;
 
   return {
@@ -34,54 +28,45 @@ export async function evaluateQaCircuitBreaker(workItemId: number): Promise<QaBr
 }
 
 export async function recordQaBounce(workItemId: number): Promise<number> {
-  const now = new Date();
-  return db.transaction((tx) => {
-    const existing = tx
-      .select()
-      .from(qaBounces)
-      .where(eq(qaBounces.workItemId, workItemId))
-      .get();
-
-    const newCount = (existing ? existing.bounceCount : 0) + 1;
-
-    tx.insert(qaBounces)
-      .values({
-        workItemId,
+  let newCount = 1;
+  const mutate = async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      const prev = draft.qaBounces?.bounceCount ?? 0;
+      newCount = prev + 1;
+      const now = new Date().toISOString();
+      draft.qaBounces = {
         bounceCount: newCount,
         lastBouncedAt: now,
         escalated: newCount > MAX_QA_BOUNCES ? 1 : 0,
-      })
-      .onConflictDoUpdate({
-        target: qaBounces.workItemId,
-        set: {
-          bounceCount: newCount,
-          lastBouncedAt: now,
-          escalated: newCount > MAX_QA_BOUNCES ? 1 : 0,
-        },
-      })
-      .run();
+      };
+    });
+  };
 
-    return newCount;
-  });
+  if (laneContext.getStore()?.workItemId === workItemId) {
+    await mutate();
+  } else {
+    await workItemQueueManager.runInLane(workItemId, mutate);
+  }
+
+  return newCount;
 }
 
 export async function resetQaBounces(workItemId: number): Promise<void> {
-  db.insert(qaBounces)
-    .values({
-      workItemId,
-      bounceCount: 0,
-      lastBouncedAt: null,
-      escalated: 0,
-    })
-    .onConflictDoUpdate({
-      target: qaBounces.workItemId,
-      set: {
+  const mutate = async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      draft.qaBounces = {
         bounceCount: 0,
         lastBouncedAt: null,
         escalated: 0,
-      },
-    })
-    .run();
+      };
+    });
+  };
+
+  if (laneContext.getStore()?.workItemId === workItemId) {
+    await mutate();
+  } else {
+    await workItemQueueManager.runInLane(workItemId, mutate);
+  }
 }
 
 export function buildQaEscalationPatch(
@@ -124,22 +109,21 @@ export async function escalateQaToBlocked(
   workItemId: number,
   currentBounceCount: number
 ): Promise<void> {
-  // Mark escalated in DB
-  db.insert(qaBounces)
-    .values({
-      workItemId,
-      bounceCount: currentBounceCount,
-      lastBouncedAt: new Date(),
-      escalated: 1,
-    })
-    .onConflictDoUpdate({
-      target: qaBounces.workItemId,
-      set: {
+  const mutate = async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      draft.qaBounces = {
+        bounceCount: currentBounceCount,
+        lastBouncedAt: new Date().toISOString(),
         escalated: 1,
-        lastBouncedAt: new Date(),
-      },
-    })
-    .run();
+      };
+    });
+  };
+
+  if (laneContext.getStore()?.workItemId === workItemId) {
+    await mutate();
+  } else {
+    await workItemQueueManager.runInLane(workItemId, mutate);
+  }
 
   const details = await adoClient.getWorkItem(workItemId);
   const currentTags = details?.fields?.['System.Tags'] as string | undefined;

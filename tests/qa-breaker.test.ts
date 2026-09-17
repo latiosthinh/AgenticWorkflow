@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import { qaBounces } from '../db/schema.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import {
   MAX_QA_BOUNCES,
   evaluateQaCircuitBreaker,
@@ -12,9 +13,20 @@ import {
 import { adoClient } from '../src/ado/client.js';
 
 describe('QA Circuit Breaker and Bounce Limits', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM qa_bounces;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('allows QA execution initially when bounce count is 0', async () => {
@@ -100,5 +112,9 @@ describe('QA Circuit Breaker and Bounce Limits', () => {
         expect.objectContaining({ path: '/fields/System.History', value: expect.stringContaining('<!-- [automated-agent] -->') }),
       ])
     );
+
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.qaBounces?.escalated).toBe(1);
+    expect(ticket?.qaBounces?.bounceCount).toBe(2);
   });
 });

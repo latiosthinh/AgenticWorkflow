@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { db, sqlite } from '../src/db/index.js';
-import { reworkCycles } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import {
   evaluateCircuitBreaker,
   resetCircuitBreaker,
@@ -10,8 +10,19 @@ import {
 } from '../src/accept/breaker.js';
 
 describe('Shared Rework Circuit Breaker', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM rework_cycles;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('Test 1: First rejection allows rework with count 1 (sourceGate: accept)', async () => {
@@ -23,18 +34,14 @@ describe('Shared Rework Circuit Breaker', () => {
       currentCount: 1,
     });
 
-    const row = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const row = ticket?.reworkCycles;
 
     expect(row).toBeDefined();
-    expect(row?.workItemId).toBe(workItemId);
     expect(row?.bounceCount).toBe(1);
     expect(row?.sourceGate).toBe('accept');
-    expect(row?.lastBounceAt).toBeInstanceOf(Date);
-    expect(row?.escalatedAt).toBeNull();
+    expect(row?.lastBounceAt).toBeDefined();
+    expect(row?.escalatedAt).toBeFalsy();
   });
 
   it('Test 2: Second rejection allows rework with count 2 (sourceGate: pr_review)', async () => {
@@ -46,15 +53,12 @@ describe('Shared Rework Circuit Breaker', () => {
     const second = await evaluateCircuitBreaker(workItemId, 'pr_review');
     expect(second).toEqual({ allowed: true, currentCount: 2 });
 
-    const row = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const row = ticket?.reworkCycles;
 
     expect(row?.bounceCount).toBe(2);
     expect(row?.sourceGate).toBe('pr_review');
-    expect(row?.escalatedAt).toBeNull();
+    expect(row?.escalatedAt).toBeFalsy();
   });
 
   it('Test 3: Third rejection trips breaker (allowed: false, count: 3) and sets escalatedAt', async () => {
@@ -69,14 +73,12 @@ describe('Shared Rework Circuit Breaker', () => {
       currentCount: 3,
     });
 
-    const row = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const row = ticket?.reworkCycles;
 
     expect(row?.bounceCount).toBe(3);
-    expect(row?.escalatedAt).toBeInstanceOf(Date);
+    expect(row?.escalatedAt).toBeDefined();
+    expect(row?.escalatedAt).not.toBeNull();
   });
 
   it('Test 4: Subsequent rejection while tripped remains rejected (allowed: false)', async () => {
@@ -94,14 +96,12 @@ describe('Shared Rework Circuit Breaker', () => {
       currentCount: 4,
     });
 
-    const row = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const row = ticket?.reworkCycles;
 
     expect(row?.bounceCount).toBe(4);
-    expect(row?.escalatedAt).toBeInstanceOf(Date);
+    expect(row?.escalatedAt).toBeDefined();
+    expect(row?.escalatedAt).not.toBeNull();
   });
 
   it('Test 5: resetCircuitBreaker clears count to 0 and removes escalatedAt', async () => {
@@ -111,23 +111,15 @@ describe('Shared Rework Circuit Breaker', () => {
     await evaluateCircuitBreaker(workItemId, 'accept');
     await evaluateCircuitBreaker(workItemId, 'accept');
 
-    const trippedRow = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
-    expect(trippedRow?.bounceCount).toBe(3);
-    expect(trippedRow?.escalatedAt).not.toBeNull();
+    const trippedTicket = await stateStore.getTicketState(workItemId);
+    expect(trippedTicket?.reworkCycles?.bounceCount).toBe(3);
+    expect(trippedTicket?.reworkCycles?.escalatedAt).not.toBeNull();
 
-    resetCircuitBreaker(workItemId);
+    await resetCircuitBreaker(workItemId);
 
-    const resetRow = db
-      .select()
-      .from(reworkCycles)
-      .where(eq(reworkCycles.workItemId, workItemId))
-      .get();
-    expect(resetRow?.bounceCount).toBe(0);
-    expect(resetRow?.escalatedAt).toBeNull();
+    const resetTicket = await stateStore.getTicketState(workItemId);
+    expect(resetTicket?.reworkCycles?.bounceCount).toBe(0);
+    expect(resetTicket?.reworkCycles?.escalatedAt).toBeNull();
 
     // After reset, subsequent bounce starts fresh at count 1 with allowed: true
     const nextResult = await evaluateCircuitBreaker(workItemId, 'accept');
