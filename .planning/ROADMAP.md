@@ -175,7 +175,11 @@ Plans:
   3. No fabrication: zero `||`/`??` defaults on any L7 field (grep-asserted in tests — the v1.0 `?? 1` / `|| '0.05%'` pattern is dead for L7); the persist path is ONE shared serialize-then-atomic-write (no duplicated value object — the forgot-one-branch bug class is structurally impossible); recompiling after an update persists a fresh `l7` summary.
   4. Cutover tolerance: a v1 in-flight ticket file with no `l7` section renders `[PENDING — retro in progress]` without erroring (PENDING render exists ONLY as cutover tolerance, not steady state).
 **Threat notes**: Pitfall 12 — v1.0's hardcoded `l2.reviewPassed:true` / `l4.securityPassed:true` / `errorRate||'0.05%'` are logged backlog debt (Open Decision #2 resolved: leave-and-log for v2.0, do NOT extend the pattern to L7, do not wire to `ado/policy.ts` this milestone). Resolved Conflict #3 binding: single post-retro compile in steady state — Phase 6 owns the Done-path wiring; this phase delivers the compiler contract + `l7` field handling.
-**Plans**: 2 plans (estimated)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — L7 state schema, core compileL1L7EvidenceIndex compiler, and deprecated alias
+- [ ] 04-02-PLAN.md — Taxonomy-driven comment formatter, cutover tolerance, fail-closed gate, and zero-fabrication verification
 **Parallelizable**: Yes — Wave B, parallel with Phases 3 & 5. On the critical path (1 → 2 → 4 → 6 → 7). Owns `deploy/evidence-index.ts` only.
 
 ### Phase 5: Prod Smoke Suite
