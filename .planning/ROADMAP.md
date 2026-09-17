@@ -127,7 +127,7 @@ Plans:
 - [x] 01-02-PLAN.md — Atomic ingress deduplication via wx markers, gateway migration, and 7-day TTL retention purge
 - [x] 01-03-PLAN.md — Single-writer invariant enforcement via AsyncLocalStorage lane context and Windows crash-atomic writes
 - [x] 01-04-PLAN.md — Checkpoint persistence, watchdog directory scans, circuit breakers, and archive lifecycle
-- [ ] 01-05-PLAN.md — Execution, deploy, and learn workers migration, SQLite/Drizzle removal, and 286-test harness port
+- [x] 01-05-PLAN.md — Execution, deploy, and learn workers migration, SQLite/Drizzle removal, and 286-test harness port
 **Parallelizable**: No — Wave A; blocks every later phase. Phase 2 follows sequentially (both edit `execute/router.ts` state calls — sequential avoids conflicting router edits).
 
 ### Phase 2: Taxonomy Foundation
@@ -139,7 +139,11 @@ Plans:
   2. The router's state switch is driven by the taxonomy and reads state via the `StateStore` — behavior-preserving: identical dispatch to v1.0 on every existing path.
   3. A v1-lifecycle replay test drives fixture revisions `New → … → Done` and asserts identical handler dispatch to v1.0; the full suite (277 tests, `mkdtemp` harness) stays green — every failing test classified BEFORE editing (intentional v2 change + REQ-ID in commit vs accidental breakage → fix code, never weaken the assertion).
 **Threat notes**: Pitfall 1 — no state/tag renames outside `taxonomy.ts` (big-bang rename strands in-flight tickets; router is exact-string keyed); Pitfall 2 — mass-red suites get fixed by classification, not assertion-weakening (test-edit vs code-edit ratio reviewed at phase audit). Storage wording in the research reads as the `StateStore` file equivalent per the OVERRIDE.
-**Plans**: 2 plans (estimated)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
+- [ ] 02-02-PLAN.md — Taxonomy-driven router refactor and full lifecycle replay parity test
 **Parallelizable**: No — Wave A, serial; the router refactor must land before Wave B's scope-guard router edit (avoids conflicting `execute/router.ts` edits).
 
 ### Phase 3: PM Scope-Lock Gate
