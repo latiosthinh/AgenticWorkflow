@@ -33,7 +33,7 @@
 
 - [x] **SCOPE-01**: After the L1 contract audit passes, the system parks the ticket for human PM scope review (`New` state + `[awaiting-scope-lock]` tag — reusing existing ADO states, no new board column), records a pending scope-lock in the ticket's `StateStore` record, and posts a scope-review packet (L1 audit summary + scope-boundary checklist + testability sign-off) — instead of auto-transitioning to `Ready to Dev`.
 - [ ] **SCOPE-02**: A human PM renders a scope verdict (👤) detected primarily on state/tag transitions (resilient to the `[automated-agent]` bot-echo shield, with watchdog/poller reconcile for missed verdicts) and secondarily via comment tokens (`[approve-scope]`/`[reject-scope]`/`[reset-scope]`); approve transitions to `Ready to Dev` + writes an L1 scope-lock evidence record to `StateStore`; reject keeps it parked with feedback + a 24h reminder ping (escalate at 72h).
-- [ ] **SCOPE-03**: The gate cannot be bypassed or deadlocked — a tag/record guard before the audit LLM call prevents re-audit from re-running the transition on a parked ticket (idempotent across revisions), and scope rejections use a refinement counter SEPARATE from the shared rework breaker (never consumes the Accept/PR ≤2 budget).
+- [x] **SCOPE-03**: The gate cannot be bypassed or deadlocked — a tag/record guard before the audit LLM call prevents re-audit from re-running the transition on a parked ticket (idempotent across revisions), and scope rejections use a refinement counter SEPARATE from the shared rework breaker (never consumes the Accept/PR ≤2 budget).
 
 ### 3. EVID — L7 Continuous-Feedback Evidence + Index Extension (L1–L7)
 
@@ -104,7 +104,7 @@
 | TAX-03 | Phase 2 | Complete |
 | SCOPE-01 | Phase 3 | Complete |
 | SCOPE-02 | Phase 3 | Pending |
-| SCOPE-03 | Phase 3 | Pending |
+| SCOPE-03 | Phase 3 | Complete |
 | EVID-01 | Phase 6 | Pending |
 | EVID-02 | Phase 4 | Pending |
 | EVID-03 | Phase 4 | Pending |
