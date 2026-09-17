@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { stateStore, resetStateStore } from '../src/state/index.js';
 import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
@@ -6,6 +8,7 @@ import { env } from '../src/config/env.js';
 import {
   compileL1L7EvidenceIndex,
   compileL1L6EvidenceIndex,
+  formatEvidenceIndexComment,
   MissingEvidenceError,
   type L1L7EvidenceSummary,
 } from '../src/deploy/evidence-index.js';
@@ -177,5 +180,355 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
     await compileL1L7EvidenceIndex(workItemId);
 
     expect(runInLaneSpy).toHaveBeenCalledWith(workItemId, expect.any(Function));
+  });
+
+  describe('Fail-Closed Gating (EVID-03)', () => {
+    async function seedCompleteTicket(workItemId: number) {
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs = [
+            {
+              revId: 1,
+              verdict: 'passed',
+              reasons: JSON.stringify(['Testability DoD met', 'Scope bounded']),
+              criteriaSummary: 'DoD complete',
+              model: 'gpt-4o',
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+          draft.l3Evidence = [
+            {
+              revId: 3,
+              testSuite: 'vitest',
+              totalTests: 10,
+              passed: 10,
+              failed: 0,
+              durationMs: 400,
+              coverageSummary: '90%',
+              gitDiffStat: '1 file changed',
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.deploymentRecords = [
+            {
+              pipelineRunId: 'pipe-1',
+              stageName: 'DeployToProd',
+              environmentName: 'Production',
+              commitSha: 'c0ffee',
+              status: 'deployed',
+              migrationRisk: 'low',
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.telemetryEvaluations = [
+            {
+              windowMinutes: 30,
+              errorRate: '0.01%',
+              p95LatencyMs: 120,
+              breached: 0,
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+          draft.retroRecords = [
+            {
+              takeaways: 'Smooth deploy',
+              actionItems: ['Monitor latency'],
+              runbookDiffPrUrl: 'https://dev.azure.com/pr/1',
+              skillPrUrl: 'https://dev.azure.com/pr/2',
+              gateFriction: { reworkBounces: 0 },
+              trendDeltas: { cycleTimeReductionMinutes: 10 },
+              createdAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+            },
+          ];
+        });
+      });
+    }
+
+    it('throws MissingEvidenceError with level L1 when ticket has empty auditLogs', async () => {
+      const workItemId = 8101;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs = [];
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L1',
+      });
+    });
+
+    it('throws MissingEvidenceError with level L3 when l3Evidence is empty and qaEvidence is missing', async () => {
+      const workItemId = 8102;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.l3Evidence = [];
+          draft.qaEvidence = undefined;
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L3',
+      });
+    });
+
+    it('throws MissingEvidenceError with level L5 when deploymentRecords is empty', async () => {
+      const workItemId = 8103;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.deploymentRecords = [];
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L5',
+      });
+    });
+
+    it('throws MissingEvidenceError with level L6 when telemetryEvaluations is empty or breached', async () => {
+      const workItemIdEmpty = 8104;
+      await seedCompleteTicket(workItemIdEmpty);
+      await workItemQueueManager.runInLane(workItemIdEmpty, async () => {
+        await stateStore.updateTicketState(workItemIdEmpty, (draft) => {
+          draft.telemetryEvaluations = [];
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemIdEmpty, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L6',
+      });
+
+      const workItemIdBreached = 8105;
+      await seedCompleteTicket(workItemIdBreached);
+      await workItemQueueManager.runInLane(workItemIdBreached, async () => {
+        await stateStore.updateTicketState(workItemIdBreached, (draft) => {
+          draft.telemetryEvaluations = [
+            {
+              windowMinutes: 30,
+              errorRate: '3.5%',
+              p95LatencyMs: 900,
+              breached: 1,
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemIdBreached, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L6',
+      });
+    });
+
+    it('throws MissingEvidenceError with level L7 when retroRecords is empty and l7Evidence is null/undefined', async () => {
+      const workItemId = 8106;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.retroRecords = [];
+          draft.l7Evidence = undefined;
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L7',
+      });
+    });
+
+    it('throws MissingEvidenceError with level L7 when retroRecords has an entry with empty or missing takeaways', async () => {
+      const workItemId = 8107;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.retroRecords = [
+            {
+              takeaways: '',
+              actionItems: ['Some action'],
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.l7Evidence = undefined;
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L7',
+      });
+    });
+  });
+
+  describe('Cutover Tolerance', () => {
+    it('permits missing L7 and renders [PENDING — retro in progress] when failClosed is false or omitted', async () => {
+      const workItemId = 8201;
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs = [
+            {
+              revId: 1,
+              verdict: 'passed',
+              reasons: JSON.stringify(['DoD met']),
+              criteriaSummary: 'Criteria verified',
+              model: 'gpt-4o',
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+          draft.l3Evidence = [
+            {
+              revId: 2,
+              testSuite: 'vitest',
+              totalTests: 5,
+              passed: 5,
+              failed: 0,
+              durationMs: 200,
+              coverageSummary: '95%',
+              gitDiffStat: '1 file changed',
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.deploymentRecords = [
+            {
+              pipelineRunId: 'pipe-cutover',
+              stageName: 'DeployToProd',
+              environmentName: 'Production',
+              commitSha: 'feedface',
+              status: 'deployed',
+              migrationRisk: 'low',
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.telemetryEvaluations = [
+            {
+              windowMinutes: 30,
+              errorRate: '0.00%',
+              p95LatencyMs: 110,
+              breached: 0,
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+          draft.retroRecords = [];
+          draft.l7Evidence = undefined;
+        });
+      });
+
+      const summary = await compileL1L7EvidenceIndex(workItemId, { failClosed: false });
+      expect(summary.l7).toBeNull();
+
+      const comment = formatEvidenceIndexComment(summary);
+      expect(comment).toContain('[PENDING — retro in progress]');
+      expect(comment).toContain('Continuous feedback collection pending completion of retrospective step.');
+    });
+  });
+
+  describe('Recompilation Freshness', () => {
+    it('updates draft.evidenceIndex.l7Summary cleanly after an L7 update without stale or null state', async () => {
+      const workItemId = 8301;
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs = [
+            {
+              revId: 1,
+              verdict: 'passed',
+              reasons: JSON.stringify(['DoD met']),
+              criteriaSummary: 'Criteria verified',
+              model: 'gpt-4o',
+              evaluatedAt: new Date().toISOString(),
+            },
+          ];
+          draft.deploymentRecords = [
+            {
+              pipelineRunId: 'pipe-fresh',
+              stageName: 'DeployToProd',
+              environmentName: 'Production',
+              commitSha: 'feedface',
+              status: 'deployed',
+              migrationRisk: 'low',
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.retroRecords = [];
+          draft.l7Evidence = undefined;
+        });
+      });
+
+      await compileL1L7EvidenceIndex(workItemId);
+      let ticket = await stateStore.getTicketState(workItemId);
+      expect(ticket?.evidenceIndex?.l7Summary).toBeNull();
+
+      // Append fresh retro record
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.retroRecords.push({
+            takeaways: 'Fresh takeaways from retro run',
+            actionItems: ['Item A', 'Item B'],
+            runbookDiffPrUrl: 'https://dev.azure.com/pr/999',
+            skillPrUrl: 'https://dev.azure.com/pr/1000',
+            gateFriction: { reworkBounces: 2 },
+            trendDeltas: { cycleTimeReductionMinutes: 30 },
+            createdAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+          });
+        });
+      });
+
+      const refreshedSummary = await compileL1L7EvidenceIndex(workItemId);
+      expect(refreshedSummary.l7).toBeDefined();
+      expect(refreshedSummary.l7?.takeaways).toBe('Fresh takeaways from retro run');
+
+      ticket = await stateStore.getTicketState(workItemId);
+      expect(ticket?.evidenceIndex?.l7Summary).not.toBeNull();
+      const parsed = JSON.parse(ticket!.evidenceIndex!.l7Summary!);
+      expect(parsed.takeaways).toBe('Fresh takeaways from retro run');
+      expect(parsed.actionItems).toEqual(['Item A', 'Item B']);
+    });
+  });
+
+  describe('Zero Fabricated Defaults Assertion', () => {
+    it('verifies src/deploy/evidence-index.ts has zero fallback operators (??, ||) in L7 extraction', () => {
+      const sourcePath = path.resolve(process.cwd(), 'src/deploy/evidence-index.ts');
+      const source = fs.readFileSync(sourcePath, 'utf8');
+
+      const l7BlockMatch = source.match(/let l7Summary:[\s\S]*?const summary:/);
+      expect(l7BlockMatch).not.toBeNull();
+      const l7Block = l7BlockMatch![0];
+
+      const checkedFields = [
+        'takeaways',
+        'actionItems',
+        'runbookDiffPrUrl',
+        'skillPrUrl',
+        'gateFriction',
+        'trendDeltas',
+      ];
+
+      for (const field of checkedFields) {
+        const fieldLineMatch = l7Block.match(new RegExp(`${field}:.*`));
+        expect(fieldLineMatch).not.toBeNull();
+        const line = fieldLineMatch![0];
+        expect(line).not.toMatch(/(\?\?|\|\|)/);
+      }
+    });
   });
 });
