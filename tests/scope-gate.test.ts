@@ -9,6 +9,14 @@ import {
   type ScopePacketData,
 } from '../src/scope/packet.js';
 import { detectScopeVerdict } from '../src/scope/verdict.js';
+import {
+  evaluateScopeBreaker,
+  resetScopeBreaker,
+  handleScopeApproval,
+  handleScopeRejection,
+  buildScopeApprovedPatch,
+  buildScopeEscalationPatch,
+} from '../src/scope/gate.js';
 import { processWorkItemAudit } from '../src/auditor/worker.js';
 import { adoClient } from '../src/ado/client.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
@@ -475,5 +483,204 @@ describe('PM Scope-Lock Gate - Scope Verdict Detection (Task 1)', () => {
     });
 
     expect(verdictTagChange.type).toBe('approve');
+  });
+});
+
+describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
+  beforeEach(() => {
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+    adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('SCOPE-03 breaker isolation: evaluateScopeBreaker increments draft.scopeLock.iterationCount only; draft.reworkCycles remains null or unchanged', async () => {
+    const workItemId = 3001;
+
+    // Initialize ticket state with scopeLock and explicit null reworkCycles
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: now,
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        draft.reworkCycles = null;
+      });
+    });
+
+    const res = await evaluateScopeBreaker(workItemId);
+    expect(res.allowed).toBe(true);
+    expect(res.iterationCount).toBe(1);
+
+    const ticketAfter = await stateStore.getTicketState(workItemId);
+    expect(ticketAfter?.scopeLock?.iterationCount).toBe(1);
+    expect(ticketAfter?.scopeLock?.status).toBe('rejected');
+    expect(ticketAfter?.reworkCycles).toBeNull();
+  });
+
+  it('SCOPE-03 breaker limit: Rejections 1 and 2 return allowed: true; rejection 3 returns allowed: false and sets status: blocked', async () => {
+    const workItemId = 3002;
+
+    const res1 = await evaluateScopeBreaker(workItemId);
+    expect(res1.allowed).toBe(true);
+    expect(res1.iterationCount).toBe(1);
+
+    const t1 = await stateStore.getTicketState(workItemId);
+    expect(t1?.scopeLock?.status).toBe('rejected');
+    expect(t1?.scopeLock?.escalatedAt).toBeNull();
+
+    const res2 = await evaluateScopeBreaker(workItemId);
+    expect(res2.allowed).toBe(true);
+    expect(res2.iterationCount).toBe(2);
+
+    const t2 = await stateStore.getTicketState(workItemId);
+    expect(t2?.scopeLock?.status).toBe('rejected');
+    expect(t2?.scopeLock?.escalatedAt).toBeNull();
+
+    const res3 = await evaluateScopeBreaker(workItemId);
+    expect(res3.allowed).toBe(false);
+    expect(res3.iterationCount).toBe(3);
+
+    const t3 = await stateStore.getTicketState(workItemId);
+    expect(t3?.scopeLock?.status).toBe('blocked');
+    expect(t3?.scopeLock?.escalatedAt).toBeDefined();
+    expect(t3?.reworkCycles).toBeUndefined();
+  });
+
+  it('SCOPE-03 breaker reset: resetScopeBreaker resets iterationCount to 0 and clears escalatedAt', async () => {
+    const workItemId = 3003;
+
+    // Trip the breaker with 3 rejections
+    await evaluateScopeBreaker(workItemId);
+    await evaluateScopeBreaker(workItemId);
+    await evaluateScopeBreaker(workItemId);
+
+    const blockedTicket = await stateStore.getTicketState(workItemId);
+    expect(blockedTicket?.scopeLock?.iterationCount).toBe(3);
+    expect(blockedTicket?.scopeLock?.status).toBe('blocked');
+    expect(blockedTicket?.scopeLock?.escalatedAt).not.toBeNull();
+
+    // Reset breaker
+    await resetScopeBreaker(workItemId);
+
+    const resetTicket = await stateStore.getTicketState(workItemId);
+    expect(resetTicket?.scopeLock?.iterationCount).toBe(0);
+    expect(resetTicket?.scopeLock?.escalatedAt).toBeNull();
+  });
+
+  it('SCOPE-02 approval: handleScopeApproval sets scopeLock.status to locked, records lockedAt and lockedBy, removes [awaiting-scope-lock], adds [scope-locked], and sets state to Ready to Dev', async () => {
+    const workItemId = 3004;
+    const initialTags = 'frontend; [awaiting-scope-lock]; [audit-passed]';
+
+    const mockWitApi = {
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    await handleScopeApproval(workItemId, initialTags, 'pm-approver@example.com');
+
+    // 1. Verify StateStore
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('locked');
+    expect(ticket?.scopeLock?.lockedBy).toBe('pm-approver@example.com');
+    expect(ticket?.scopeLock?.lockedAt).toBeDefined();
+
+    // 2. Verify ADO call
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const [calledId, patchDoc] = mockWitApi.updateWorkItem.mock.calls[0];
+    expect(calledId).toBe(workItemId);
+
+    // State -> Ready to Dev
+    const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp).toBeDefined();
+    expect(stateOp.op).toBe(Operation.Replace);
+    expect(stateOp.value).toBe('Ready to Dev');
+
+    // Tags updated: [scope-locked] added, [awaiting-scope-lock] removed
+    const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp).toBeDefined();
+    expect(tagOp.value).toContain('frontend');
+    expect(tagOp.value).toContain('[audit-passed]');
+    expect(tagOp.value).toContain('[scope-locked]');
+    expect(tagOp.value).not.toContain('[awaiting-scope-lock]');
+
+    // History contains confirmation and bot echo marker
+    const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp).toBeDefined();
+    expect(historyOp.value).toContain('[Scope Locked]');
+    expect(historyOp.value).toContain('<!-- [automated-agent] -->');
+  });
+
+  it('SCOPE-02 escalation: handleScopeRejection on 3rd bounce calls ADO with buildScopeEscalationPatch (State: Blocked, tag: [scope-unresolved])', async () => {
+    const workItemId = 3005;
+    const initialTags = 'payments; [awaiting-scope-lock]';
+
+    const mockWitApi = {
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    // Pre-populate 2 rejections
+    await evaluateScopeBreaker(workItemId);
+    await evaluateScopeBreaker(workItemId);
+
+    // 3rd rejection
+    const result = await handleScopeRejection(
+      workItemId,
+      'Scope boundary is too broad. Please narrow to Stripe webhook only.',
+      initialTags,
+      'pm-reviewer@example.com'
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.iterationCount).toBe(3);
+
+    // Verify ADO call with escalation patch
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const [calledId, patchDoc] = mockWitApi.updateWorkItem.mock.calls[0];
+    expect(calledId).toBe(workItemId);
+
+    // State -> Blocked
+    const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp).toBeDefined();
+    expect(stateOp.op).toBe(Operation.Replace);
+    expect(stateOp.value).toBe('Blocked');
+
+    // Tags: [scope-unresolved] added, [awaiting-scope-lock] removed
+    const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp).toBeDefined();
+    expect(tagOp.value).toContain('payments');
+    expect(tagOp.value).toContain('[scope-unresolved]');
+    expect(tagOp.value).not.toContain('[awaiting-scope-lock]');
+
+    // History contains escalation notice and bot echo marker
+    const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
+    expect(historyOp).toBeDefined();
+    expect(historyOp.value).toContain('[Scope Escalated]');
+    expect(historyOp.value).toContain('<!-- [automated-agent] -->');
+
+    // Verify StateStore state is blocked
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('blocked');
+    expect(ticket?.scopeLock?.iterationCount).toBe(3);
+    expect(ticket?.reworkCycles).toBeUndefined();
   });
 });
