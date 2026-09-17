@@ -221,20 +221,22 @@ describe('PM Scope-Lock Gate - Auditor Worker & Idempotency (Task 2)', () => {
     const workItemIdLocked = 2003;
     const revIdLocked = 1;
 
-    await stateStore.updateTicketState(workItemIdLocked, (draft) => {
-      const now = new Date().toISOString();
-      draft.scopeLock = {
-        status: 'locked',
-        iterationCount: 1,
-        requestedAt: now,
-        lockedAt: now,
-        lockedBy: 'pm@example.com',
-        feedback: null,
-        remindedAt: null,
-        escalatedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
+    await workItemQueueManager.runInLane(workItemIdLocked, async () => {
+      await stateStore.updateTicketState(workItemIdLocked, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'locked',
+          iterationCount: 1,
+          requestedAt: now,
+          lockedAt: now,
+          lockedBy: 'pm@example.com',
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
     });
 
     const mockWitApiLocked = {

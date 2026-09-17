@@ -1,11 +1,15 @@
 import {
   getWorkItemDetails,
-  transitionToReadyToDev,
   postFeedbackComment,
 } from '../ado/work-item.js';
+import { adoClient } from '../ado/client.js';
 import { formatL1AuditComment } from '../ado/formatter.js';
 import { auditTicketContract } from './evaluator.js';
 import { stateStore } from '../state/index.js';
+import {
+  formatScopeReviewPacketComment,
+  buildParkScopeLockPatch,
+} from '../scope/packet.js';
 
 export async function processWorkItemAudit(
   workItemId: number,
@@ -22,6 +26,24 @@ export async function processWorkItemAudit(
         revId,
         'skipped',
         `Ticket state is '${workItem.state}', expected 'New'`
+      );
+      return;
+    }
+
+    const ticketState = await stateStore.getTicketState(workItemId);
+    const isParkedAwaiting =
+      workItem.tags?.includes('[awaiting-scope-lock]') ||
+      ticketState?.scopeLock?.status === 'pending';
+    const isAlreadyLocked =
+      workItem.tags?.includes('[scope-locked]') ||
+      ticketState?.scopeLock?.status === 'locked';
+
+    if (isParkedAwaiting || isAlreadyLocked) {
+      stateStore.updateDedupStatus(
+        workItemId,
+        revId,
+        'skipped',
+        `Work item ${workItemId} is parked awaiting scope lock or already locked; skipping re-audit`
       );
       return;
     }
@@ -50,12 +72,35 @@ export async function processWorkItemAudit(
       `## L1 Audit Verdict: ${result.passed ? 'PASSED' : 'FAILED'}\n${result.criteria_summary}`
     );
 
-    // Step 5 & 6: Format HTML comment and transition or post feedback
-    const htmlComment = formatL1AuditComment(result);
-
+    // Step 5 & 6: Format comment and park or post feedback
     if (result.passed) {
-      await transitionToReadyToDev(workItemId, htmlComment);
+      const packetHtml = formatScopeReviewPacketComment({
+        workItemId,
+        title: workItem.title,
+        criteriaSummary: result.criteria_summary,
+        reasons: result.reasons,
+      });
+
+      const patchDoc = buildParkScopeLockPatch(packetHtml, workItem.tags);
+      await adoClient.updateWorkItem(workItemId, patchDoc);
+
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'pending',
+          iterationCount: 0,
+          requestedAt: now,
+          lockedAt: null,
+          lockedBy: null,
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
     } else {
+      const htmlComment = formatL1AuditComment(result);
       await postFeedbackComment(workItemId, htmlComment);
     }
 
