@@ -151,28 +151,44 @@ export const GOLDEN_PATH_V2: readonly StepDefinition[] = Object.freeze([
   }),
 ]);
 
+export function normalizeTags(
+  tags?: readonly string[] | string[] | string | null
+): string[] {
+  if (!tags) return [];
+  const rawList = typeof tags === 'string' ? [tags] : Array.isArray(tags) ? tags : [];
+  return rawList.flatMap((t) =>
+    typeof t === 'string'
+      ? t
+          .split(/[;,]/)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : []
+  );
+}
+
 export function resolveRoutingStep(
   state: string,
   tags?: readonly string[] | string[] | string | null
 ): StepDefinition | undefined {
-  if (tags && tags.includes('[awaiting-input]')) {
-    return GOLDEN_PATH_V2.find((s) => s.step === 3);
+  const normalizedTags = normalizeTags(tags);
+  if (normalizedTags.some((t) => t.includes('[awaiting-input]'))) {
+    return getStepByNumber(3);
   }
   switch (state) {
     case 'New':
-      return GOLDEN_PATH_V2.find((s) => s.step === 1);
+      return getStepByNumber(1);
     case 'Ready to Dev':
-      return GOLDEN_PATH_V2.find((s) => s.step === 2);
+      return getStepByNumber(2);
     case 'In Dev':
-      return GOLDEN_PATH_V2.find((s) => s.step === 3);
+      return getStepByNumber(3);
     case 'Dev Done':
-      return GOLDEN_PATH_V2.find((s) => s.step === 4);
+      return getStepByNumber(4);
     case 'Ready for QA':
-      return GOLDEN_PATH_V2.find((s) => s.step === 6);
+      return getStepByNumber(6);
     case 'Ready to Deploy':
-      return GOLDEN_PATH_V2.find((s) => s.step === 7);
+      return getStepByNumber(7);
     case 'Done':
-      return GOLDEN_PATH_V2.find((s) => s.step === 9);
+      return getStepByNumber(9);
     default:
       return undefined;
   }

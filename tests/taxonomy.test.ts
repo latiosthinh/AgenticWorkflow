@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   GOLDEN_PATH_V2,
+  normalizeTags,
   resolveRoutingStep,
   getStepByNumber,
   getStepsByColumn,
@@ -168,12 +169,34 @@ describe('Taxonomy Resolution Helpers (TAX-03)', () => {
     expect(resolveRoutingStep('In Dev')?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', ['[awaiting-input]'])?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', 'backend; [awaiting-input]')?.step).toBe(3);
+    expect(resolveRoutingStep('AnyState', '[awaiting-input]; other-tag')?.step).toBe(3);
+    expect(resolveRoutingStep('AnyState', 'other-tag, [awaiting-input]')?.step).toBe(3);
+    expect(resolveRoutingStep('AnyState', ['[awaiting-input]; other-tag'])?.step).toBe(3);
+    expect(resolveRoutingStep('AnyState', ['backend', ' [awaiting-input] '])?.step).toBe(3);
+    expect(resolveRoutingStep('AnyState', ['other-tag, [awaiting-input]'])?.step).toBe(3);
     expect(resolveRoutingStep('Dev Done')?.step).toBe(4);
     expect(resolveRoutingStep('Ready for QA')?.step).toBe(6);
     expect(resolveRoutingStep('Ready to Deploy')?.step).toBe(7);
     expect(resolveRoutingStep('Done')?.step).toBe(9);
     expect(resolveRoutingStep('UnknownState')).toBeUndefined();
     expect(resolveRoutingStep('Blocked')).toBeUndefined();
+  });
+
+  it('normalizes tag strings and arrays with semicolon/comma delimiters and whitespace trimming', () => {
+    expect(normalizeTags(undefined)).toEqual([]);
+    expect(normalizeTags(null)).toEqual([]);
+    expect(normalizeTags('')).toEqual([]);
+    expect(normalizeTags('backend; [awaiting-input]')).toEqual(['backend', '[awaiting-input]']);
+    expect(normalizeTags('[awaiting-input], other-tag; extra-tag')).toEqual([
+      '[awaiting-input]',
+      'other-tag',
+      'extra-tag',
+    ]);
+    expect(normalizeTags([' [awaiting-input] ', 'backend; scope-locked'])).toEqual([
+      '[awaiting-input]',
+      'backend',
+      'scope-locked',
+    ]);
   });
 
   it('filters steps by column and state', () => {
