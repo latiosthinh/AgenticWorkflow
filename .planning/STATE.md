@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: roadmap_complete
-stopped_at: v2.0 roadmap RE-PLANNED around the file-backed StateStore — 7 phases, 19/19 requirements mapped, ready for Phase 1 planning
-last_updated: "2026-09-16T00:00:00.000Z"
-last_activity: 2026-09-16
+status: completed
+stopped_at: v2.0 roadmap RE-PLANNED — ROADMAP.md replaced (7 phases on the file-backed StateStore; state matrix + flow + locked constraints incl. single-machine ceiling + coverage 19/19), REQUIREMENTS.md traceability filled for all 19 rev-2 requirements; NOT yet committed (orchestrator commits after user approval)
+last_updated: "2026-09-17T10:15:32.891Z"
+last_activity: 2026-09-16 — v2.0 roadmap re-planned (7 phases, 19/19 requirements mapped)
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 1 — StateStore Migration (not started)
-Plan: — (no plans created yet; 19 estimated across 7 phases)
-Status: Roadmap complete (RE-PLANNED around the file-backed StateStore) — awaiting Phase 1 discuss/plan
-Last activity: 2026-09-16 — v2.0 roadmap re-planned (7 phases, 19/19 requirements mapped)
+Phase: 1 — StateStore Migration (in_progress)
+Plan: 01-01 (completed) — foundational StateStore types, strict JSON frontmatter codec, path guards, and test harness
+Status: In Progress
+Last activity: 2026-09-17 — completed Plan 01-01 (StateStore Migration foundation)
 
-Progress: [          ] 0% (0/7 phases)
+Progress: [██░░░░░░░░] 20%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -174,10 +174,14 @@ Recent decisions affecting current work:
 - [Roadmap]: Safety linchpin VERIFIED — `lane-manager.ts:9` `concurrency:1` ⇒ single-writer per ticket; ALL mutations (workers + watchdog + poller) route through `getLane(id)`; ingress dedup = atomic `wx` markers `data/state/dedup/<id>-<rev>` (EEXIST ⇒ duplicate) with TTL sweep mirroring the 7-day purge; writes crash-atomic (temp + rename, rm-then-rename on win32); watchdog scans + L7/DORA trends = `readdir` + frontmatter parse (O(active tickets)); ticket files get archive/TTL lifecycle; 277 tests port from `:memory:` SQLite to per-test `mkdtemp` dirs.
 - [Roadmap]: `ponytail:` ceiling recorded — single orchestrator machine is load-bearing for local files; enterprise multi-instance swaps the `StateStore` impl → Postgres behind the same interface (STORE-01, deferred, NOT v2.0).
 - [Roadmap]: Binding for every phase — no reintroduction of SQLite/Drizzle/tables/DDL; zero new deps AND dep reduction (`better-sqlite3`/`drizzle-orm`/`drizzle-kit` removed in Phase 1); research Pitfalls 2, 5–12 remain binding with storage wording read as the StateStore file equivalent.
+- [01-01]: File-backed StateStore foundation implemented using strict JSON frontmatter between triple-dash fences with path traversal guards.
+- [01-01]: Atomic file deduplication marker creation implemented via fs.writeFileSync with flag wx and 7-day TTL sweep.
+- [01-01]: Ephemeral mkdtemp test harness created to isolate StateStore file system tests.
 
 ### Pending Todos
 
 Plan-phase validation items (from research flags — resolve during discuss/plan of the owning phase):
+
 - [Phase 1]: Decide frontmatter codec approach (hand-rolled parse/serialize — zero new deps), archive/TTL policy location (e.g. `data/state/archive/`) + sweep cadence, and the win32 rm-then-rename crash-safe ordering; StateStore root via zod env (default `data/state/`).
 - [Phase 3]: Validate ADO org permits bot tag-writes on `New`/`Ready to Dev` items; check tag collisions for `[awaiting-scope-lock]`/`[scope-locked]`; decide PM notification mechanism (comment vs @mention/System.AssignedTo).
 - [Phase 5]: Security-review the wider prod egress allowance (PRODUCTION_SMOKE_URL); decide smoke-suite authorship (target repo vs orchestrator-owned — changes worktree need).
@@ -201,6 +205,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-16
-Stopped at: v2.0 roadmap RE-PLANNED — ROADMAP.md replaced (7 phases on the file-backed StateStore; state matrix + flow + locked constraints incl. single-machine ceiling + coverage 19/19), REQUIREMENTS.md traceability filled for all 19 rev-2 requirements; NOT yet committed (orchestrator commits after user approval)
-Resume: Next step `/gsd-plan-phase 1` (StateStore Migration — critical blocker; everything persists on it) — or `/gsd-discuss-phase 1` first; Wave B (phases 3/4/5) can be planned in any order after Phase 2 completes
+Last session: 2026-09-17
+Stopped at: Completed 01-01-PLAN.md (foundational StateStore types, strict JSON frontmatter codec, path traversal guards, test harness)
+Resume: Next step 01-02-PLAN.md (Ingress deduplication & lane-manager AsyncLocalStorage wiring)

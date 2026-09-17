@@ -18,7 +18,7 @@
 
 ### 0. STATE — File-backed StateStore (persistence foundation)
 
-- [ ] **STATE-01**: v1.0 SQLite/Drizzle persistence is replaced by a file-backed `StateStore` behind a backend-agnostic interface — per-ticket state collapses the 12 v1.0 tables into ONE markdown+frontmatter file (`data/state/tickets/<id>.md`); every worker reads/writes state ONLY via `StateStore` (no worker touches raw storage); `better-sqlite3`/`drizzle-orm`/`drizzle-kit` removed from `package.json`.
+- [x] **STATE-01**: v1.0 SQLite/Drizzle persistence is replaced by a file-backed `StateStore` behind a backend-agnostic interface — per-ticket state collapses the 12 v1.0 tables into ONE markdown+frontmatter file (`data/state/tickets/<id>.md`); every worker reads/writes state ONLY via `StateStore` (no worker touches raw storage); `better-sqlite3`/`drizzle-orm`/`drizzle-kit` removed from `package.json`.
 - [ ] **STATE-02**: Ingress dedup is atomic and concurrency-safe without a DB — a create-if-absent per-rev marker (`fs.writeFileSync(path,'',{flag:'wx'})`; `EEXIST` ⇒ duplicate, drop) replaces the SQLite PK constraint, with a TTL sweep mirroring the v1.0 7-day purge. Concurrent duplicate `(workItemId,revId)` webhook deliveries produce ZERO duplicate agent dispatches.
 - [ ] **STATE-03**: The single-writer invariant holds — EVERY ticket-state mutation (workers, watchdog, poller) routes through the per-work-item lane (`concurrency:1`); writes are crash-atomic (temp-file + rename, with rm-then-rename on win32); the invariant is enforced by the `StateStore` API surface + a regression test (a stray direct write, or an off-lane mutation, fails the suite).
 - [ ] **STATE-04**: File-based operation reaches v1.0 behavioral parity + crash recovery — watchdog/poller scans (`readdir` + frontmatter parse) locate pending/aged items; ticket state files have an archive/TTL lifecycle preventing unbounded growth; the full v1.0 suite (277 tests) is ported from `:memory:` SQLite to per-test `mkdtemp` file dirs and stays green (no regression from the migration).
@@ -95,7 +95,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STATE-01 | Phase 1 | Pending |
+| STATE-01 | Phase 1 | Complete |
 | STATE-02 | Phase 1 | Pending |
 | STATE-03 | Phase 1 | Pending |
 | STATE-04 | Phase 1 | Pending |
