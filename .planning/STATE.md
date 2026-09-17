@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-09-17T11:47:00.000Z"
-last_activity: 2026-09-17 — completed Plan 02-01 (Canonical Golden Path v2 taxonomy data model with 9 steps, 5 columns, frozen immutability, and state resolution helpers)
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-09-17T12:00:00.000Z"
+last_activity: 2026-09-17 — completed Plan 02-02 (Taxonomy-driven router refactor and full lifecycle replay parity test)
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 2 — Taxonomy Foundation
-Plan: 02-01 (completed) — canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
-Status: In Phase 2
-Last activity: 2026-09-17 — completed Plan 02-01 (Canonical Golden Path v2 taxonomy data model with 9 steps, 5 columns, frozen immutability, and state resolution helpers)
+Phase: 2 — Taxonomy Foundation (complete)
+Plan: 02-02 (completed) — taxonomy-driven router refactor and full lifecycle replay parity test
+Status: Phase 2 complete — Ready for Wave B (Phases 3, 4, 5)
+Last activity: 2026-09-17 — completed Plan 02-02 (Taxonomy-driven router refactor and full lifecycle replay parity test)
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100% (Wave A complete: Phases 1 & 2)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 86%
 | Phase 01 P04 | 8m | 2 tasks | 10 files |
 | Phase 01 P05 | 15m | 3 tasks | 15 files |
 | Phase 02 P01 | 3m | 2 tasks | 2 files |
+| Phase 02 P02 | 6m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -197,6 +198,8 @@ Recent decisions affecting current work:
 - [01-05]: Configured vitest test.exclude to ignore ephemeral .worktrees/** directories
 - [02-01]: Recursively freeze GOLDEN_PATH_V2 array, step definitions, and child tag/evidence collections via Object.freeze
 - [02-01]: Support both string and string-array formats for tags in resolveRoutingStep to maintain compatibility with ADO work item models
+- [02-02]: Router state dispatch delegates to resolveRoutingStep from pipeline taxonomy using a step.step switch table
+- [02-02]: Bound routeWorkItemEvent inside workItemQueueManager.runInLane to guarantee ambient lane context for all direct and routed state store mutations
 
 ### Pending Todos
 
@@ -225,6 +228,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T11:47:00.000Z
-Stopped at: Completed 02-01-PLAN.md
-Resume: Next plan: 02-02-PLAN.md (Taxonomy-driven router refactor and full lifecycle replay parity test)
+Last session: 2026-09-17T12:00:00.000Z
+Stopped at: Completed Phase 2 (02-02-PLAN.md)
+Resume: Next phase: Wave B (Phase 3: PM Scope-Lock Gate, Phase 4: L7 Evidence Index Extension, Phase 5: Prod Smoke Suite)

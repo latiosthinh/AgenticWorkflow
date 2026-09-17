@@ -27,7 +27,7 @@
 
 - [x] **TAX-01**: System models the Golden Path v2 as a single data-driven source (`src/pipeline/taxonomy.ts`): each of the 9 steps mapped to its column (Refinement/Execution/Acceptance/Release/Retro), actor (⚡ AI / 👤 Human), evidence level (L1–L7), and ADO state — with no v1.0 directory renames (taxonomy is additive metadata over the existing src dirs).
 - [ ] **TAX-02**: The ADO state-transition router and the evidence-index stage labels are driven by the v2 taxonomy, and the authoritative state matrix in ROADMAP/docs reflects the 5 columns / 9 steps / L1–L7 model with governance hand-offs.
-- [ ] **TAX-03**: Taxonomy adoption is behavior-preserving for v1.0 routing — a mapping test asserts all 9 steps resolve column/actor/evidence-level/ADO-state from the taxonomy source, and a v1-lifecycle replay test drives fixture revisions `New → … → Done` asserting identical handler dispatch to v1.0.
+- [x] **TAX-03**: Taxonomy adoption is behavior-preserving for v1.0 routing — a mapping test asserts all 9 steps resolve column/actor/evidence-level/ADO-state from the taxonomy source, and a v1-lifecycle replay test drives fixture revisions `New → … → Done` asserting identical handler dispatch to v1.0.
 
 ### 2. SCOPE — Human PM Scope-Lock Gate (Refinement, Step 2)
 
@@ -101,7 +101,7 @@
 | STATE-04 | Phase 1 | Complete |
 | TAX-01 | Phase 2 | Complete |
 | TAX-02 | Phase 7 | Pending |
-| TAX-03 | Phase 2 | Pending |
+| TAX-03 | Phase 2 | Complete |
 | SCOPE-01 | Phase 3 | Pending |
 | SCOPE-02 | Phase 3 | Pending |
 | SCOPE-03 | Phase 3 | Pending |

@@ -95,7 +95,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 ## Phases
 
 - [x] **Phase 1: StateStore Migration** — replace v1.0 SQLite/Drizzle with the file-backed `StateStore`: per-ticket markdown+frontmatter, atomic `wx` dedup markers, lane-enforced single-writer invariant, crash-atomic writes, watchdog scans + file lifecycle, and the 277-test harness ported to `mkdtemp` — the foundation everything persists on.
-- [ ] **Phase 2: Taxonomy Foundation** — the v2 model (5 cols / 9 steps / actors ⚡👤 / L1–L7) as a data-driven source (`src/pipeline/taxonomy.ts`) driving the router; behavior-preserving for v1.0 paths, proven by lifecycle replay parity.
+- [x] **Phase 2: Taxonomy Foundation** — the v2 model (5 cols / 9 steps / actors ⚡👤 / L1–L7) as a data-driven source (`src/pipeline/taxonomy.ts`) driving the router; behavior-preserving for v1.0 paths, proven by lifecycle replay parity.
 - [ ] **Phase 3: PM Scope-Lock Gate** — human 👤 PM scope verdict at Refinement Step 2; audit pass parks the ticket instead of auto-unlocking dev; unbypassable, undeadlockable, breaker-isolated.
 - [ ] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults.
 - [ ] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox.
@@ -143,7 +143,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Canonical taxonomy types, frozen GOLDEN_PATH_V2 data model, and unit tests
-- [ ] 02-02-PLAN.md — Taxonomy-driven router refactor and full lifecycle replay parity test
+- [x] 02-02-PLAN.md — Taxonomy-driven router refactor and full lifecycle replay parity test
 **Parallelizable**: No — Wave A, serial; the router refactor must land before Wave B's scope-guard router edit (avoids conflicting `execute/router.ts` edits).
 
 ### Phase 3: PM Scope-Lock Gate
