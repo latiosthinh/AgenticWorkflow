@@ -228,7 +228,7 @@ Plans:
 |---|---|---|---|
 | 1. StateStore Migration | 5/5 | Complete | 2026-09-17 |
 | 2. Taxonomy Foundation | 2/2 | Complete | 2026-09-17 |
-| 3. PM Scope-Lock Gate | 0/3 | Not started | — |
+| 3. PM Scope-Lock Gate | 3/3 | Complete | 2026-09-17 |
 | 4. L7 Evidence Index Extension | 0/2 | Not started | — |
 | 5. Prod Smoke Suite | 0/3 | Not started | — |
 | 6. Retro & L7 Output | 0/3 | Not started | — |
