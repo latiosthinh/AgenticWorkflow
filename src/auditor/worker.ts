@@ -55,24 +55,7 @@ export async function processWorkItemAudit(
       acceptanceCriteria: workItem.acceptanceCriteria,
     });
 
-    // Step 4: Persist audit outcome via stateStore.updateTicketState
-    await stateStore.updateTicketState(
-      workItemId,
-      (draft) => {
-        draft.revId = revId;
-        draft.auditLogs.push({
-          revId,
-          verdict: result.passed ? 'passed' : 'failed',
-          reasons: JSON.stringify(result.reasons),
-          criteriaSummary: result.criteria_summary,
-          model: 'gpt-4o',
-          evaluatedAt: new Date().toISOString(),
-        });
-      },
-      `## L1 Audit Verdict: ${result.passed ? 'PASSED' : 'FAILED'}\n${result.criteria_summary}`
-    );
-
-    // Step 5 & 6: Format comment and park or post feedback
+    // Step 4 & 5: Format comment, update ADO, and atomically persist StateStore
     if (result.passed) {
       const packetHtml = formatScopeReviewPacketComment({
         workItemId,
@@ -84,24 +67,54 @@ export async function processWorkItemAudit(
       const patchDoc = buildParkScopeLockPatch(packetHtml, workItem.tags);
       await adoClient.updateWorkItem(workItemId, patchDoc);
 
-      await stateStore.updateTicketState(workItemId, (draft) => {
-        const now = new Date().toISOString();
-        draft.scopeLock = {
-          status: 'pending',
-          iterationCount: 0,
-          requestedAt: now,
-          lockedAt: null,
-          lockedBy: null,
-          feedback: null,
-          remindedAt: null,
-          escalatedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-      });
+      const now = new Date().toISOString();
+      await stateStore.updateTicketState(
+        workItemId,
+        (draft) => {
+          draft.revId = revId;
+          draft.auditLogs.push({
+            revId,
+            verdict: 'passed',
+            reasons: JSON.stringify(result.reasons),
+            criteriaSummary: result.criteria_summary,
+            model: 'gpt-4o',
+            evaluatedAt: now,
+          });
+          draft.scopeLock = {
+            status: 'pending',
+            iterationCount: 0,
+            requestedAt: now,
+            lockedAt: null,
+            lockedBy: null,
+            feedback: null,
+            remindedAt: null,
+            escalatedAt: null,
+            createdAt: now,
+            updatedAt: now,
+          };
+        },
+        `## L1 Audit Verdict: PASSED\n${result.criteria_summary}`
+      );
     } else {
       const htmlComment = formatL1AuditComment(result);
       await postFeedbackComment(workItemId, htmlComment);
+
+      const now = new Date().toISOString();
+      await stateStore.updateTicketState(
+        workItemId,
+        (draft) => {
+          draft.revId = revId;
+          draft.auditLogs.push({
+            revId,
+            verdict: 'failed',
+            reasons: JSON.stringify(result.reasons),
+            criteriaSummary: result.criteria_summary,
+            model: 'gpt-4o',
+            evaluatedAt: now,
+          });
+        },
+        `## L1 Audit Verdict: FAILED\n${result.criteria_summary}`
+      );
     }
 
     stateStore.updateDedupStatus(workItemId, revId, 'completed');

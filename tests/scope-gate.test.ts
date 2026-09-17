@@ -368,6 +368,44 @@ describe('PM Scope-Lock Gate - Auditor Worker & Idempotency (Task 2)', () => {
     const ticket = await stateStore.getTicketState(workItemId);
     expect(ticket?.auditLogs).toHaveLength(1);
   });
+
+  it('WR-04: processWorkItemAudit does not persist partial state in StateStore if ADO call fails', async () => {
+    const workItemId = 2005;
+    const revId = 1;
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        rev: revId,
+        fields: {
+          'System.Title': 'Failing ADO call',
+          'System.Description': 'Description',
+          'Microsoft.VSTS.Common.AcceptanceCriteria':
+            'Given valid signature, return 200 and process event. System actor verified.',
+          'System.State': 'New',
+          'System.Tags': 'payments',
+        },
+      }),
+      updateWorkItem: vi.fn().mockRejectedValue(new Error('ADO Network Error 503')),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-2005');
+
+    await expect(
+      workItemQueueManager.runInLane(workItemId, () =>
+        processWorkItemAudit(workItemId, revId)
+      )
+    ).rejects.toThrow('ADO Network Error 503');
+
+    // StateStore must remain uninitialized - no partial auditLogs or scopeLock
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket).toBeNull();
+
+    // Dedup status recorded as failed
+    const dedup = stateStore.getDedupEvent(workItemId, revId);
+    expect(dedup?.status).toBe('failed');
+    expect(dedup?.errorMessage).toContain('ADO Network Error 503');
+  });
 });
 
 describe('PM Scope-Lock Gate - Scope Verdict Detection (Task 1)', () => {
