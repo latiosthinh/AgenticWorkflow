@@ -391,17 +391,17 @@ export function recordDedupEvent(
 | A1 | Strict JSON frontmatter between `---` fences satisfies all human and tooling markdown reader expectations. | Architecture Patterns | Low — JSON is valid YAML; any YAML parser parses it natively. |
 | A2 | Active ticket volume in production will stay under 1,000 concurrent tickets, ensuring `readdir` scans take < 15ms. | Common Pitfalls | Low — Archive lifecycle moves completed tickets to `data/state/archive/`, bounding active set. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Dedup Sweep Interval & Trigger:**
    - What we know: v1.0 used daily `setInterval` (86,400,000ms) plus startup run.
    - What's unclear: Should sweep run on startup and every 24h, or on each webhook batch?
-   - Recommendation: Keep v1.0 startup + 24h interval pattern (`purgeOldDedup`).
+   - RESOLVED: Keep v1.0 startup + 24h interval pattern (`purgeOldDedupMarkers(retentionDays = 7)`).
 
 2. **Archive Trigger Cadence:**
    - What we know: Tickets reach `Done` at end of pipeline.
    - What's unclear: Should ticket files be moved to `archive/` immediately upon `Done`, or during a periodic background sweep?
-   - Recommendation: Provide `archiveTicket(workItemId)` called on pipeline completion, plus an optional TTL sweep for tickets untouched > 30 days.
+   - RESOLVED: Provide `archiveTicket(workItemId)` called on pipeline completion, plus an optional TTL sweep for tickets untouched > 30 days.
 
 ## Environment Availability
 
