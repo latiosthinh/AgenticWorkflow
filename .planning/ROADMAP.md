@@ -192,7 +192,12 @@ Plans:
   3. The runner is sandboxed and read-only: deterministic checked-in suite via `sandbox/runner.runCommand` (`extendEnv:false`, scrubbed env, egress allow-list to the `PRODUCTION_SMOKE_URL` host only — no metadata endpoint, no internal subnets; hard total timeout ≤ ~5 min so the per-ticket lane stays responsive — no sleep-in-lane); tests assert the default suite contains no non-idempotent verbs; stdout/stderr pass the existing redaction filter BEFORE persisting to `StateStore` or posting comments (sanitize-html + agent marker).
   4. Every run persists to the ticket's `StateStore` smoke section (runIndex, classification, checks passed/failed, durationMs, commitSha, scrubbed output) and feeds L6 Prod-Confidence evidence; the L6 evidence comment renders smoke + telemetry results, and the release-confidence path requires both PASS.
 **Threat notes**: Pitfalls 8–9 — the LLM only *interprets* smoke results, never authors commands against prod (SSRF/injection); lane hygiene is load-bearing now that state writes are lane-serialized (bounded in-lane work). Plan-phase validation: security-review the wider prod egress allowance; decide smoke-suite authorship (target-repo vs orchestrator-owned — materially changes worktree need); scrubbed+truncated output retention in the ticket file.
-**Plans**: 3 plans (estimated)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Smoke configuration in env.ts, StateStore types, and core HTTP/SHA health probe
+- [ ] 05-02-PLAN.md — Sandboxed execution, INFRA vs APP error classification, 2-strike flake filter, and alert formatter
+- [ ] 05-03-PLAN.md — Deployment worker fail-fast sequencing, tag patching, and composite L6 evidence index
 **Parallelizable**: Yes — Wave B, parallel with Phases 3 & 4. Owns `deploy/smoke.ts` (NEW) + `deploy/worker.ts` smoke→telemetry sequencing ONLY — Phase 6 owns the final Done-patch re-sequencing in `deploy/worker.ts` (avoids a conflicting edit).
 
 ### Phase 6: Retro & L7 Output
