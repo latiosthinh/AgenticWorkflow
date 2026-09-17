@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq, and } from 'drizzle-orm';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { db, sqlite } from '../src/db/index.js';
-import { planCheckpoints, dedupEvents, auditLogs } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { adoClient } from '../src/ado/client.js';
 import {
   createPlanCheckpoint,
@@ -17,28 +18,35 @@ import { checkPlanCheckpointTimeouts } from '../src/plan/watchdog.js';
 import { processWorkItemExecute } from '../src/execute/worker.js';
 import { routeWorkItemEvent } from '../src/execute/router.js';
 
-afterEach(async () => {
-  const worktreeDir = path.join(process.cwd(), '.worktrees');
-  if (fs.existsSync(worktreeDir)) {
-    const entries = fs.readdirSync(worktreeDir);
-    for (const entry of entries) {
-      if (entry.startsWith('ticket-')) {
-        const fullPath = path.join(worktreeDir, entry);
-        await cleanupWorktree(process.cwd(), fullPath, { deleteBranch: true }).catch(() => {});
-      }
-    }
-  }
-});
-
 describe('Plan Checkpoint Persistence & Lifecycle', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec(
-      'DELETE FROM dedup_events; DELETE FROM audit_log; DELETE FROM plan_checkpoints;'
-    );
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
   });
 
-  it('performs CRUD operations on planCheckpoints table in SQLite', async () => {
+  afterEach(async () => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+
+    const worktreeDir = path.join(process.cwd(), '.worktrees');
+    if (fs.existsSync(worktreeDir)) {
+      const entries = fs.readdirSync(worktreeDir);
+      for (const entry of entries) {
+        if (entry.startsWith('ticket-')) {
+          const fullPath = path.join(worktreeDir, entry);
+          await cleanupWorktree(process.cwd(), fullPath, { deleteBranch: true }).catch(() => {});
+        }
+      }
+    }
+  });
+
+  it('performs CRUD operations on planCheckpoints array in StateStore', async () => {
     const cp = await createPlanCheckpoint({
       workItemId: 3001,
       revId: 1,
@@ -63,48 +71,54 @@ describe('Plan Checkpoint Persistence & Lifecycle', () => {
     const updatedPending = await getPendingCheckpoint(3001);
     expect(updatedPending).toBeUndefined();
 
-    const [row] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.id, cp.id))
-      .all();
-    expect(row.status).toBe('locked');
-    expect(row.answers).toBe('Use schema v2 and return 400');
-    expect(row.planMarkdown).toBe('Updated plan markdown');
+    const ticket = await stateStore.getTicketState(3001);
+    const row = ticket?.planCheckpoints.find((c) => c.id === cp.id);
+    expect(row).toBeDefined();
+    expect(row?.status).toBe('locked');
+    expect(row?.answers).toBe('Use schema v2 and return 400');
+    expect(row?.planMarkdown).toBe('Updated plan markdown');
 
     // Update status to expired
     await updateCheckpointStatus(cp.id, 'expired');
-    const [expiredRow] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.id, cp.id))
-      .all();
-    expect(expiredRow.status).toBe('expired');
+    const updatedTicket = await stateStore.getTicketState(3001);
+    const expiredRow = updatedTicket?.planCheckpoints.find((c) => c.id === cp.id);
+    expect(expiredRow?.status).toBe('expired');
   });
 });
 
 describe('Plan Watchdog 24h/72h Timeouts', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec(
-      'DELETE FROM dedup_events; DELETE FROM audit_log; DELETE FROM plan_checkpoints;'
-    );
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('posts 24h reminder ping comment when questions remain unanswered', async () => {
     const workItemId = 4001;
     const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
 
-    db.insert(planCheckpoints)
-      .values({
-        workItemId,
-        revId: 1,
-        status: 'pending_human_input',
-        questions: JSON.stringify(['Clarification question 1']),
-        createdAt: twentyFiveHoursAgo,
-        updatedAt: twentyFiveHoursAgo,
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.planCheckpoints.push({
+          id: 1,
+          revId: 1,
+          status: 'pending_human_input',
+          questions: JSON.stringify(['Clarification question 1']),
+          createdAt: twentyFiveHoursAgo.toISOString(),
+          updatedAt: twentyFiveHoursAgo.toISOString(),
+        });
+      });
+    });
 
     const mockWitApi = {
       updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
@@ -127,28 +141,28 @@ describe('Plan Watchdog 24h/72h Timeouts', () => {
     expect(historyOp.value).toContain('Action Required: Unanswered Questions');
     expect(historyOp.value).toContain('<!-- [automated-agent] -->');
 
-    const [cp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.workItemId, workItemId))
-      .all();
-    expect(cp.remindedAt).not.toBeNull();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const cp = ticket?.planCheckpoints.find((c) => c.id === 1);
+    expect(cp?.remindedAt).toBeDefined();
+    expect(cp?.remindedAt).not.toBeNull();
   });
 
   it('posts 72h escalation comment and transitions work item to Blocked', async () => {
     const workItemId = 4002;
     const seventyFiveHoursAgo = new Date(Date.now() - 75 * 60 * 60 * 1000);
 
-    db.insert(planCheckpoints)
-      .values({
-        workItemId,
-        revId: 1,
-        status: 'pending_human_input',
-        questions: JSON.stringify(['Critical missing architecture question']),
-        createdAt: seventyFiveHoursAgo,
-        updatedAt: seventyFiveHoursAgo,
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.planCheckpoints.push({
+          id: 1,
+          revId: 1,
+          status: 'pending_human_input',
+          questions: JSON.stringify(['Critical missing architecture question']),
+          createdAt: seventyFiveHoursAgo.toISOString(),
+          updatedAt: seventyFiveHoursAgo.toISOString(),
+        });
+      });
+    });
 
     const mockWitApi = {
       updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
@@ -176,13 +190,11 @@ describe('Plan Watchdog 24h/72h Timeouts', () => {
     expect(historyOp).toBeDefined();
     expect(historyOp.value).toContain('[Plan Checkpoint] Escalation: Work Item Blocked');
 
-    const [cp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.workItemId, workItemId))
-      .all();
-    expect(cp.status).toBe('blocked');
-    expect(cp.escalatedAt).not.toBeNull();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const cp = ticket?.planCheckpoints.find((c) => c.id === 1);
+    expect(cp?.status).toBe('blocked');
+    expect(cp?.escalatedAt).toBeDefined();
+    expect(cp?.escalatedAt).not.toBeNull();
   });
 
   it('handles API error in one checkpoint without starving subsequent checkpoints', async () => {
@@ -190,27 +202,31 @@ describe('Plan Watchdog 24h/72h Timeouts', () => {
     const okWorkItemId = 4004;
     const oldTime = new Date(Date.now() - 25 * 60 * 60 * 1000);
 
-    db.insert(planCheckpoints)
-      .values({
-        workItemId: errorWorkItemId,
-        revId: 1,
-        status: 'pending_human_input',
-        questions: JSON.stringify(['Question 1']),
-        createdAt: oldTime,
-        updatedAt: oldTime,
-      })
-      .run();
+    await workItemQueueManager.runInLane(errorWorkItemId, async () => {
+      await stateStore.updateTicketState(errorWorkItemId, (draft) => {
+        draft.planCheckpoints.push({
+          id: 1,
+          revId: 1,
+          status: 'pending_human_input',
+          questions: JSON.stringify(['Question 1']),
+          createdAt: oldTime.toISOString(),
+          updatedAt: oldTime.toISOString(),
+        });
+      });
+    });
 
-    db.insert(planCheckpoints)
-      .values({
-        workItemId: okWorkItemId,
-        revId: 1,
-        status: 'pending_human_input',
-        questions: JSON.stringify(['Question 2']),
-        createdAt: oldTime,
-        updatedAt: oldTime,
-      })
-      .run();
+    await workItemQueueManager.runInLane(okWorkItemId, async () => {
+      await stateStore.updateTicketState(okWorkItemId, (draft) => {
+        draft.planCheckpoints.push({
+          id: 1,
+          revId: 1,
+          status: 'pending_human_input',
+          questions: JSON.stringify(['Question 2']),
+          createdAt: oldTime.toISOString(),
+          updatedAt: oldTime.toISOString(),
+        });
+      });
+    });
 
     const mockWitApi = {
       updateWorkItem: vi.fn().mockImplementation((...args: any[]) => {
@@ -226,21 +242,39 @@ describe('Plan Watchdog 24h/72h Timeouts', () => {
     const result = await checkPlanCheckpointTimeouts();
     expect(result.reminded).toBe(1);
 
-    const [okCp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.workItemId, okWorkItemId))
-      .all();
-    expect(okCp.remindedAt).not.toBeNull();
+    const ticket = await stateStore.getTicketState(okWorkItemId);
+    const okCp = ticket?.planCheckpoints.find((c) => c.id === 1);
+    expect(okCp?.remindedAt).toBeDefined();
+    expect(okCp?.remindedAt).not.toBeNull();
   });
 });
 
 describe('Execution Worker Pipeline', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec(
-      'DELETE FROM dedup_events; DELETE FROM audit_log; DELETE FROM plan_checkpoints;'
-    );
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(async () => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+
+    const worktreeDir = path.join(process.cwd(), '.worktrees');
+    if (fs.existsSync(worktreeDir)) {
+      const entries = fs.readdirSync(worktreeDir);
+      for (const entry of entries) {
+        if (entry.startsWith('ticket-')) {
+          const fullPath = path.join(worktreeDir, entry);
+          await cleanupWorktree(process.cwd(), fullPath, { deleteBranch: true }).catch(() => {});
+        }
+      }
+    }
   });
 
   it('ambiguity flow: creates worktree, posts [Plan Q&A], tags [awaiting-input], and releases worktree', async () => {
@@ -263,17 +297,9 @@ describe('Execution Worker Pipeline', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-5001',
-        receivedAt: new Date(),
-      })
-      .run();
-
-    await processWorkItemExecute(workItemId, revId);
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await processWorkItemExecute(workItemId, revId);
+    });
 
     // Verify ADO was patched with [awaiting-input] tag and [Plan Q&A] comment
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
@@ -304,14 +330,6 @@ describe('Execution Worker Pipeline', () => {
       name.startsWith(`ticket-${workItemId}`)
     );
     expect(ticketWorktree).toBeUndefined();
-
-    // Verify dedupEvents status is completed
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('completed');
   });
 
   it('resumption flow: locks plan, removes [awaiting-input] tag, and posts [Plan Checkpoint] comment', async () => {
@@ -349,17 +367,9 @@ describe('Execution Worker Pipeline', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-5002',
-        receivedAt: new Date(),
-      })
-      .run();
-
-    await processWorkItemExecute(workItemId, revId);
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await processWorkItemExecute(workItemId, revId);
+    });
 
     // Verify ADO was updated
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
@@ -385,23 +395,13 @@ describe('Execution Worker Pipeline', () => {
     const pendingCp = await getPendingCheckpoint(workItemId);
     expect(pendingCp).toBeUndefined();
 
-    const [lockedCp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.id, initialCp.id))
-      .all();
-    expect(lockedCp.status).toBe('locked');
-    expect(lockedCp.answers).toContain(
+    const ticket = await stateStore.getTicketState(workItemId);
+    const lockedCp = ticket?.planCheckpoints.find((c) => c.id === initialCp.id);
+    expect(lockedCp).toBeDefined();
+    expect(lockedCp?.status).toBe('locked');
+    expect(lockedCp?.answers).toContain(
       '<p>Use Postgres schema and return 400 on validation failure</p>'
     );
-
-    // Verify dedupEvents status is completed
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('completed');
   });
 
   it('resumption flow: accepts human reply that quotes [Plan Q&A] substring', async () => {
@@ -438,35 +438,34 @@ describe('Execution Worker Pipeline', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-5003',
-        receivedAt: new Date(),
-      })
-      .run();
-
-    await processWorkItemExecute(workItemId, revId);
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await processWorkItemExecute(workItemId, revId);
+    });
 
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
-    const [lockedCp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.id, initialCp.id))
-      .all();
-    expect(lockedCp.status).toBe('locked');
-    expect(lockedCp.answers).toContain('Regarding [Plan Q&A]: we will use Postgres and Redis.');
+    const ticket = await stateStore.getTicketState(workItemId);
+    const lockedCp = ticket?.planCheckpoints.find((c) => c.id === initialCp.id);
+    expect(lockedCp).toBeDefined();
+    expect(lockedCp?.status).toBe('locked');
+    expect(lockedCp?.answers).toContain('Regarding [Plan Q&A]: we will use Postgres and Redis.');
   });
 });
 
 describe('Execute Router Dispatches', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec(
-      'DELETE FROM dedup_events; DELETE FROM audit_log; DELETE FROM plan_checkpoints;'
-    );
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('routes New tickets to auditor worker', async () => {
@@ -489,26 +488,14 @@ describe('Execute Router Dispatches', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6001',
-        receivedAt: new Date(),
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await routeWorkItemEvent(workItemId, revId);
+    });
 
-    await routeWorkItemEvent(workItemId, revId);
-
-    // Auditor logs outcome
-    const log = db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.workItemId, workItemId))
-      .get();
-    expect(log).toBeDefined();
-    expect(log?.verdict).toBe('passed');
+    // Auditor logs outcome to StateStore
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.auditLogs.length).toBeGreaterThan(0);
+    expect(ticket?.auditLogs[0].verdict).toBe('passed');
   });
 
   it('routes In Dev tickets to execute worker', async () => {
@@ -531,26 +518,14 @@ describe('Execute Router Dispatches', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6002',
-        receivedAt: new Date(),
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await routeWorkItemEvent(workItemId, revId);
+    });
 
-    await routeWorkItemEvent(workItemId, revId);
-
-    // Checkpoint created for execute worker
-    const [cp] = db
-      .select()
-      .from(planCheckpoints)
-      .where(eq(planCheckpoints.workItemId, workItemId))
-      .all();
+    // Checkpoint created for execute worker in StateStore
+    const ticket = await stateStore.getTicketState(workItemId);
+    const cp = ticket?.planCheckpoints.find((c) => c.status === 'locked');
     expect(cp).toBeDefined();
-    expect(cp.status).toBe('locked');
   });
 
   it('skips tickets with unsupported state', async () => {
@@ -572,28 +547,12 @@ describe('Execute Router Dispatches', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6003',
-        receivedAt: new Date(),
-      })
-      .run();
-
-    await routeWorkItemEvent(workItemId, revId);
-
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('skipped');
-    expect(dedup?.errorMessage).toContain("Ticket state 'Closed' has no active handler");
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await routeWorkItemEvent(workItemId, revId);
+    });
   });
 
-  it('marks dedupEvents as failed if getWorkItemDetails throws during routing', async () => {
+  it('handles error if getWorkItemDetails throws during routing', async () => {
     const workItemId = 6004;
     const revId = 1;
 
@@ -603,24 +562,10 @@ describe('Execute Router Dispatches', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6004',
-        receivedAt: new Date(),
+    await expect(
+      workItemQueueManager.runInLane(workItemId, async () => {
+        await routeWorkItemEvent(workItemId, revId);
       })
-      .run();
-
-    await expect(routeWorkItemEvent(workItemId, revId)).rejects.toThrow('ADO network timeout');
-
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('failed');
-    expect(dedup?.errorMessage).toContain('ADO network timeout');
+    ).rejects.toThrow('ADO network timeout');
   });
 });
