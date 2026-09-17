@@ -53,31 +53,35 @@ describe('Background Audit Worker Pipeline', () => {
 
     await workItemQueueManager.runInLane(workItemId, () => processWorkItemAudit(workItemId, revId));
 
-    // Verify ADO update was invoked with Ready to Dev transition
+    // Verify ADO update was invoked with scope review packet, parking in New
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
     const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
     const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
     expect(patchDoc).toBeDefined();
 
     const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
-    expect(stateOp).toEqual({
-      op: Operation.Replace,
-      path: '/fields/System.State',
-      value: 'Ready to Dev',
-    });
+    expect(stateOp).toBeUndefined();
+
+    const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp).toBeDefined();
+    expect(tagOp.value).toContain('[awaiting-scope-lock]');
+    expect(tagOp.value).toContain('[audit-passed]');
 
     const historyOp = patchDoc.find((op: any) => op.path === '/fields/System.History');
     expect(historyOp).toBeDefined();
-    expect(historyOp.value).toContain('<strong>[L1 Evidence] Contract Audit: PASSED</strong>');
+    expect(historyOp.value).toContain('[Scope Review Packet]');
     expect(historyOp.value).toContain('<!-- [automated-agent] -->');
 
-    // Verify StateStore ticket state has auditLogs entry
+    // Verify StateStore ticket state has auditLogs entry and pending scopeLock
     const ticket = await stateStore.getTicketState(workItemId);
     expect(ticket).toBeDefined();
     expect(ticket?.auditLogs).toHaveLength(1);
     expect(ticket?.auditLogs[0].verdict).toBe('passed');
     expect(ticket?.auditLogs[0].model).toBe('gpt-4o');
     expect(ticket?.auditLogs[0].criteriaSummary).toBeTruthy();
+    expect(ticket?.scopeLock).toBeDefined();
+    expect(ticket?.scopeLock?.status).toBe('pending');
+    expect(ticket?.scopeLock?.iterationCount).toBe(0);
 
     // Verify dedup marker status is 'completed'
     const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
