@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: completed
-stopped_at: Completed Phase 3 Plan 02 (03-02-PLAN.md)
-last_updated: "2026-09-17T13:40:00.000Z"
-last_activity: 2026-09-17 — completed Plan 03-02 (Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation)
+stopped_at: Completed Phase 3 Plan 03 (03-03-PLAN.md)
+last_updated: "2026-09-17T14:30:00.000Z"
+last_activity: 2026-09-17 — completed Plan 03-03 (Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 10
-  percent: 91
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 3 — PM Scope-Lock Gate (executing)
-Plan: 03-02 (completed) — Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation
-Status: Plan 03-02 complete — Next: Plan 03-03 (Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
-Last activity: 2026-09-17 — completed Plan 03-02 (Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation)
+Phase: 3 — PM Scope-Lock Gate (completed)
+Plan: 03-03 (completed) — Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring
+Status: Phase 3 complete — Next: Wave B remaining parallel phases (Phase 4: L7 Evidence Index Extension / Phase 5: Prod Smoke Suite)
+Last activity: 2026-09-17 — completed Plan 03-03 (Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
 
-Progress: [████░░░░░░] 47% (Wave B executing: Phase 3 Plan 02 complete)
+Progress: [█████░░░░░] 53% (Wave B: Phase 3 complete)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -71,6 +71,7 @@ Progress: [████░░░░░░] 47% (Wave B executing: Phase 3 Plan 0
 | Phase 02 P02 | 6m | 2 tasks | 2 files |
 | Phase 03 P01 | 8m | 2 tasks | 4 files |
 | Phase 03 P02 | 6m | 2 tasks | 4 files |
+| Phase 03 P03 | 8m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,10 @@ Recent decisions affecting current work:
 - [03-02]: Scope verdict detection evaluates state transitions (New -> Ready to Dev), tags ([scope-locked], [scope-rejected]), and tokens ([approve-scope], [reject-scope], [reset-scope]) with HTML loop shields stripped
 - [03-02]: Refinement circuit breaker operates strictly on draft.scopeLock.iterationCount without reading or modifying draft.reworkCycles, enforcing complete breaker isolation
 - [03-02]: Third scope rejection trips refinement circuit breaker to Blocked state with [scope-unresolved] tag and posts escalation instructions
+- [03-03]: Scope watchdog scans pending tickets on interval, posting 24h reminders and escalating tickets pending over 72h to Blocked with [scope-unresolved]
+- [03-03]: Scope watchdog reconciles dropped webhooks by checking ADO state for Ready to Dev or [scope-locked] tag, updating StateStore to locked without reminder/escalation
+- [03-03]: Router enforces fail-closed scope check at Step 3 In Dev, refusing dispatch with dedup status 'skipped' when scopeLock.status is not 'locked'
+- [03-03]: Scope watchdog lifecycle wired into Fastify server startup and graceful shutdown alongside plan watchdog
 
 ### Pending Todos
 
@@ -235,6 +240,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T13:40:00.000Z
-Stopped at: Completed Phase 3 Plan 02 (03-02-PLAN.md)
-Resume: Next plan: Wave B (03-03-PLAN.md: Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
+Last session: 2026-09-17T14:30:00.000Z
+Stopped at: Completed Phase 3 Plan 03 (03-03-PLAN.md)
+Resume: Next: Wave B parallel phases (Phase 4: L7 Evidence Index Extension / Phase 5: Prod Smoke Suite)
