@@ -182,9 +182,15 @@ export async function processTelemetryEvaluation(
   await adoClient.updateWorkItem(workItemId, patch);
 
   // Trigger Phase 8: LEARN feedback loop asynchronously upon Done transition
-  processLearningFeedbackLoop(workItemId).catch((err) => {
-    console.warn(`[deploy-worker] Background learning feedback loop failed for #${workItemId}:`, err?.message);
-  });
+  processLearningFeedbackLoop(workItemId)
+    .catch((err) => {
+      console.warn(`[deploy-worker] Background learning feedback loop failed for #${workItemId}:`, err?.message);
+    })
+    .finally(async () => {
+      await stateStore.archiveTicket(workItemId).catch((err) => {
+        console.warn(`[deploy-worker] Failed to archive ticket #${workItemId}:`, err?.message);
+      });
+    });
 
   return { result: evalResult, summary: evidenceSummary };
 }
