@@ -61,7 +61,15 @@ export async function compileL1L6EvidenceIndex(
     ? ticket.telemetryEvaluations[ticket.telemetryEvaluations.length - 1]
     : undefined;
 
-  const l1Reasons: string[] = l1Record?.reasons ? JSON.parse(l1Record.reasons) : ['Definition of Done verified'];
+  let l1Reasons: string[] = ['Definition of Done verified'];
+  if (l1Record?.reasons) {
+    try {
+      const parsed = JSON.parse(l1Record.reasons);
+      l1Reasons = Array.isArray(parsed) ? parsed : [String(parsed)];
+    } catch {
+      l1Reasons = [l1Record.reasons];
+    }
+  }
 
   const summary: L1L6EvidenceSummary = {
     workItemId,
