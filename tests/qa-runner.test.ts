@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { sqlite } from '../src/db/index.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { env } from '../src/config/env.js';
+import { resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import {
   checkStagingHealth,
   runQaSuite,
@@ -9,9 +11,20 @@ import {
 import { extractFailureFingerprints } from '../src/qa/fingerprint.js';
 
 describe('QA Test Runner and 2-Strike Sequential Filter', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM qa_runs;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   describe('checkStagingHealth', () => {

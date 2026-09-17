@@ -1,11 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import {
-  reworkCycles,
-  l3Evidence,
-  qaEvidence,
-  telemetryEvaluations,
-} from '../src/db/schema.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { harvestTicketLifecycleData } from '../src/learn/harvester.ts';
 import { buildSkillLearningPrompt } from '../src/learn/prompt.js';
 import {
@@ -13,19 +10,25 @@ import {
   inferSkillDomain,
 } from '../src/learn/generator.js';
 import { adoClient } from '../src/ado/client.js';
-import { vi } from 'vitest';
 
 describe('Learning Harvester, Prompt Isolation & Skill Generation (LRN-01)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM rework_cycles;');
-    sqlite.exec('DELETE FROM l3_evidence;');
-    sqlite.exec('DELETE FROM qa_evidence;');
-    sqlite.exec('DELETE FROM telemetry_evaluations;');
-    sqlite.exec('DELETE FROM skills_prs;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
   });
 
-  it('harvests complete lifecycle data from SQLite tables and ADO work item', async () => {
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('harvests complete lifecycle data from StateStore and ADO work item', async () => {
     const workItemId = 8001;
 
     vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
@@ -37,53 +40,42 @@ describe('Learning Harvester, Prompt Isolation & Skill Generation (LRN-01)', () 
       },
     } as any);
 
-    db.insert(reworkCycles)
-      .values({
-        workItemId,
-        bounceCount: 1,
-        sourceGate: 'pr_review',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .run();
-
-    db.insert(l3Evidence)
-      .values({
-        workItemId,
-        revId: 3,
-        testSuite: 'vitest',
-        totalTests: 18,
-        passed: 18,
-        failed: 0,
-        durationMs: 900,
-        gitDiffStat: '4 files changed, 140 insertions(+)',
-        createdAt: new Date(),
-      })
-      .run();
-
-    db.insert(qaEvidence)
-      .values({
-        workItemId,
-        totalTests: 24,
-        passedCount: 24,
-        failedCount: 0,
-        durationMs: 3100,
-        commitSha: 'c0ffee889900',
-        flakeCleared: 1,
-        createdAt: new Date(),
-      })
-      .run();
-
-    db.insert(telemetryEvaluations)
-      .values({
-        workItemId,
-        windowMinutes: 30,
-        errorRate: '0.04%',
-        p95LatencyMs: 135,
-        breached: 0,
-        evaluatedAt: new Date(),
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.reworkCycles = {
+          bounceCount: 1,
+          sourceGate: 'pr_review',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        draft.l3Evidence.push({
+          revId: 3,
+          testSuite: 'vitest',
+          totalTests: 18,
+          passed: 18,
+          failed: 0,
+          durationMs: 900,
+          gitDiffStat: '4 files changed, 140 insertions(+)',
+          createdAt: new Date().toISOString(),
+        });
+        draft.qaEvidence = {
+          totalTests: 24,
+          passedCount: 24,
+          failedCount: 0,
+          durationMs: 3100,
+          commitSha: 'c0ffee889900',
+          flakeCleared: 1,
+          createdAt: new Date().toISOString(),
+        };
+        draft.telemetryEvaluations.push({
+          windowMinutes: 30,
+          errorRate: '0.04%',
+          p95LatencyMs: 135,
+          breached: 0,
+          evaluatedAt: new Date().toISOString(),
+        });
+      });
+    });
 
     const data = await harvestTicketLifecycleData(workItemId);
 

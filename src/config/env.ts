@@ -5,7 +5,6 @@ export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3000),
   STATE_STORE_DIR: z.string().default('./data/state'),
-  DATABASE_PATH: z.string().default('./data/gateway.db').optional(),
   ADO_ORG_URL: z.string().url(),
   ADO_PAT: z.string().min(1, 'ADO_PAT is required'),
   ADO_BOT_ID: z.string().min(1, 'ADO_BOT_ID is required'),

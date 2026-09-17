@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import crypto from 'node:crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyRawBody from 'fastify-raw-body';
-import { eq } from 'drizzle-orm';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { PolicyEvaluationStatus } from 'azure-devops-node-api/interfaces/PolicyInterfaces.js';
-import { db, sqlite } from '../src/db/index.js';
-import { dedupEvents } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { adoClient } from '../src/ado/client.js';
 import {
   buildMergeReadyForQaPatch,
@@ -14,15 +14,18 @@ import {
 } from '../src/ado/work-item.js';
 import { handlePullRequestEvent } from '../src/ingress/pr-router.js';
 import { webhookRoutes, registerPullRequestHandler } from '../src/ingress/routes.js';
-import { env } from '../src/config/env.js';
 
 describe('PR Merge Handling & Ready for QA Transition (MRG-05)', () => {
   let mockWitApi: any;
   let mockPolicyApi: any;
   let mockGitApi: any;
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
 
   beforeEach(() => {
-    sqlite.exec('DELETE FROM dedup_events;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.clearAllMocks();
 
     mockWitApi = {
@@ -75,6 +78,9 @@ describe('PR Merge Handling & Ready for QA Transition (MRG-05)', () => {
   });
 
   afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
     adoClient.setPolicyApi(null);
     adoClient.setGitApi(null);
@@ -308,13 +314,11 @@ describe('PR Merge Handling & Ready for QA Transition (MRG-05)', () => {
       expect(mockPrHandler).toHaveBeenCalledTimes(1);
 
       // Verify dedup record was created and updated to completed
-      const events = db
-        .select()
-        .from(dedupEvents)
-        .where(eq(dedupEvents.workItemId, 801))
-        .all();
-      expect(events.length).toBe(1);
-      expect(events[0].status).toBe('completed');
+      const prRevId =
+        (crypto.createHash('sha256').update(rawPayload).digest().readInt32BE(0) >>> 0) || 1;
+      const event = stateStore.getDedupEvent ? stateStore.getDedupEvent(801, prRevId) : null;
+      expect(event).not.toBeNull();
+      expect(event?.status).toBe('completed');
     });
 
     it('deduplicates identical PR deliveries with HTTP 200 duplicate_ignored (T-05-12 mitigation)', async () => {

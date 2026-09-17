@@ -16,6 +16,10 @@ export class WorkItemQueueManager {
   }
 
   public async runInLane<T>(workItemId: number, fn: () => Promise<T>): Promise<T> {
+    const current = laneContext.getStore();
+    if (current && current.workItemId === workItemId) {
+      return await fn();
+    }
     const lane = this.getLane(workItemId);
     return (await lane.add(() => laneContext.run({ workItemId }, fn))) as T;
   }

@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import { qaEvidence, qaBounces, qaRuns } from '../src/db/schema.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { adoClient } from '../src/ado/client.js';
 import {
   formatQaEvidenceComment,
@@ -10,14 +12,22 @@ import {
 import { processQaVerification } from '../src/qa/worker.js';
 import { routeWorkItemEvent } from '../src/execute/router.js';
 import { extractFailureFingerprints } from '../src/qa/fingerprint.js';
-import { eq } from 'drizzle-orm';
 
 describe('QA Orchestrator, Formatters & State Transitions', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM qa_evidence;');
-    sqlite.exec('DELETE FROM qa_bounces;');
-    sqlite.exec('DELETE FROM qa_runs;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   describe('Formatters', () => {
@@ -127,11 +137,8 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
         ])
       );
 
-      const evidence = db
-        .select()
-        .from(qaEvidence)
-        .where(eq(qaEvidence.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const evidence = ticket?.qaEvidence;
 
       expect(evidence).toBeDefined();
       expect(evidence?.totalTests).toBe(10);
@@ -197,11 +204,8 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
         ])
       );
 
-      const evidence = db
-        .select()
-        .from(qaEvidence)
-        .where(eq(qaEvidence.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const evidence = ticket?.qaEvidence;
 
       expect(evidence?.flakeCleared).toBe(1);
     });
@@ -269,11 +273,8 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
         ])
       );
 
-      const bounceRecord = db
-        .select()
-        .from(qaBounces)
-        .where(eq(qaBounces.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const bounceRecord = ticket?.qaBounces;
 
       expect(bounceRecord?.bounceCount).toBe(1);
     });
@@ -281,8 +282,15 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
     it('escalates to Blocked with [qa-escalated] when QA bounce cap of 2 is exceeded', async () => {
       const workItemId = 4104;
 
-      // Seed 2 existing bounces in DB
-      sqlite.exec(`INSERT INTO qa_bounces (work_item_id, bounce_count, escalated) VALUES (${workItemId}, 2, 0);`);
+      // Seed 2 existing bounces in StateStore
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.qaBounces = {
+            bounceCount: 2,
+            escalated: 0,
+          };
+        });
+      });
 
       vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
         id: workItemId,
@@ -338,11 +346,8 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
         ])
       );
 
-      const bounceRecord = db
-        .select()
-        .from(qaBounces)
-        .where(eq(qaBounces.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const bounceRecord = ticket?.qaBounces;
 
       expect(bounceRecord?.escalated).toBe(1);
     });
@@ -351,6 +356,8 @@ describe('QA Orchestrator, Formatters & State Transitions', () => {
   describe('routeWorkItemEvent integration', () => {
     it('routes Ready for QA work items to processQaVerification', async () => {
       const workItemId = 4201;
+
+      stateStore.recordDedupEvent(workItemId, 2, 'hash-4201');
 
       vi.spyOn(adoClient, 'getRevision').mockResolvedValue({
         id: workItemId,

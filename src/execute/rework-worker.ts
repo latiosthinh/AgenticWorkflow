@@ -92,7 +92,7 @@ export async function processWorkItemRework(
       }
     }
 
-    if (!baseRefResolved) {
+    if (!baseRef || !baseRefResolved) {
       throw new Error(
         `Unable to resolve valid base branch reference for cumulative diff. Checked: ${baseRef}, master, main, origin/main, origin/master`
       );

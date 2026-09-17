@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { eq } from 'drizzle-orm';
-import { db, sqlite } from '../src/db/index.js';
-import { reworkCycles, dedupEvents } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { adoClient } from '../src/ado/client.js';
 import { handlePullRequestEvent, extractWorkItemId } from '../src/ingress/pr-router.js';
 import { evaluateCircuitBreaker, resetCircuitBreaker } from '../src/accept/breaker.js';
 import { processWorkItemRework } from '../src/execute/rework-worker.js';
 import { CommentThreadStatus } from 'azure-devops-node-api/interfaces/GitInterfaces.js';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { env } from '../src/config/env.js';
 
 vi.mock('../src/execute/rework-worker.js', () => ({
   processWorkItemRework: vi.fn().mockResolvedValue(undefined),
@@ -17,10 +16,13 @@ vi.mock('../src/execute/rework-worker.js', () => ({
 describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
   let mockGitApi: any;
   let mockWitApi: any;
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
 
   beforeEach(() => {
-    sqlite.exec('DELETE FROM rework_cycles;');
-    sqlite.exec('DELETE FROM dedup_events;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.clearAllMocks();
 
     mockGitApi = {
@@ -44,6 +46,9 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
   });
 
   afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
     adoClient.setGitApi(null);
     adoClient.setWorkItemTrackingApi(null);
   });
@@ -180,11 +185,8 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
       await handlePullRequestEvent(payload);
 
       // Verify circuit breaker incremented to 1
-      const cycle = db
-        .select()
-        .from(reworkCycles)
-        .where(eq(reworkCycles.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const cycle = ticket?.reworkCycles;
       expect(cycle?.bounceCount).toBe(1);
       expect(cycle?.sourceGate).toBe('pr_review');
 
@@ -277,11 +279,8 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
       await handlePullRequestEvent(payload);
 
       expect(processWorkItemRework).toHaveBeenCalledTimes(1);
-      const cycle = db
-        .select()
-        .from(reworkCycles)
-        .where(eq(reworkCycles.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const cycle = ticket?.reworkCycles;
       expect(cycle?.bounceCount).toBe(1);
     });
 
@@ -307,11 +306,8 @@ describe('PR Review Rejection & Shared Circuit Breaker (MRG-04)', () => {
       await handlePullRequestEvent(payloadBounce2);
       expect(processWorkItemRework).toHaveBeenCalledTimes(1);
 
-      const cycleAfterBounce2 = db
-        .select()
-        .from(reworkCycles)
-        .where(eq(reworkCycles.workItemId, workItemId))
-        .get();
+      const ticketAfterBounce2 = await stateStore.getTicketState(workItemId);
+      const cycleAfterBounce2 = ticketAfterBounce2?.reworkCycles;
       expect(cycleAfterBounce2?.bounceCount).toBe(2);
 
       // Bounce 3: another PR review rejection trips the shared breaker
