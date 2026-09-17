@@ -984,6 +984,47 @@ describe('PM Scope-Lock Gate - Scope Watchdog & ADO Reconciler (SCOPE-02 watchdo
     expect(ticket?.scopeLock?.escalatedAt).not.toBeNull();
   });
 
+  it('WR-03: watchdog handles rejected scope tickets for reminders and 72h escalation', async () => {
+    const workItemId = 4005;
+    const seventyFiveHoursAgo = new Date(Date.now() - 75 * 60 * 60 * 1000);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.scopeLock = {
+          status: 'rejected',
+          iterationCount: 1,
+          requestedAt: seventyFiveHoursAgo.toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: 'Revise criteria',
+          remindedAt: new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString(),
+          escalatedAt: null,
+          createdAt: seventyFiveHoursAgo.toISOString(),
+          updatedAt: seventyFiveHoursAgo.toISOString(),
+        };
+      });
+    });
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        fields: {
+          'System.State': 'New',
+          'System.Tags': 'backend; [awaiting-scope-lock]',
+        },
+      }),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    const result = await checkScopeLockTimeouts();
+    expect(result.escalated).toBe(1);
+
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.scopeLock?.status).toBe('blocked');
+    expect(ticket?.scopeLock?.escalatedAt).toBeDefined();
+  });
+
   it('watchdog reconciliation: reconciles StateStore to locked when ADO state is Ready to Dev or has [scope-locked] without reminder/escalation', async () => {
     const workItemId = 4004;
     const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);

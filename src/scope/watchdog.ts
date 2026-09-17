@@ -19,7 +19,10 @@ export async function checkScopeLockTimeouts(): Promise<{
   const tickets = await stateStore.listTickets();
 
   for (const ticket of tickets) {
-    if (ticket.scopeLock?.status !== 'pending') {
+    if (
+      ticket.scopeLock?.status !== 'pending' &&
+      ticket.scopeLock?.status !== 'rejected'
+    ) {
       continue;
     }
 
@@ -33,7 +36,10 @@ export async function checkScopeLockTimeouts(): Promise<{
         // Human already approved in ADO: reconcile StateStore
         await workItemQueueManager.runInLane(ticket.workItemId, async () => {
           await stateStore.updateTicketState(ticket.workItemId, (draft) => {
-            if (draft.scopeLock && draft.scopeLock.status === 'pending') {
+            if (
+              draft.scopeLock &&
+              (draft.scopeLock.status === 'pending' || draft.scopeLock.status === 'rejected')
+            ) {
               draft.scopeLock.status = 'locked';
               draft.scopeLock.lockedAt = new Date().toISOString();
               draft.scopeLock.updatedAt = new Date().toISOString();
@@ -53,7 +59,11 @@ export async function checkScopeLockTimeouts(): Promise<{
 
         await workItemQueueManager.runInLane(ticket.workItemId, async () => {
           const current = await stateStore.getTicketState(ticket.workItemId);
-          if (!current?.scopeLock || current.scopeLock.status !== 'pending' || current.scopeLock.escalatedAt) {
+          if (
+            !current?.scopeLock ||
+            (current.scopeLock.status !== 'pending' && current.scopeLock.status !== 'rejected') ||
+            current.scopeLock.escalatedAt
+          ) {
             return;
           }
 
@@ -73,7 +83,10 @@ export async function checkScopeLockTimeouts(): Promise<{
           ]);
 
           await stateStore.updateTicketState(ticket.workItemId, (draft) => {
-            if (draft.scopeLock && draft.scopeLock.status === 'pending') {
+            if (
+              draft.scopeLock &&
+              (draft.scopeLock.status === 'pending' || draft.scopeLock.status === 'rejected')
+            ) {
               draft.scopeLock.status = 'blocked';
               draft.scopeLock.escalatedAt = new Date().toISOString();
               draft.scopeLock.updatedAt = new Date().toISOString();
@@ -87,7 +100,11 @@ export async function checkScopeLockTimeouts(): Promise<{
 
         await workItemQueueManager.runInLane(ticket.workItemId, async () => {
           const current = await stateStore.getTicketState(ticket.workItemId);
-          if (!current?.scopeLock || current.scopeLock.status !== 'pending' || current.scopeLock.remindedAt) {
+          if (
+            !current?.scopeLock ||
+            (current.scopeLock.status !== 'pending' && current.scopeLock.status !== 'rejected') ||
+            current.scopeLock.remindedAt
+          ) {
             return;
           }
 
@@ -100,7 +117,10 @@ export async function checkScopeLockTimeouts(): Promise<{
           ]);
 
           await stateStore.updateTicketState(ticket.workItemId, (draft) => {
-            if (draft.scopeLock && draft.scopeLock.status === 'pending') {
+            if (
+              draft.scopeLock &&
+              (draft.scopeLock.status === 'pending' || draft.scopeLock.status === 'rejected')
+            ) {
               draft.scopeLock.remindedAt = new Date().toISOString();
               draft.scopeLock.updatedAt = new Date().toISOString();
             }
