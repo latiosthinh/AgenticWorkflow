@@ -129,7 +129,25 @@ export interface EvidenceIndexState {
   l4Summary: string;
   l5Summary: string;
   l6Summary: string;
+  l7Summary?: string | null;
   completedAt: string;
+}
+
+export interface L7EvidenceState {
+  id?: number;
+  takeaways: string;
+  actionItems: string[];
+  runbookDiffPrUrl?: string | null;
+  skillPrUrl?: string | null;
+  gateFriction?: {
+    scopeRejections?: number;
+    reworkBounces?: number;
+    qaStrikes?: number;
+    smokeFlakes?: number;
+  } | null;
+  trendDeltas?: Record<string, unknown> | null;
+  createdAt: string;
+  completedAt?: string | null;
 }
 
 export interface SkillsPrEntry {
@@ -160,6 +178,8 @@ export interface TicketState {
   telemetryEvaluations: TelemetryEvaluationEntry[];
   evidenceIndex?: EvidenceIndexState | null;
   skillsPrs: SkillsPrEntry[];
+  retroRecords?: L7EvidenceState[];
+  l7Evidence?: L7EvidenceState | null;
 }
 
 export interface StateStore {
