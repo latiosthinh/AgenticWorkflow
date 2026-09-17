@@ -18,6 +18,11 @@ import {
   formatEvidenceIndexComment,
   type L1L6EvidenceSummary,
 } from './evidence-index.js';
+import {
+  executeTwoStrikeSmokeFilter,
+  formatSmokeAlertComment,
+  type TwoStrikeSmokeResult,
+} from './smoke.js';
 import { processLearningFeedbackLoop } from '../learn/worker.js';
 import {
   Operation,
@@ -31,6 +36,8 @@ export interface ProcessDeployOptions {
   mockMetrics?: TelemetryMetrics;
   windowMinutes?: number;
   skipPreparation?: boolean;
+  smokeUrl?: string;
+  mockSmokeResult?: Partial<TwoStrikeSmokeResult>;
 }
 
 export async function processDeploymentPreparation(
@@ -195,6 +202,137 @@ export async function processTelemetryEvaluation(
   return { result: evalResult, summary: evidenceSummary };
 }
 
+export async function processSmokeVerification(
+  workItemId: number,
+  options?: {
+    commitSha?: string;
+    smokeUrl?: string;
+    worktreePath?: string;
+    testCommand?: string;
+    mockSmokeResult?: Partial<TwoStrikeSmokeResult>;
+    rollbackCommand?: string;
+  }
+): Promise<TwoStrikeSmokeResult> {
+  const commitSha = options?.commitSha || 'main';
+  const rollbackCommand =
+    options?.rollbackCommand || `git revert -m 1 ${commitSha} && git push origin main`;
+
+  let result: TwoStrikeSmokeResult;
+  if (options?.mockSmokeResult) {
+    const outcome = options.mockSmokeResult.outcome || 'passed';
+    const classification =
+      options.mockSmokeResult.classification || (outcome === 'failed' ? 'APP' : 'NONE');
+    result = {
+      outcome,
+      classification,
+      firstRun: options.mockSmokeResult.firstRun || {
+        passed: outcome !== 'failed',
+        classification: outcome === 'failed' ? classification : 'NONE',
+        failures: [],
+        durationMs: 0,
+      },
+      secondRun: options.mockSmokeResult.secondRun,
+      flakeCleared: options.mockSmokeResult.flakeCleared ?? (outcome === 'flaked'),
+      identicalFailures: options.mockSmokeResult.identicalFailures ?? (outcome === 'failed'),
+      ...options.mockSmokeResult,
+    };
+
+    // Record mock smoke evidence to StateStore if none exists
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        if (!draft.smokeEvidence) {
+          draft.smokeEvidence = {
+            status: result.outcome === 'failed' ? 'failed' : 'passed',
+            classification: result.classification,
+            commitSha,
+            smokeUrl: options?.smokeUrl || null,
+            checksTotal: 1,
+            checksPassed: result.outcome === 'failed' ? 0 : 1,
+            checksFailed: result.outcome === 'failed' ? 1 : 0,
+            durationMs: 0,
+            flakeCleared: Boolean(result.flakeCleared),
+            createdAt: new Date().toISOString(),
+          };
+        }
+      });
+    });
+  } else {
+    result = await executeTwoStrikeSmokeFilter({
+      workItemId,
+      commitSha,
+      smokeUrl: options?.smokeUrl,
+      worktreePath: options?.worktreePath,
+      testCommand: options?.testCommand,
+    });
+  }
+
+  if (result.outcome === 'failed') {
+    const details = await getWorkItemDetails(workItemId);
+
+    let reasons: string[] = [];
+    if (result.secondRun && result.secondRun.failures.length > 0) {
+      reasons = result.secondRun.failures.map((f) => f.errorMessage);
+    } else if (result.firstRun && result.firstRun.failures.length > 0) {
+      reasons = result.firstRun.failures.map((f) => f.errorMessage);
+    }
+    if (reasons.length === 0) {
+      reasons = [
+        result.classification === 'INFRA'
+          ? 'Smoke test harness encountered an infrastructure or network error'
+          : 'Production smoke verification regression detected',
+      ];
+    }
+
+    if (result.classification === 'INFRA') {
+      const alertComment = formatSmokeAlertComment({
+        workItemId,
+        commitSha,
+        classification: 'INFRA',
+        reasons,
+      });
+
+      const tagPatch = buildTagPatch(details.tags, '[smoke-harness-error]', '[deploying]');
+      const patch: JsonPatchDocument = [
+        ...tagPatch,
+        {
+          op: Operation.Add,
+          path: '/fields/System.History',
+          value: alertComment,
+        },
+      ];
+
+      await adoClient.updateWorkItem(workItemId, patch);
+    } else {
+      const alertComment = formatSmokeAlertComment({
+        workItemId,
+        commitSha,
+        classification: 'APP',
+        reasons,
+        rollbackCommand,
+      });
+
+      const tagPatch = buildTagPatch(details.tags, '[deploy-regressed]', '[deploying]');
+      const patch: JsonPatchDocument = [
+        {
+          op: Operation.Replace,
+          path: '/fields/System.State',
+          value: 'In Dev',
+        },
+        ...tagPatch,
+        {
+          op: Operation.Add,
+          path: '/fields/System.History',
+          value: alertComment,
+        },
+      ];
+
+      await adoClient.updateWorkItem(workItemId, patch);
+    }
+  }
+
+  return result;
+}
+
 export async function processDeploymentWorkflow(
   workItemId: number,
   revId: number,
@@ -215,10 +353,23 @@ export async function processDeploymentWorkflow(
     });
   }
 
-  // 2. Telemetry evaluation & completion
+  // 2. Production Smoke Suite (FAIL-FAST)
+  const commitSha = options?.commitSha || 'main';
+  const smokeResult = await processSmokeVerification(workItemId, {
+    commitSha,
+    smokeUrl: options?.smokeUrl,
+    mockSmokeResult: options?.mockSmokeResult,
+  });
+
+  if (smokeResult.outcome === 'failed') {
+    // Fail fast: halt deployment workflow immediately without evaluating telemetry window
+    return;
+  }
+
+  // 3. Telemetry evaluation & completion (only if smoke passed or flake cleared)
   await processTelemetryEvaluation(workItemId, {
     mockMetrics: options?.mockMetrics,
     windowMinutes: options?.windowMinutes,
-    commitSha: options?.commitSha,
+    commitSha,
   });
 }

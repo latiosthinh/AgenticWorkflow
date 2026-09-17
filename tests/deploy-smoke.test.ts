@@ -11,6 +11,8 @@ import {
   formatSmokeAlertComment,
   type SmokeRunResult,
 } from '../src/deploy/smoke.js';
+import { adoClient } from '../src/ado/client.js';
+import { processSmokeVerification } from '../src/deploy/worker.js';
 
 describe('Production Smoke Suite - probeProductionHealth', () => {
   const originalEnvNodeEnv = env.NODE_ENV;
@@ -616,5 +618,170 @@ describe('formatSmokeAlertComment', () => {
     expect(comment).not.toContain('<script>');
     expect(comment).not.toContain('</script>');
     expect(comment).toContain('Valid error message');
+  });
+});
+
+describe('processSmokeVerification integration', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
+  beforeEach(() => {
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+    vi.restoreAllMocks();
+  });
+
+  it('bounces to In Dev with [deploy-regressed] and regression alert comment on APP failure', async () => {
+    const workItemId = 8001;
+
+    vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+      id: workItemId,
+      rev: 2,
+      fields: {
+        'System.Title': 'Release broken auth service',
+        'System.State': 'Ready to Deploy',
+        'System.Tags': '[qa-verified]; [deploying]',
+      },
+    } as any);
+
+    const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+      id: workItemId,
+    } as any);
+
+    const result = await processSmokeVerification(workItemId, {
+      commitSha: 'a1b2c3d4e5f6',
+      mockSmokeResult: {
+        outcome: 'failed',
+        classification: 'APP',
+        firstRun: {
+          passed: false,
+          classification: 'APP',
+          failures: [{ testFile: 'smoke', testName: 'probe', errorMessage: 'HTTP 500' }],
+          durationMs: 100,
+        },
+      },
+      rollbackCommand: 'az webapp deployment slot swap --name auth --slot staging --action reset',
+    });
+
+    expect(result.outcome).toBe('failed');
+    expect(result.classification).toBe('APP');
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      workItemId,
+      expect.arrayContaining([
+        expect.objectContaining({ path: '/fields/System.State', value: 'In Dev' }),
+        expect.objectContaining({
+          path: '/fields/System.Tags',
+          value: expect.stringContaining('[deploy-regressed]'),
+        }),
+        expect.objectContaining({
+          path: '/fields/System.History',
+          value: expect.stringContaining('[L6 Smoke Alert] Production Smoke Regression'),
+        }),
+        expect.objectContaining({
+          path: '/fields/System.History',
+          value: expect.stringContaining('az webapp deployment slot swap'),
+        }),
+      ])
+    );
+
+    // Verify [deploying] removed
+    const patch = updateSpy.mock.calls[0][1];
+    const tagsOp = patch.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagsOp.value).not.toContain('[deploying]');
+  });
+
+  it('retains Ready to Deploy with [smoke-harness-error] and harness alert comment on INFRA failure', async () => {
+    const workItemId = 8002;
+
+    vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+      id: workItemId,
+      rev: 2,
+      fields: {
+        'System.Title': 'Release with network blip',
+        'System.State': 'Ready to Deploy',
+        'System.Tags': '[qa-verified]; [deploying]',
+      },
+    } as any);
+
+    const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+      id: workItemId,
+    } as any);
+
+    const result = await processSmokeVerification(workItemId, {
+      commitSha: 'b2c3d4e5f6a1',
+      mockSmokeResult: {
+        outcome: 'failed',
+        classification: 'INFRA',
+        firstRun: {
+          passed: false,
+          classification: 'INFRA',
+          failures: [{ testFile: 'smoke', testName: 'probe', errorMessage: 'socket hang up' }],
+          durationMs: 100,
+        },
+      },
+    });
+
+    expect(result.outcome).toBe('failed');
+    expect(result.classification).toBe('INFRA');
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      workItemId,
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/fields/System.Tags',
+          value: expect.stringContaining('[smoke-harness-error]'),
+        }),
+        expect.objectContaining({
+          path: '/fields/System.History',
+          value: expect.stringContaining('[L6 Smoke Alert] Production Smoke Harness Infrastructure Error'),
+        }),
+      ])
+    );
+
+    const patch = updateSpy.mock.calls[0][1];
+    const stateOp = patch.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp).toBeUndefined(); // State must not change
+
+    const tagsOp = patch.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagsOp.value).not.toContain('[deploying]');
+  });
+
+  it('proceeds without bounce or patch on passing or flaked smoke verification', async () => {
+    const workItemId = 8003;
+
+    vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+      id: workItemId,
+      rev: 2,
+      fields: {
+        'System.Title': 'Release healthy service',
+        'System.State': 'Ready to Deploy',
+        'System.Tags': '[qa-verified]; [deploying]',
+      },
+    } as any);
+
+    const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+      id: workItemId,
+    } as any);
+
+    const result = await processSmokeVerification(workItemId, {
+      commitSha: 'c3d4e5f6a1b2',
+      mockSmokeResult: {
+        outcome: 'flaked',
+        flakeCleared: true,
+      },
+    });
+
+    expect(result.outcome).toBe('flaked');
+    expect(result.flakeCleared).toBe(true);
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 });
