@@ -126,7 +126,7 @@ Plans:
 - [x] 01-01-PLAN.md — StateStore core types, strict JSON frontmatter codec, path traversal defense, and ephemeral mkdtemp test harness
 - [x] 01-02-PLAN.md — Atomic ingress deduplication via wx markers, gateway migration, and 7-day TTL retention purge
 - [x] 01-03-PLAN.md — Single-writer invariant enforcement via AsyncLocalStorage lane context and Windows crash-atomic writes
-- [ ] 01-04-PLAN.md — Checkpoint persistence, watchdog directory scans, circuit breakers, and archive lifecycle
+- [x] 01-04-PLAN.md — Checkpoint persistence, watchdog directory scans, circuit breakers, and archive lifecycle
 - [ ] 01-05-PLAN.md — Execution, deploy, and learn workers migration, SQLite/Drizzle removal, and 286-test harness port
 **Parallelizable**: No — Wave A; blocks every later phase. Phase 2 follows sequentially (both edit `execute/router.ts` state calls — sequential avoids conflicting router edits).
 
