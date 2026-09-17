@@ -98,13 +98,14 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
       expect(summary.l6.breached).toBe(false);
 
       const html = formatEvidenceIndexComment(summary);
-      expect(html).toContain('[Golden Path Complete] Unified L1–L6 Evidence Index');
+      expect(html).toContain('[Golden Path Complete] Unified L1–L7 Evidence Index');
       expect(html).toContain('L1');
       expect(html).toContain('L2');
       expect(html).toContain('L3');
       expect(html).toContain('L4');
       expect(html).toContain('L5');
       expect(html).toContain('L6');
+      expect(html).toContain('L7');
       expect(html).toContain('<!-- [automated-agent] -->');
     });
   });
@@ -199,7 +200,7 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
           }),
           expect.objectContaining({
             path: '/fields/System.History',
-            value: expect.stringContaining('[Golden Path Complete] Unified L1–L6 Evidence Index'),
+            value: expect.stringContaining('[Golden Path Complete] Unified L1–L7 Evidence Index'),
           }),
         ])
       );
