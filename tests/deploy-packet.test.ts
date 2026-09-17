@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import { deploymentRecords } from '../src/db/schema.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import {
   assessMigrationRisk,
   buildRollbackProcedure,
@@ -8,11 +10,21 @@ import {
   formatL5ReadinessComment,
   buildDeployingPatch,
 } from '../src/deploy/packet.js';
-import { eq } from 'drizzle-orm';
 
 describe('L5 Deployment Readiness Packet and Schema Verification', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM deployment_records;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('assesses low migration risk when no schema files are modified', () => {
@@ -64,28 +76,26 @@ describe('L5 Deployment Readiness Packet and Schema Verification', () => {
     expect(tagOp?.value).toContain('[qa-verified]');
   });
 
-  it('persists and retrieves deployment records in SQLite database', () => {
+  it('persists and retrieves deployment records in StateStore', async () => {
     const workItemId = 5002;
-    db.insert(deploymentRecords)
-      .values({
-        workItemId,
-        pipelineRunId: 'run-1234',
-        stageName: 'DeployToProd',
-        environmentName: 'Production',
-        commitSha: '112233445566',
-        status: 'pending_approval',
-        releaseNotes: 'User service updates',
-        rollbackPlan: 'revert commit 112233445566',
-        migrationRisk: 'low',
-        createdAt: new Date(),
-      })
-      .run();
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.deploymentRecords.push({
+          pipelineRunId: 'run-1234',
+          stageName: 'DeployToProd',
+          environmentName: 'Production',
+          commitSha: '112233445566',
+          status: 'pending_approval',
+          releaseNotes: 'User service updates',
+          rollbackPlan: 'revert commit 112233445566',
+          migrationRisk: 'low',
+          createdAt: new Date().toISOString(),
+        });
+      });
+    });
 
-    const record = db
-      .select()
-      .from(deploymentRecords)
-      .where(eq(deploymentRecords.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const record = ticket?.deploymentRecords[0];
 
     expect(record).toBeDefined();
     expect(record?.stageName).toBe('DeployToProd');

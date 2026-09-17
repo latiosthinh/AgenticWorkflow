@@ -1,40 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { db, sqlite } from '../src/db/index.js';
-import { skillsPrs, reworkCycles, l3Evidence, qaEvidence } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { adoClient } from '../src/ado/client.js';
 import { formatSkillPrComment, stageAndPublishSkillPr } from '../src/learn/publisher.js';
 import { processLearningFeedbackLoop } from '../src/learn/worker.js';
-import { eq } from 'drizzle-orm';
 
 describe('Learn Feedback Loop Orchestrator (LRN-01, LRN-02)', () => {
   const tempTestDir = path.join(process.cwd(), '.worktrees', 'test-learn-orchestrator');
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
 
   beforeEach(() => {
-    sqlite.exec('DROP TABLE IF EXISTS skills_prs;');
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS skills_prs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        work_item_id INTEGER NOT NULL,
-        skill_name TEXT NOT NULL,
-        branch_name TEXT NOT NULL,
-        pull_request_id INTEGER,
-        pr_url TEXT,
-        status TEXT NOT NULL DEFAULT 'pending_review',
-        summary TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      );
-    `);
-    sqlite.exec('DELETE FROM rework_cycles;');
-    sqlite.exec('DELETE FROM l3_evidence;');
-    sqlite.exec('DELETE FROM qa_evidence;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
 
     if (fs.existsSync(tempTestDir)) {
       fs.rmSync(tempTestDir, { recursive: true, force: true });
     }
     fs.mkdirSync(tempTestDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+    if (fs.existsSync(tempTestDir)) {
+      fs.rmSync(tempTestDir, { recursive: true, force: true });
+    }
   });
 
   it('formats sanitized skill PR discussion comment with loop shield', () => {
@@ -138,12 +135,9 @@ describe('Learn Feedback Loop Orchestrator (LRN-01, LRN-02)', () => {
       ])
     );
 
-    // Verify SQLite persistence
-    const record = db
-      .select()
-      .from(skillsPrs)
-      .where(eq(skillsPrs.workItemId, workItemId))
-      .get();
+    // Verify StateStore persistence
+    const ticket = await stateStore.getTicketState(workItemId);
+    const record = ticket?.skillsPrs[0];
 
     expect(record).toBeDefined();
     expect(record?.pullRequestId).toBe(404);

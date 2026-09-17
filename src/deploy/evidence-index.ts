@@ -1,14 +1,6 @@
 import sanitizeHtml from 'sanitize-html';
-import { eq, desc } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import {
-  auditLogs,
-  l3Evidence,
-  qaEvidence,
-  deploymentRecords,
-  telemetryEvaluations,
-  evidenceIndices,
-} from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 
 export interface L1L6EvidenceSummary {
   workItemId: number;
@@ -49,39 +41,25 @@ export interface L1L6EvidenceSummary {
 export async function compileL1L6EvidenceIndex(
   workItemId: number
 ): Promise<L1L6EvidenceSummary> {
-  const l1Record = db
-    .select()
-    .from(auditLogs)
-    .where(eq(auditLogs.workItemId, workItemId))
-    .orderBy(desc(auditLogs.id))
-    .get();
+  const ticket = await stateStore.getTicketState(workItemId);
 
-  const l3Local = db
-    .select()
-    .from(l3Evidence)
-    .where(eq(l3Evidence.workItemId, workItemId))
-    .orderBy(desc(l3Evidence.id))
-    .get();
+  const l1Record = ticket?.auditLogs && ticket.auditLogs.length > 0
+    ? ticket.auditLogs[ticket.auditLogs.length - 1]
+    : undefined;
 
-  const l3Qa = db
-    .select()
-    .from(qaEvidence)
-    .where(eq(qaEvidence.workItemId, workItemId))
-    .get();
+  const l3Local = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+    ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
+    : undefined;
 
-  const l5Record = db
-    .select()
-    .from(deploymentRecords)
-    .where(eq(deploymentRecords.workItemId, workItemId))
-    .orderBy(desc(deploymentRecords.id))
-    .get();
+  const l3Qa = ticket?.qaEvidence ?? undefined;
 
-  const l6Record = db
-    .select()
-    .from(telemetryEvaluations)
-    .where(eq(telemetryEvaluations.workItemId, workItemId))
-    .orderBy(desc(telemetryEvaluations.id))
-    .get();
+  const l5Record = ticket?.deploymentRecords && ticket.deploymentRecords.length > 0
+    ? ticket.deploymentRecords[ticket.deploymentRecords.length - 1]
+    : undefined;
+
+  const l6Record = ticket?.telemetryEvaluations && ticket.telemetryEvaluations.length > 0
+    ? ticket.telemetryEvaluations[ticket.telemetryEvaluations.length - 1]
+    : undefined;
 
   const l1Reasons: string[] = l1Record?.reasons ? JSON.parse(l1Record.reasons) : ['Definition of Done verified'];
 
@@ -121,31 +99,20 @@ export async function compileL1L6EvidenceIndex(
     },
   };
 
-  // Persist to evidenceIndices
-  db.insert(evidenceIndices)
-    .values({
-      workItemId,
-      l1Summary: JSON.stringify(summary.l1),
-      l2Summary: JSON.stringify(summary.l2),
-      l3Summary: JSON.stringify(summary.l3),
-      l4Summary: JSON.stringify(summary.l4),
-      l5Summary: JSON.stringify(summary.l5),
-      l6Summary: JSON.stringify(summary.l6),
-      completedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: evidenceIndices.workItemId,
-      set: {
+  // Persist to TicketState evidenceIndex
+  await workItemQueueManager.runInLane(workItemId, async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      draft.evidenceIndex = {
         l1Summary: JSON.stringify(summary.l1),
         l2Summary: JSON.stringify(summary.l2),
         l3Summary: JSON.stringify(summary.l3),
         l4Summary: JSON.stringify(summary.l4),
         l5Summary: JSON.stringify(summary.l5),
         l6Summary: JSON.stringify(summary.l6),
-        completedAt: new Date(),
-      },
-    })
-    .run();
+        completedAt: new Date().toISOString(),
+      };
+    });
+  });
 
   return summary;
 }

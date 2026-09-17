@@ -1,6 +1,6 @@
 import sanitizeHtml from 'sanitize-html';
-import { db } from '../db/index.js';
-import { telemetryEvaluations } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 import { env } from '../config/env.js';
 
 export interface TelemetryMetrics {
@@ -150,19 +150,23 @@ export async function evaluateProductionTelemetry(options: {
   const metrics = mockMetrics ?? (await queryAzureMonitorMetrics(undefined, undefined, windowMinutes));
   const { breached, reasons } = evaluateMetricsAgainstThresholds(metrics, customThresholds);
 
-  db.insert(telemetryEvaluations)
-    .values({
-      workItemId,
-      windowMinutes: metrics.windowMinutes,
-      errorRate: `${metrics.errorRatePercent.toFixed(2)}%`,
-      p95LatencyMs: metrics.p95LatencyMs,
-      baselineErrorRate: '0.10%',
-      baselineP95Ms: 120,
-      breached: breached ? 1 : 0,
-      breachReasons: reasons.length > 0 ? JSON.stringify(reasons) : null,
-      evaluatedAt: new Date(),
-    })
-    .run();
+  await workItemQueueManager.runInLane(workItemId, async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      if (!draft.telemetryEvaluations) {
+        draft.telemetryEvaluations = [];
+      }
+      draft.telemetryEvaluations.push({
+        windowMinutes: metrics.windowMinutes,
+        errorRate: `${metrics.errorRatePercent.toFixed(2)}%`,
+        p95LatencyMs: metrics.p95LatencyMs,
+        baselineErrorRate: '0.10%',
+        baselineP95Ms: 120,
+        breached: breached ? 1 : 0,
+        breachReasons: reasons.length > 0 ? JSON.stringify(reasons) : null,
+        evaluatedAt: new Date().toISOString(),
+      });
+    });
+  });
 
   return {
     breached,

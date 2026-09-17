@@ -1,6 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { deploymentRecords } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 import { adoClient } from '../ado/client.js';
 import { getWorkItemDetails, buildTagPatch } from '../ado/work-item.js';
 import {
@@ -52,20 +51,24 @@ export async function processDeploymentPreparation(
     environmentName,
   });
 
-  db.insert(deploymentRecords)
-    .values({
-      workItemId,
-      pipelineRunId: `run-${Date.now()}`,
-      stageName: 'DeployToProduction',
-      environmentName,
-      commitSha,
-      status: 'pending_approval',
-      releaseNotes: packet.releaseNotes,
-      rollbackPlan: packet.rollback.revertCommand,
-      migrationRisk: packet.migrationRisk.riskLevel,
-      createdAt: new Date(),
-    })
-    .run();
+  await workItemQueueManager.runInLane(workItemId, async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      if (!draft.deploymentRecords) {
+        draft.deploymentRecords = [];
+      }
+      draft.deploymentRecords.push({
+        pipelineRunId: `run-${Date.now()}`,
+        stageName: 'DeployToProduction',
+        environmentName,
+        commitSha,
+        status: 'pending_approval',
+        releaseNotes: packet.releaseNotes,
+        rollbackPlan: packet.rollback.revertCommand,
+        migrationRisk: packet.migrationRisk.riskLevel,
+        createdAt: new Date().toISOString(),
+      });
+    });
+  });
 
   const l5Comment = formatL5ReadinessComment(packet);
   const tagPatch = buildDeployingPatch(details.tags);
@@ -143,13 +146,15 @@ export async function processTelemetryEvaluation(
   }
 
   // Telemetry Passed: Transition to Done with unified L1-L6 Evidence Index
-  db.update(deploymentRecords)
-    .set({
-      status: 'deployed',
-      deployedAt: new Date(),
-    })
-    .where(eq(deploymentRecords.workItemId, workItemId))
-    .run();
+  await workItemQueueManager.runInLane(workItemId, async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      if (draft.deploymentRecords && draft.deploymentRecords.length > 0) {
+        const lastRecord = draft.deploymentRecords[draft.deploymentRecords.length - 1];
+        lastRecord.status = 'deployed';
+        lastRecord.deployedAt = new Date().toISOString();
+      }
+    });
+  });
 
   const evidenceSummary = await compileL1L6EvidenceIndex(workItemId);
   const evidenceComment = formatEvidenceIndexComment(evidenceSummary);

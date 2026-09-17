@@ -1,11 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import {
-  reworkCycles,
-  l3Evidence,
-  qaEvidence,
-  telemetryEvaluations,
-} from '../db/schema.js';
+import { stateStore } from '../state/index.js';
 import { getWorkItemDetails } from '../ado/work-item.js';
 import type { TicketLifecycleData } from './types.js';
 
@@ -13,32 +6,19 @@ export async function harvestTicketLifecycleData(
   workItemId: number
 ): Promise<TicketLifecycleData> {
   const details = await getWorkItemDetails(workItemId);
+  const ticket = await stateStore.getTicketState(workItemId);
 
-  const rework = db
-    .select()
-    .from(reworkCycles)
-    .where(eq(reworkCycles.workItemId, workItemId))
-    .get();
+  const rework = ticket?.reworkCycles;
 
-  const l3 = db
-    .select()
-    .from(l3Evidence)
-    .where(eq(l3Evidence.workItemId, workItemId))
-    .orderBy(desc(l3Evidence.id))
-    .get();
+  const l3 = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+    ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
+    : undefined;
 
-  const qa = db
-    .select()
-    .from(qaEvidence)
-    .where(eq(qaEvidence.workItemId, workItemId))
-    .get();
+  const qa = ticket?.qaEvidence;
 
-  const telemetry = db
-    .select()
-    .from(telemetryEvaluations)
-    .where(eq(telemetryEvaluations.workItemId, workItemId))
-    .orderBy(desc(telemetryEvaluations.id))
-    .get();
+  const telemetry = ticket?.telemetryEvaluations && ticket.telemetryEvaluations.length > 0
+    ? ticket.telemetryEvaluations[ticket.telemetryEvaluations.length - 1]
+    : undefined;
 
   const reviewComments: string[] = [];
   if (details.history) {

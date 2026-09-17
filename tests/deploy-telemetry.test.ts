@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import { telemetryEvaluations } from '../src/db/schema.js';
 import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import {
   evaluateMetricsAgainstThresholds,
   evaluateProductionTelemetry,
@@ -9,11 +9,21 @@ import {
   queryAzureMonitorMetrics,
   type TelemetryMetrics,
 } from '../src/deploy/telemetry.js';
-import { eq } from 'drizzle-orm';
 
 describe('Production Telemetry Monitoring & Breach Detection (DPLY-02)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM telemetry_evaluations;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('evaluates healthy metrics as non-breached', () => {
@@ -93,11 +103,8 @@ describe('Production Telemetry Monitoring & Breach Detection (DPLY-02)', () => {
 
     expect(result.breached).toBe(false);
 
-    const record = db
-      .select()
-      .from(telemetryEvaluations)
-      .where(eq(telemetryEvaluations.workItemId, workItemId))
-      .get();
+    const ticket = await stateStore.getTicketState(workItemId);
+    const record = ticket?.telemetryEvaluations[0];
 
     expect(record).toBeDefined();
     expect(record?.errorRate).toBe('0.15%');

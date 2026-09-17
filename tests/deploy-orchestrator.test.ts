@@ -1,13 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { db, sqlite } from '../src/db/index.js';
-import {
-  deploymentRecords,
-  telemetryEvaluations,
-  evidenceIndices,
-  auditLogs,
-  l3Evidence,
-  qaEvidence,
-} from '../src/db/schema.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { adoClient } from '../src/ado/client.js';
 import { env } from '../src/config/env.js';
 import {
@@ -20,88 +14,78 @@ import {
   processDeploymentWorkflow,
 } from '../src/deploy/worker.js';
 import { routeWorkItemEvent } from '../src/execute/router.js';
-import { eq } from 'drizzle-orm';
 
 describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM deployment_records;');
-    sqlite.exec('DELETE FROM telemetry_evaluations;');
-    sqlite.exec('DELETE FROM evidence_indices;');
-    sqlite.exec('DELETE FROM audit_log;');
-    sqlite.exec('DELETE FROM l3_evidence;');
-    sqlite.exec('DELETE FROM qa_evidence;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   describe('Evidence Index Aggregator & Formatter', () => {
     it('aggregates L1 through L6 evidence from respective tables', async () => {
       const workItemId = 7001;
 
-      // Seed prior stage evidence
-      db.insert(auditLogs)
-        .values({
-          workItemId,
-          revId: 1,
-          verdict: 'passed',
-          reasons: JSON.stringify(['Testability DoD met', 'Scope bounded']),
-          criteriaSummary: 'DoD Criteria complete',
-          model: 'gpt-4o',
-          evaluatedAt: new Date(),
-        })
-        .run();
-
-      db.insert(l3Evidence)
-        .values({
-          workItemId,
-          revId: 3,
-          testSuite: 'vitest',
-          totalTests: 15,
-          passed: 15,
-          failed: 0,
-          durationMs: 850,
-          coverageSummary: '88%',
-          gitDiffStat: '3 files changed, 120 insertions(+)',
-          createdAt: new Date(),
-        })
-        .run();
-
-      db.insert(qaEvidence)
-        .values({
-          workItemId,
-          totalTests: 20,
-          passedCount: 20,
-          failedCount: 0,
-          durationMs: 3200,
-          commitSha: 'beefcafe1234',
-          stagingUrl: 'https://staging.app.net',
-          flakeCleared: 0,
-          createdAt: new Date(),
-        })
-        .run();
-
-      db.insert(deploymentRecords)
-        .values({
-          workItemId,
-          pipelineRunId: 'run-99',
-          stageName: 'DeployToProd',
-          environmentName: 'Production',
-          commitSha: 'beefcafe1234',
-          status: 'deployed',
-          migrationRisk: 'low',
-          createdAt: new Date(),
-        })
-        .run();
-
-      db.insert(telemetryEvaluations)
-        .values({
-          workItemId,
-          windowMinutes: 30,
-          errorRate: '0.02%',
-          p95LatencyMs: 140,
-          breached: 0,
-          evaluatedAt: new Date(),
-        })
-        .run();
+      // Seed prior stage evidence in StateStore
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.auditLogs.push({
+            revId: 1,
+            verdict: 'passed',
+            reasons: JSON.stringify(['Testability DoD met', 'Scope bounded']),
+            criteriaSummary: 'DoD Criteria complete',
+            model: 'gpt-4o',
+            evaluatedAt: new Date().toISOString(),
+          });
+          draft.l3Evidence.push({
+            revId: 3,
+            testSuite: 'vitest',
+            totalTests: 15,
+            passed: 15,
+            failed: 0,
+            durationMs: 850,
+            coverageSummary: '88%',
+            gitDiffStat: '3 files changed, 120 insertions(+)',
+            createdAt: new Date().toISOString(),
+          });
+          draft.qaEvidence = {
+            totalTests: 20,
+            passedCount: 20,
+            failedCount: 0,
+            durationMs: 3200,
+            commitSha: 'beefcafe1234',
+            stagingUrl: 'https://staging.app.net',
+            flakeCleared: 0,
+            createdAt: new Date().toISOString(),
+          };
+          draft.deploymentRecords.push({
+            pipelineRunId: 'run-99',
+            stageName: 'DeployToProd',
+            environmentName: 'Production',
+            commitSha: 'beefcafe1234',
+            status: 'deployed',
+            migrationRisk: 'low',
+            createdAt: new Date().toISOString(),
+          });
+          draft.telemetryEvaluations.push({
+            windowMinutes: 30,
+            errorRate: '0.02%',
+            p95LatencyMs: 140,
+            breached: 0,
+            evaluatedAt: new Date().toISOString(),
+          });
+        });
+      });
 
       const summary = await compileL1L6EvidenceIndex(workItemId);
 
@@ -163,11 +147,8 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         ])
       );
 
-      const record = db
-        .select()
-        .from(deploymentRecords)
-        .where(eq(deploymentRecords.workItemId, workItemId))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const record = ticket?.deploymentRecords[0];
 
       expect(record).toBeDefined();
       expect(record?.status).toBe('pending_approval');
@@ -338,6 +319,8 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         failedRequests: 1,
         windowMinutes: 30,
       };
+
+      stateStore.recordDedupEvent(workItemId, 2, 'hash-7301');
 
       await routeWorkItemEvent(workItemId, 2, {
         mockMetrics,

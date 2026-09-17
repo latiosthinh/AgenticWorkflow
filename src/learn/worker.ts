@@ -1,5 +1,5 @@
-import { db } from '../db/index.js';
-import { skillsPrs } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 import { adoClient } from '../ado/client.js';
 import { harvestTicketLifecycleData } from './harvester.js';
 import { generateSkillFromLifecycle } from './generator.js';
@@ -36,19 +36,23 @@ export async function processLearningFeedbackLoop(
     mockPrCreator: options?.mockPrCreator,
   });
 
-  // 4. Persist to SQLite skills_prs
-  db.insert(skillsPrs)
-    .values({
-      workItemId,
-      skillName: skill.frontmatter.name,
-      branchName,
-      pullRequestId,
-      prUrl,
-      status: 'pending_review',
-      summary: skill.summary,
-      createdAt: new Date(),
-    })
-    .run();
+  // 4. Persist to StateStore skillsPrs
+  await workItemQueueManager.runInLane(workItemId, async () => {
+    await stateStore.updateTicketState(workItemId, (draft) => {
+      if (!draft.skillsPrs) {
+        draft.skillsPrs = [];
+      }
+      draft.skillsPrs.push({
+        skillName: skill.frontmatter.name,
+        branchName,
+        pullRequestId,
+        prUrl,
+        status: 'pending_review',
+        summary: skill.summary,
+        createdAt: new Date().toISOString(),
+      });
+    });
+  });
 
   // 5. Post notification comment on work item discussion
   const comment = formatSkillPrComment({
