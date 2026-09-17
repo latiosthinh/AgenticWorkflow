@@ -19,6 +19,7 @@ import { processDeploymentWorkflow } from '../deploy/worker.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
 import { resolveRoutingStep } from '../pipeline/taxonomy.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 
 function parseDiffStat(statStr?: string): { totalLoc: number; filesChanged: number } {
   if (!statStr) return { totalLoc: 50, filesChanged: 2 };
@@ -56,142 +57,144 @@ export async function routeWorkItemEvent(
   revId: number,
   options?: any
 ): Promise<void> {
-  try {
-    const workItem = await getWorkItemDetails(workItemId, revId);
+  return workItemQueueManager.runInLane(workItemId, async () => {
+    try {
+      const workItem = await getWorkItemDetails(workItemId, revId);
 
-    let previousState: string | undefined;
-    if (revId > 1) {
-      try {
-        const prevDetails = await getWorkItemDetails(workItemId, revId - 1);
-        previousState = prevDetails.state;
-      } catch {
-        // Ignore previous revision lookup failure
-      }
-    }
-
-    const verdict = detectAcceptanceVerdict({
-      currentState: workItem.state,
-      previousState,
-      historyComment: workItem.history,
-      tags: workItem.tags,
-    });
-
-    if (verdict.type === 'reset_rework') {
-      await resetCircuitBreaker(workItemId);
-      stateStore.updateDedupStatus(workItemId, revId, 'completed');
-    } else if (verdict.type === 'approve') {
-      await updateWorkItemTags(
-        workItemId,
-        '[acceptance-approved]',
-        '[awaiting-acceptance]'
-      );
-      stateStore.updateDedupStatus(workItemId, revId, 'completed');
-    } else if (verdict.type === 'reject') {
-      const breaker = await evaluateCircuitBreaker(workItemId, 'accept');
-      if (!breaker.allowed) {
-        await escalateReworkToBlocked(workItemId, breaker.currentCount);
-        stateStore.updateDedupStatus(workItemId, revId, 'completed');
-      } else {
-        await processWorkItemRework(workItemId, revId, verdict.feedback, options);
-      }
-    } else {
-      const step = resolveRoutingStep(workItem.state, workItem.tags);
-
-      if (!step) {
-        stateStore.updateDedupStatus(
-          workItemId,
-          revId,
-          'skipped',
-          `Ticket state '${workItem.state}' has no active handler`
-        );
-        return;
-      }
-
-      switch (step.step) {
-        case 1:
-          await processWorkItemAudit(workItemId, revId);
-          break;
-        case 3:
-          await processWorkItemExecute(workItemId, revId, options);
-          break;
-        case 4: {
-          const ticket = await stateStore.getTicketState(workItemId);
-          const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0
-            ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
-            : undefined;
-
-          const testSummary = evidence
-            ? {
-                suite: evidence.testSuite,
-                totalTests: evidence.totalTests,
-                passed: evidence.passed,
-                failed: evidence.failed,
-                durationMs: evidence.durationMs,
-              }
-            : {
-                suite: 'vitest',
-                totalTests: 1,
-                passed: 1,
-                failed: 0,
-                durationMs: 100,
-              };
-
-          const diffStat = parseDiffStat(evidence?.gitDiffStat);
-
-          const prDescription = formatPrDescription({
-            workItemId,
-            title: workItem.title,
-            acceptanceCriteria: workItem.acceptanceCriteria,
-            testSummary,
-            diffStat,
-          });
-
-          const slug = slugify(workItem.title);
-          const sourceBranch = `task/ticket-${workItemId}-${slug}`;
-
-          await createOrGetPullRequest({
-            workItemId,
-            title: workItem.title,
-            sourceBranch,
-            description: prDescription,
-            projectId: env.ADO_PROJECT,
-            repositoryId: env.ADO_REPOSITORY_ID,
-          });
-
-          stateStore.updateDedupStatus(workItemId, revId, 'completed');
-          break;
+      let previousState: string | undefined;
+      if (revId > 1) {
+        try {
+          const prevDetails = await getWorkItemDetails(workItemId, revId - 1);
+          previousState = prevDetails.state;
+        } catch {
+          // Ignore previous revision lookup failure
         }
-        case 6:
-          await processQaVerification(workItemId, options);
+      }
+
+      const verdict = detectAcceptanceVerdict({
+        currentState: workItem.state,
+        previousState,
+        historyComment: workItem.history,
+        tags: workItem.tags,
+      });
+
+      if (verdict.type === 'reset_rework') {
+        await resetCircuitBreaker(workItemId);
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+      } else if (verdict.type === 'approve') {
+        await updateWorkItemTags(
+          workItemId,
+          '[acceptance-approved]',
+          '[awaiting-acceptance]'
+        );
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+      } else if (verdict.type === 'reject') {
+        const breaker = await evaluateCircuitBreaker(workItemId, 'accept');
+        if (!breaker.allowed) {
+          await escalateReworkToBlocked(workItemId, breaker.currentCount);
           stateStore.updateDedupStatus(workItemId, revId, 'completed');
-          break;
-        case 7:
-          await processDeploymentWorkflow(workItemId, revId, options);
-          stateStore.updateDedupStatus(workItemId, revId, 'completed');
-          break;
-        default:
+        } else {
+          await processWorkItemRework(workItemId, revId, verdict.feedback, options);
+        }
+      } else {
+        const step = resolveRoutingStep(workItem.state, workItem.tags);
+
+        if (!step) {
           stateStore.updateDedupStatus(
             workItemId,
             revId,
             'skipped',
             `Ticket state '${workItem.state}' has no active handler`
           );
-          break;
+          return;
+        }
+
+        switch (step.step) {
+          case 1:
+            await processWorkItemAudit(workItemId, revId);
+            break;
+          case 3:
+            await processWorkItemExecute(workItemId, revId, options);
+            break;
+          case 4: {
+            const ticket = await stateStore.getTicketState(workItemId);
+            const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+              ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
+              : undefined;
+
+            const testSummary = evidence
+              ? {
+                  suite: evidence.testSuite,
+                  totalTests: evidence.totalTests,
+                  passed: evidence.passed,
+                  failed: evidence.failed,
+                  durationMs: evidence.durationMs,
+                }
+              : {
+                  suite: 'vitest',
+                  totalTests: 1,
+                  passed: 1,
+                  failed: 0,
+                  durationMs: 100,
+                };
+
+            const diffStat = parseDiffStat(evidence?.gitDiffStat);
+
+            const prDescription = formatPrDescription({
+              workItemId,
+              title: workItem.title,
+              acceptanceCriteria: workItem.acceptanceCriteria,
+              testSummary,
+              diffStat,
+            });
+
+            const slug = slugify(workItem.title);
+            const sourceBranch = `task/ticket-${workItemId}-${slug}`;
+
+            await createOrGetPullRequest({
+              workItemId,
+              title: workItem.title,
+              sourceBranch,
+              description: prDescription,
+              projectId: env.ADO_PROJECT,
+              repositoryId: env.ADO_REPOSITORY_ID,
+            });
+
+            stateStore.updateDedupStatus(workItemId, revId, 'completed');
+            break;
+          }
+          case 6:
+            await processQaVerification(workItemId, options);
+            stateStore.updateDedupStatus(workItemId, revId, 'completed');
+            break;
+          case 7:
+            await processDeploymentWorkflow(workItemId, revId, options);
+            stateStore.updateDedupStatus(workItemId, revId, 'completed');
+            break;
+          default:
+            stateStore.updateDedupStatus(
+              workItemId,
+              revId,
+              'skipped',
+              `Ticket state '${workItem.state}' has no active handler`
+            );
+            break;
+        }
       }
+    } catch (err: any) {
+      stateStore.updateDedupStatus(
+        workItemId,
+        revId,
+        'failed',
+        err?.message || String(err)
+      );
+      console.error(
+        `[router] Failed routing work item ${workItemId} rev ${revId}:`,
+        err
+      );
+      throw err;
     }
-  } catch (err: any) {
-    stateStore.updateDedupStatus(
-      workItemId,
-      revId,
-      'failed',
-      err?.message || String(err)
-    );
-    console.error(
-      `[router] Failed routing work item ${workItemId} rev ${revId}:`,
-      err
-    );
-    throw err;
-  }
+  });
 }
 
 // ponytail: static routing table; make dynamic via pluggable pipeline plugins in v2
