@@ -260,6 +260,7 @@ export async function transitionToReadyForQa(
 export {
   buildScopeApprovedPatch,
   buildScopeEscalationPatch,
+  buildScopeResetPatch,
 } from '../scope/gate.js';
 
 // ponytail: standard JSON patch fields; add custom area and iteration paths in v2

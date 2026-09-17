@@ -62,7 +62,11 @@ export async function evaluateScopeBreaker(
   return { allowed, iterationCount };
 }
 
-export async function resetScopeBreaker(workItemId: number): Promise<void> {
+export async function resetScopeBreaker(
+  workItemId: number,
+  currentTags?: string,
+  updateAdo = false
+): Promise<JsonPatchDocument> {
   const mutate = async () => {
     await stateStore.updateTicketState(workItemId, (draft) => {
       if (draft.scopeLock) {
@@ -84,6 +88,54 @@ export async function resetScopeBreaker(workItemId: number): Promise<void> {
   } else {
     await workItemQueueManager.runInLane(workItemId, mutate);
   }
+
+  const patch = buildScopeResetPatch(currentTags);
+  if (updateAdo) {
+    await adoClient.updateWorkItem(workItemId, patch);
+  }
+  return patch;
+}
+
+export function buildScopeResetPatch(
+  currentTags?: string
+): JsonPatchDocument {
+  const tagPatches = buildTagPatch(
+    currentTags,
+    '[awaiting-scope-lock]',
+    '[scope-unresolved]'
+  );
+
+  const commentHtml = `<p><strong>[Scope Reset] Scope Review Breaker Reset by PM</strong></p><p>Refinement circuit breaker reset. Work item unblocked and returned to scope review.</p>\n<!-- [automated-agent] -->`;
+
+  return [
+    ...tagPatches,
+    {
+      op: Operation.Replace,
+      path: '/fields/System.State',
+      value: 'New',
+    },
+    {
+      op: Operation.Add,
+      path: '/fields/System.History',
+      value: commentHtml,
+    },
+  ] as unknown as JsonPatchDocument;
+}
+
+export async function handleScopeReset(
+  workItemId: number,
+  currentTags?: string
+): Promise<JsonPatchDocument> {
+  let tags = currentTags;
+  if (tags === undefined) {
+    try {
+      const item = await adoClient.getWorkItem(workItemId);
+      tags = item.fields?.['System.Tags'] || '';
+    } catch {
+      tags = '';
+    }
+  }
+  return resetScopeBreaker(workItemId, tags, true);
 }
 
 export function buildScopeApprovedPatch(

@@ -24,6 +24,7 @@ import {
   detectScopeVerdict,
   handleScopeApproval,
   handleScopeRejection,
+  handleScopeReset,
   resetScopeBreaker,
 } from '../scope/index.js';
 
@@ -89,7 +90,7 @@ export async function routeWorkItemEvent(
       });
 
       if (scopeVerdict.type === 'reset_scope') {
-        await resetScopeBreaker(workItemId);
+        await handleScopeReset(workItemId, workItem.tags);
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
         return;
       } else if (scopeVerdict.type === 'approve') {

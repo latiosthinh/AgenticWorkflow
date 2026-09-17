@@ -14,8 +14,10 @@ import {
   resetScopeBreaker,
   handleScopeApproval,
   handleScopeRejection,
+  handleScopeReset,
   buildScopeApprovedPatch,
   buildScopeEscalationPatch,
+  buildScopeResetPatch,
 } from '../src/scope/gate.js';
 import {
   checkScopeLockTimeouts,
@@ -621,6 +623,30 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
     expect(new Date(resetTicket?.scopeLock?.requestedAt!).getTime()).toBeGreaterThan(0);
   });
 
+  it('SCOPE-03 breaker reset: handleScopeReset updates ADO to New with [awaiting-scope-lock] and clears [scope-unresolved]', async () => {
+    const workItemId = 30031;
+    const initialTags = 'backend; [scope-unresolved]';
+
+    const mockWitApi = {
+      updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    await handleScopeReset(workItemId, initialTags);
+
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    const updateArgs = mockWitApi.updateWorkItem.mock.calls[0];
+    const patchDoc = updateArgs.find((a: any) => Array.isArray(a));
+    expect(patchDoc).toBeDefined();
+
+    const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+    expect(stateOp.value).toBe('New');
+
+    const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+    expect(tagOp.value).toContain('[awaiting-scope-lock]');
+    expect(tagOp.value).not.toContain('[scope-unresolved]');
+  });
+
   it('SCOPE-02 approval: handleScopeApproval sets scopeLock.status to locked, records lockedAt and lockedBy, removes [awaiting-scope-lock], adds [scope-locked], and sets state to Ready to Dev', async () => {
     const workItemId = 3004;
     const initialTags = 'frontend; [awaiting-scope-lock]; [audit-passed]';
@@ -1162,6 +1188,15 @@ describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 
     expect(ticketReset?.scopeLock?.iterationCount).toBe(0);
     expect(ticketReset?.scopeLock?.escalatedAt).toBeNull();
     expect(stateStore.getDedupEvent(workItemIdReset, 2)?.status).toBe('completed');
+
+    // Verify ADO call unblocked ticket to New and restored [awaiting-scope-lock]
+    const resetCall = mockWitApi.updateWorkItem.mock.calls[2];
+    const resetPatch = resetCall.find((a: any) => Array.isArray(a));
+    const resetStateOp = resetPatch.find((op: any) => op.path === '/fields/System.State');
+    expect(resetStateOp.value).toBe('New');
+    const resetTagOp = resetPatch.find((op: any) => op.path === '/fields/System.Tags');
+    expect(resetTagOp.value).toContain('[awaiting-scope-lock]');
+    expect(resetTagOp.value).not.toContain('[scope-unresolved]');
   });
 
   it('router Step 3 guard: refuses In Dev dispatch when ticket is not scope-locked and marks dedup skipped', async () => {
