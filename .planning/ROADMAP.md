@@ -157,7 +157,12 @@ Plans:
   4. Scope rejections never poison the shared rework breaker: after 2 scope bounces then a scope lock, the first Accept reject reports breaker `currentCount: 1`; scope iterations use a SEPARATE refinement counter (cap 2 → `Blocked` + `[scope-unresolved]`, human takeover) — never consuming the Accept/PR ≤2 budget.
   5. `In Dev` dispatch is refused without a scope lock — the router guard fires before worktree provisioning/MCP mount/LLM spend (Anti-Pattern 7), and the dedup marker records the skip reason.
 **Threat notes**: Pitfall 5 (bot-echo deadlock — verdict via state/tag + watchdog + poller reconcile; log shield-dropped events with human `revisedBy`), Pitfall 6 (re-audit bypass — park state is `New` per SCOPE-01, resolving research Open Decision #1 Axis B, which makes the tag/record guard before any LLM call + the triple-rev idempotency test NON-optional), Pitfall 7 (breaker poisoning — separate refinement counter; shared ≤2 breaker untouched for accept/pr_review). Plan-phase validation: ADO org tag-write permissions + no collisions with `[awaiting-scope-lock]`/`[scope-locked]`; PM notification mechanism (comment vs `@mention`/`System.AssignedTo`); sweep interval ≥5 min honoring Retry-After.
-**Plans**: 3 plans (estimated)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Scope-Lock State Types, Review Packet, and Auditor Parking Interception
+- [ ] 03-02-PLAN.md — Scope Verdict Detection, Approval/Rejection Gate, and Refinement Breaker Isolation
+- [ ] 03-03-PLAN.md — Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring
 **Parallelizable**: Yes — Wave B, parallel with Phases 4 & 5 (mutually independent file sets: this phase owns `src/scope/` NEW + `auditor/worker.ts` + the `execute/router.ts` scope-guard + `accept/breaker.ts` + `ado/work-item.ts` patch builders + `src/index.ts` watchdog start — Phases 4/5 must not touch the router).
 
 ### Phase 4: L7 Evidence Index Extension
