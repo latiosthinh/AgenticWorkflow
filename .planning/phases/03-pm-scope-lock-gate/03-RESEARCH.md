@@ -386,12 +386,12 @@ export async function evaluateScopeBreaker(
 
 *(All claims verified against repository codebase and Golden Path v2 specifications)*
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Watchdog Poller Reconciliation Frequency:**
    - What we know: Standard watchdog runs hourly (`60 * 60 * 1000`), poller runs every 15s.
    - What's unclear: Should scope watchdog sweep run on the 1-hour cadence or faster?
-   - Recommendation: Default to 1-hour interval matching `src/plan/watchdog.ts`; allow parameter override in tests.
+   - RESOLVED: Default to 1-hour interval matching `src/plan/watchdog.ts`; allow parameter override in tests.
 
 ## Environment Availability
 
