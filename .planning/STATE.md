@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-09-17T10:55:00.000Z"
-last_activity: 2026-09-17 — completed Plan 01-04 (Plan checkpoints, watchdog scans, circuit breakers & QA StateStore migration)
+stopped_at: Completed 01-05-PLAN.md (Phase 1 complete)
+last_updated: "2026-09-17T11:15:00.000Z"
+last_activity: 2026-09-17 — completed Plan 01-05 (Complete StateStore worker migration, SQLite eradication, and full 312-test suite green)
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 1 — StateStore Migration (in_progress)
-Plan: 01-04 (completed) — plan checkpoints, watchdog scans, circuit breakers, and archive lifecycle
-Status: In Progress
-Last activity: 2026-09-17 — completed Plan 01-04 (Plan checkpoints, watchdog scans, circuit breakers & QA StateStore migration)
+Phase: 1 — StateStore Migration (completed)
+Plan: 01-05 (completed) — complete worker migration, SQLite eradication, and full test suite green
+Status: Phase 1 Complete
+Last activity: 2026-09-17 — completed Plan 01-05 (Complete StateStore worker migration, SQLite eradication, and full 312-test suite green)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -66,6 +66,7 @@ Progress: [████████░░] 80%
 | Phase 01 P02 | 4m | 2 tasks | 9 files |
 | Phase 01 P03 | 6m | 2 tasks | 7 files |
 | Phase 01 P04 | 8m | 2 tasks | 10 files |
+| Phase 01 P05 | 15m | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,11 @@ Recent decisions affecting current work:
 - [01-04]: Migrated plan checkpoints and watchdog scanner to StateStore with O(active tickets) readdir directory scans
 - [01-04]: Migrated rework circuit breaker and QA circuit breaker bounce counters into single-writer serialized TicketState frontmatter
 - [01-04]: Persisted QA test runs and evidence directly into ticket documents without SQLite dependencies
+- [01-05]: Migrated execution, test runner, deploy, and learn worker state exclusively to file-backed StateStore
+- [01-05]: Compiled unified L1-L6 evidence index directly from TicketState frontmatter without database queries
+- [01-05]: Completely eliminated better-sqlite3, drizzle-orm, drizzle-kit, and src/db/ from repository
+- [01-05]: Added re-entrancy support to WorkItemQueueManager.runInLane to avoid nested lane self-deadlocks
+- [01-05]: Configured vitest test.exclude to ignore ephemeral .worktrees/** directories
 
 ### Pending Todos
 
@@ -216,6 +222,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T10:55:00.000Z
-Stopped at: Completed 01-04-PLAN.md
-Resume: Next step 01-05-PLAN.md
+Last session: 2026-09-17T11:15:00.000Z
+Stopped at: Completed 01-05-PLAN.md (Phase 1 complete)
+Resume: Next phase: Phase 2 Taxonomy Foundation (02-01-PLAN.md)

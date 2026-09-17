@@ -94,7 +94,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 
 ## Phases
 
-- [ ] **Phase 1: StateStore Migration** — replace v1.0 SQLite/Drizzle with the file-backed `StateStore`: per-ticket markdown+frontmatter, atomic `wx` dedup markers, lane-enforced single-writer invariant, crash-atomic writes, watchdog scans + file lifecycle, and the 277-test harness ported to `mkdtemp` — the foundation everything persists on.
+- [x] **Phase 1: StateStore Migration** — replace v1.0 SQLite/Drizzle with the file-backed `StateStore`: per-ticket markdown+frontmatter, atomic `wx` dedup markers, lane-enforced single-writer invariant, crash-atomic writes, watchdog scans + file lifecycle, and the 277-test harness ported to `mkdtemp` — the foundation everything persists on.
 - [ ] **Phase 2: Taxonomy Foundation** — the v2 model (5 cols / 9 steps / actors ⚡👤 / L1–L7) as a data-driven source (`src/pipeline/taxonomy.ts`) driving the router; behavior-preserving for v1.0 paths, proven by lifecycle replay parity.
 - [ ] **Phase 3: PM Scope-Lock Gate** — human 👤 PM scope verdict at Refinement Step 2; audit pass parks the ticket instead of auto-unlocking dev; unbypassable, undeadlockable, breaker-isolated.
 - [ ] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults.
@@ -217,7 +217,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
-| 1. StateStore Migration | 0/5 | Not started | — |
+| 1. StateStore Migration | 5/5 | Complete | 2026-09-17 |
 | 2. Taxonomy Foundation | 0/2 | Not started | — |
 | 3. PM Scope-Lock Gate | 0/3 | Not started | — |
 | 4. L7 Evidence Index Extension | 0/2 | Not started | — |
