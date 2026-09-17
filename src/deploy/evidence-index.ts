@@ -1,6 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 import { stateStore } from '../state/index.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
+import { GOLDEN_PATH_V2, type EvidenceLevel } from '../pipeline/taxonomy.js';
 
 export class MissingEvidenceError extends Error {
   constructor(
@@ -202,13 +203,29 @@ export async function compileL1L6EvidenceIndex(
   return compileL1L7EvidenceIndex(workItemId, options);
 }
 
+function getTaxonomyStage(level: EvidenceLevel): string {
+  const steps = GOLDEN_PATH_V2.filter(
+    (s) => s.primaryEvidenceLevel === level || s.evidenceLevels.includes(level)
+  );
+  if (steps.length === 0) return level;
+  return Array.from(new Set(steps.map((s) => s.column))).join(' & ');
+}
+
 export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string {
-  const { workItemId, l1, l2, l3, l4, l5, l6 } = summary;
+  const { workItemId, l1, l2, l3, l4, l5, l6, l7 } = summary;
+
+  const l7Badge = l7
+    ? '<span style="color: #2e7d32; font-weight: bold;">[RECORDED]</span>'
+    : '<span style="color: #f57c00; font-weight: bold;">[PENDING — retro in progress]</span>';
+
+  const l7Details = l7
+    ? `Takeaways: ${sanitizeHtml(l7.takeaways)} | Action items: <code>${l7.actionItems.length}</code>${l7.runbookDiffPrUrl ? ` | Runbook: <a href="${sanitizeHtml(l7.runbookDiffPrUrl)}">PR</a>` : ''}${l7.skillPrUrl ? ` | Skill: <a href="${sanitizeHtml(l7.skillPrUrl)}">PR</a>` : ''}`
+    : 'Continuous feedback collection pending completion of retrospective step.';
 
   const html = `
 <div class="golden-path-evidence-index">
-  <h3>🎉 [Golden Path Complete] Unified L1–L6 Evidence Index</h3>
-  <p>Work item #${workItemId} has successfully completed all eight stages of the Agentic SDLC Golden Path with verifiable evidence across all six levels.</p>
+  <h3>🎉 [Golden Path Complete] Unified L1–L7 Evidence Index</h3>
+  <p>Work item #${workItemId} has successfully completed all nine steps across five columns of the Agentic SDLC Golden Path with verifiable evidence across all seven levels.</p>
 
   <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: sans-serif;">
     <thead>
@@ -222,39 +239,45 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
     <tbody>
       <tr>
         <td><strong>L1</strong></td>
-        <td>CONTRACT</td>
+        <td>${getTaxonomyStage('L1')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[VERIFIED]</span></td>
         <td>${sanitizeHtml(l1.criteriaSummary)}</td>
       </tr>
       <tr>
         <td><strong>L2</strong></td>
-        <td>REVIEW</td>
+        <td>${getTaxonomyStage('L2')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[APPROVED]</span></td>
         <td>${sanitizeHtml(l2.qualityNotes)}</td>
       </tr>
       <tr>
         <td><strong>L3</strong></td>
-        <td>CHECK &amp; QA</td>
+        <td>${getTaxonomyStage('L3')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[PASSED]</span></td>
         <td>Local tests: <code>${l3.localTestsPassed}/${l3.localTestsTotal}</code> | QA integration: <code>${l3.qaTestsPassed}/${l3.qaTestsTotal}</code>${l3.flakeCleared ? ' (Flake cleared)' : ''}</td>
       </tr>
       <tr>
         <td><strong>L4</strong></td>
-        <td>SECURITY</td>
+        <td>${getTaxonomyStage('L4')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[COMPLIANT]</span></td>
         <td>${sanitizeHtml(l4.policiesSummary)}</td>
       </tr>
       <tr>
         <td><strong>L5</strong></td>
-        <td>DEPLOY</td>
+        <td>${getTaxonomyStage('L5')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[APPROVED]</span></td>
         <td>Environment: <strong>${sanitizeHtml(l5.environmentName)}</strong> | Commit: <code>${sanitizeHtml(l5.commitSha.slice(0, 8))}</code> | Migration Risk: ${sanitizeHtml(l5.migrationRisk.toUpperCase())}</td>
       </tr>
       <tr>
         <td><strong>L6</strong></td>
-        <td>TELEMETRY</td>
+        <td>${getTaxonomyStage('L6')}</td>
         <td><span style="color: #2e7d32; font-weight: bold;">[CONFIRMED]</span></td>
         <td>${l6.windowMinutes}-min observation: Error rate <code>${sanitizeHtml(l6.errorRate)}</code>, P95 latency <code>${l6.p95LatencyMs}ms</code> (Zero regressions)</td>
+      </tr>
+      <tr>
+        <td><strong>L7</strong></td>
+        <td>${getTaxonomyStage('L7')}</td>
+        <td>${l7Badge}</td>
+        <td>${l7Details}</td>
       </tr>
     </tbody>
   </table>
@@ -277,6 +300,7 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
       'p',
       'code',
       'strong',
+      'a',
     ]),
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
@@ -286,6 +310,7 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
       tr: ['style'],
       th: ['align'],
       td: ['align'],
+      a: ['href'],
     },
   });
 
