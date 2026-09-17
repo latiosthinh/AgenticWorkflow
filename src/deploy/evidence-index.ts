@@ -108,7 +108,7 @@ export async function compileL1L7EvidenceIndex(
     if (!l6Record || l6Record.breached) {
       throw new MissingEvidenceError(`Missing or breached L6 telemetry record for #${workItemId}`, 'L6', workItemId);
     }
-    if (!l7Record || !l7Record.takeaways) {
+    if (!l7Record || typeof l7Record.takeaways !== 'string' || !l7Record.takeaways.trim()) {
       throw new MissingEvidenceError(`Missing required L7 continuous feedback record for #${workItemId}`, 'L7', workItemId);
     }
   }

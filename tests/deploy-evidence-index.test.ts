@@ -378,6 +378,30 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
         level: 'L7',
       });
     });
+
+    it('throws MissingEvidenceError with level L7 when takeaways is whitespace-only', async () => {
+      const workItemId = 8108;
+      await seedCompleteTicket(workItemId);
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.retroRecords = [
+            {
+              takeaways: '   \t\n  ',
+              actionItems: ['Some action'],
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          draft.l7Evidence = undefined;
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toMatchObject({
+        name: 'MissingEvidenceError',
+        level: 'L7',
+      });
+    });
   });
 
   describe('Cutover Tolerance', () => {
