@@ -377,7 +377,9 @@ export class FileStateStore implements StateStore {
     if (fs.existsSync(this.dedupDir)) {
       const files = fs.readdirSync(this.dedupDir);
       for (const file of files) {
-        if (!file.endsWith('.json') || file.startsWith('.')) {
+        const isDedupJson = file.endsWith('.json') && !file.startsWith('.');
+        const isOrphanTmp = file.includes('.json.tmp.');
+        if (!isDedupJson && !isOrphanTmp) {
           continue;
         }
         const fullPath = path.join(this.dedupDir, file);
