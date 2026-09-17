@@ -1,14 +1,14 @@
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
-import { db } from '../db/index.js';
-import { l3Evidence, type InsertL3Evidence } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 import { buildTagPatch } from '../ado/work-item.js';
 import {
   Operation,
   type JsonPatchDocument,
 } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 
-// ponytail: local sqlite L3 evidence store; export to ADO Test Plans API in v2
+// ponytail: local StateStore L3 evidence store; export to ADO Test Plans API in v2
 
 export interface L3EvidenceDetails {
   testSuite: string;
@@ -21,8 +21,25 @@ export interface L3EvidenceDetails {
   repairCyclesUsed?: number;
 }
 
-export async function recordL3Evidence(data: InsertL3Evidence): Promise<void> {
-  db.insert(l3Evidence).values(data).run();
+export async function recordL3Evidence(data: any): Promise<void> {
+  await workItemQueueManager.runInLane(data.workItemId, async () => {
+    await stateStore.updateTicketState(data.workItemId, (draft) => {
+      if (!draft.l3Evidence) {
+        draft.l3Evidence = [];
+      }
+      draft.l3Evidence.push({
+        revId: data.revId,
+        testSuite: data.testSuite,
+        totalTests: data.totalTests,
+        passed: data.passed,
+        failed: data.failed,
+        durationMs: data.durationMs,
+        gitDiffStat: typeof data.gitDiffStat === 'string' ? data.gitDiffStat : JSON.stringify(data.gitDiffStat),
+        coverageSummary: data.coverageSummary || null,
+        createdAt: new Date().toISOString(),
+      });
+    });
+  });
 }
 
 export function formatL3EvidenceComment(evidence: L3EvidenceDetails): string {

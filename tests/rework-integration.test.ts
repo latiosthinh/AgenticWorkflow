@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { simpleGit } from 'simple-git';
-import { eq, and } from 'drizzle-orm';
-import { db, sqlite } from '../src/db/index.js';
-import { dedupEvents, reworkCycles, l3Evidence } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { adoClient } from '../src/ado/client.js';
 import { routeWorkItemEvent } from '../src/execute/router.js';
 import { processWorkItemRework } from '../src/execute/rework-worker.js';
@@ -17,15 +17,20 @@ import { evaluateCircuitBreaker, resetCircuitBreaker } from '../src/accept/break
 
 describe('Rework Execution Integration & Router Workflow', () => {
   const rootGit = simpleGit(process.cwd());
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
 
   beforeEach(() => {
-    sqlite.exec(
-      'DELETE FROM dedup_events; DELETE FROM rework_cycles; DELETE FROM l3_evidence; DELETE FROM audit_log; DELETE FROM plan_checkpoints;'
-    );
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
   });
 
   afterEach(async () => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
     const worktreeDir = path.join(process.cwd(), '.worktrees');
     if (fs.existsSync(worktreeDir)) {
       const entries = fs.readdirSync(worktreeDir);
@@ -100,15 +105,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6002',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-6002');
 
     await routeWorkItemEvent(workItemId, revId);
 
@@ -118,7 +115,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
     expect(tagOp.value).toContain('[acceptance-approved]');
     expect(tagOp.value).not.toContain('[awaiting-acceptance]');
 
-    const dedup = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).get();
+    const dedup = stateStore.getDedupEvent(workItemId, revId);
     expect(dedup?.status).toBe('completed');
   });
 
@@ -151,15 +148,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6003',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-6003');
 
     let promptReceived = '';
     await routeWorkItemEvent(workItemId, revId, {
@@ -185,11 +174,11 @@ describe('Rework Execution Integration & Router Workflow', () => {
     expect(promptReceived).toContain('Input &lt;= 0 must return 400.');
 
     // 2. Verify circuit breaker recorded bounce 1
-    const breakerRow = db.select().from(reworkCycles).where(eq(reworkCycles.workItemId, workItemId)).get();
-    expect(breakerRow?.bounceCount).toBe(1);
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.reworkCycles?.bounceCount).toBe(1);
 
     // 3. Verify L3 evidence recorded
-    const evidenceRows = db.select().from(l3Evidence).where(eq(l3Evidence.workItemId, workItemId)).all();
+    const evidenceRows = ticket?.l3Evidence || [];
     expect(evidenceRows.length).toBeGreaterThanOrEqual(1);
     expect(evidenceRows[0].passed).toBe(2);
 
@@ -233,22 +222,14 @@ describe('Rework Execution Integration & Router Workflow', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6004',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-6004');
 
     await routeWorkItemEvent(workItemId, revId);
 
     // Verify circuit breaker tripped
-    const breakerRow = db.select().from(reworkCycles).where(eq(reworkCycles.workItemId, workItemId)).get();
-    expect(breakerRow?.bounceCount).toBe(3);
-    expect(breakerRow?.escalatedAt).toBeDefined();
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.reworkCycles?.bounceCount).toBe(3);
+    expect(ticket?.reworkCycles?.escalatedAt).toBeDefined();
 
     // Verify ADO escalated to Blocked with [rework-escalated]
     expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
@@ -284,21 +265,13 @@ describe('Rework Execution Integration & Router Workflow', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId: 3,
-        status: 'pending',
-        payloadHash: 'hash-6005',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, 3, 'hash-6005');
 
     await routeWorkItemEvent(workItemId, 3);
 
-    const breakerRow = db.select().from(reworkCycles).where(eq(reworkCycles.workItemId, workItemId)).get();
-    expect(breakerRow?.bounceCount).toBe(0);
-    expect(breakerRow?.escalatedAt).toBeNull();
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.reworkCycles?.bounceCount).toBe(0);
+    expect(ticket?.reworkCycles?.escalatedAt).toBeNull();
 
     // Subsequent evaluateCircuitBreaker is allowed with count 1
     const nextCheck = await evaluateCircuitBreaker(workItemId, 'accept');
@@ -330,15 +303,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-6006',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-6006');
 
     await routeWorkItemEvent(workItemId, revId, {
       maxDiffLoc: 5,
@@ -358,7 +323,7 @@ describe('Rework Execution Integration & Router Workflow', () => {
     const tagOp = lastPatch.find((op: any) => op.path === '/fields/System.Tags');
     expect(tagOp?.value).toContain('[diff-ceiling-exceeded]');
 
-    const dedup = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).get();
+    const dedup = stateStore.getDedupEvent(workItemId, revId);
     expect(dedup?.status).toBe('completed');
   });
 });

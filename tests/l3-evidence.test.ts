@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq, and } from 'drizzle-orm';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { db, sqlite } from '../src/db/index.js';
-import { l3Evidence, dedupEvents, planCheckpoints } from '../src/db/schema.js';
+import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { adoClient } from '../src/ado/client.js';
 import {
   formatL3EvidenceComment,
@@ -35,11 +35,22 @@ afterEach(async () => {
 });
 
 describe('L3 Evidence Persistence & Patch Builders', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM l3_evidence;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
   });
 
-  it('persists structured L3 evidence into SQLite and queries successfully', async () => {
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('persists structured L3 evidence into StateStore and queries successfully', async () => {
     await recordL3Evidence({
       workItemId: 7001,
       revId: 1,
@@ -52,9 +63,10 @@ describe('L3 Evidence Persistence & Patch Builders', () => {
       gitDiffStat: '3 files changed, 85 insertions(+)',
     });
 
-    const rows = db.select().from(l3Evidence).all();
+    const ticket = await stateStore.getTicketState(7001);
+    expect(ticket).toBeDefined();
+    const rows = ticket?.l3Evidence || [];
     expect(rows).toHaveLength(1);
-    expect(rows[0].workItemId).toBe(7001);
     expect(rows[0].revId).toBe(1);
     expect(rows[0].testSuite).toBe('vitest');
     expect(rows[0].totalTests).toBe(15);
@@ -242,12 +254,23 @@ describe('ADO REST Transition Helpers', () => {
 });
 
 describe('Execution Worker Pipeline End-to-End Orchestration', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM dedup_events; DELETE FROM audit_log; DELETE FROM plan_checkpoints; DELETE FROM l3_evidence;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
   });
 
-  it('Golden Path: runs bounded editing, passes tests, records L3 evidence in SQLite, transitions to Dev Done', async () => {
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('Golden Path: runs bounded editing, passes tests, records L3 evidence in StateStore, transitions to Dev Done', async () => {
     const workItemId = 9001;
     const revId = 1;
 
@@ -267,15 +290,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9001',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9001');
 
     await processWorkItemExecute(workItemId, revId, {
       mockCodeEdit: async (worktreePath) => {
@@ -291,12 +306,9 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
       }),
     });
 
-    // 1. Verify SQLite L3 evidence persisted
-    const evidenceRows = db
-      .select()
-      .from(l3Evidence)
-      .where(and(eq(l3Evidence.workItemId, workItemId), eq(l3Evidence.revId, revId)))
-      .all();
+    // 1. Verify StateStore L3 evidence persisted
+    const ticket = await stateStore.getTicketState(workItemId);
+    const evidenceRows = ticket?.l3Evidence || [];
     expect(evidenceRows).toHaveLength(1);
     expect(evidenceRows[0].passed).toBe(1);
     expect(evidenceRows[0].failed).toBe(0);
@@ -317,7 +329,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     expect(historyOp?.value).toContain('<!-- [automated-agent] -->');
 
     // 3. Verify dedupEvents completed
-    const dedup = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).get();
+    const dedup = stateStore.getDedupEvent(workItemId, revId);
     expect(dedup?.status).toBe('completed');
   });
 
@@ -341,15 +353,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9002',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9002');
 
     await processWorkItemExecute(workItemId, revId, {
       maxDiffLoc: 250,
@@ -369,8 +373,8 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     expect(tagOp?.value).toContain('[diff-ceiling-exceeded]');
 
     // No L3 evidence should be recorded for failed verification
-    const evidenceRows = db.select().from(l3Evidence).where(eq(l3Evidence.workItemId, workItemId)).all();
-    expect(evidenceRows).toHaveLength(0);
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket?.l3Evidence || []).toHaveLength(0);
   });
 
   it('Contract Conflict: flags ticket Blocked when baseline protected test files are modified', async () => {
@@ -393,15 +397,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9003',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9003');
 
     await processWorkItemExecute(workItemId, revId, {
       mockCodeEdit: async (worktreePath) => {
@@ -446,15 +442,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9007',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9007');
 
     await processWorkItemExecute(workItemId, revId, {
       mockCodeEdit: async (worktreePath) => {
@@ -496,15 +484,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9004',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9004');
 
     await processWorkItemExecute(workItemId, revId, {
       mockCodeEdit: async (worktreePath) => {
@@ -550,15 +530,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9005',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9005');
 
     await processWorkItemExecute(workItemId, revId, {
       mockTestRunner: async () => ({
@@ -617,15 +589,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     };
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-9006',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-9006');
 
     await processWorkItemExecute(workItemId, revId, {
       autoProceedResumption: true,
@@ -640,13 +604,13 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
     });
 
     // Verify checkpoint is locked
-    const [cp] = db.select().from(planCheckpoints).where(eq(planCheckpoints.id, initialCp.id)).all();
-    expect(cp.status).toBe('locked');
+    const ticket = await stateStore.getTicketState(workItemId);
+    const cp = ticket?.planCheckpoints.find((c) => c.id === initialCp.id);
+    expect(cp?.status).toBe('locked');
 
     // Verify L3 evidence recorded
-    const evidence = db.select().from(l3Evidence).where(eq(l3Evidence.workItemId, workItemId)).get();
-    expect(evidence).toBeDefined();
-    expect(evidence?.passed).toBe(1);
+    expect(ticket?.l3Evidence).toBeDefined();
+    expect(ticket?.l3Evidence[0]?.passed).toBe(1);
 
     // Verify transition to Dev Done
     const updateCalls = mockWitApi.updateWorkItem.mock.calls;

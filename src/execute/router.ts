@@ -1,6 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { dedupEvents, l3Evidence } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
 import {
   getWorkItemDetails,
   updateWorkItemTags,
@@ -79,43 +77,19 @@ export async function routeWorkItemEvent(
 
     if (verdict.type === 'reset_rework') {
       resetCircuitBreaker(workItemId);
-      db.update(dedupEvents)
-        .set({ status: 'completed' })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else if (verdict.type === 'approve') {
       await updateWorkItemTags(
         workItemId,
         '[acceptance-approved]',
         '[awaiting-acceptance]'
       );
-      db.update(dedupEvents)
-        .set({ status: 'completed' })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else if (verdict.type === 'reject') {
       const breaker = await evaluateCircuitBreaker(workItemId, 'accept');
       if (!breaker.allowed) {
         await escalateReworkToBlocked(workItemId, breaker.currentCount);
-        db.update(dedupEvents)
-          .set({ status: 'completed' })
-          .where(
-            and(
-              eq(dedupEvents.workItemId, workItemId),
-              eq(dedupEvents.revId, revId)
-            )
-          )
-        .run();
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
       } else {
         await processWorkItemRework(workItemId, revId, verdict.feedback, options);
       }
@@ -127,12 +101,10 @@ export async function routeWorkItemEvent(
     ) {
       await processWorkItemExecute(workItemId, revId, options);
     } else if (workItem.state === 'Dev Done') {
-      const evidence = db
-        .select()
-        .from(l3Evidence)
-        .where(eq(l3Evidence.workItemId, workItemId))
-        .orderBy(desc(l3Evidence.id))
-        .get();
+      const ticket = await stateStore.getTicketState(workItemId);
+      const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+        ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
+        : undefined;
 
       const testSummary = evidence
         ? {
@@ -172,64 +144,28 @@ export async function routeWorkItemEvent(
         repositoryId: env.ADO_REPOSITORY_ID,
       });
 
-      db.update(dedupEvents)
-        .set({ status: 'completed' })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else if (workItem.state === 'Ready for QA') {
       await processQaVerification(workItemId, options);
-      db.update(dedupEvents)
-        .set({ status: 'completed' })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else if (workItem.state === 'Ready to Deploy') {
       await processDeploymentWorkflow(workItemId, revId, options);
-      db.update(dedupEvents)
-        .set({ status: 'completed' })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else {
-      db.update(dedupEvents)
-        .set({
-          status: 'skipped',
-          errorMessage: `Ticket state '${workItem.state}' has no active handler`,
-        })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(
+        workItemId,
+        revId,
+        'skipped',
+        `Ticket state '${workItem.state}' has no active handler`
+      );
     }
   } catch (err: any) {
-    db.update(dedupEvents)
-      .set({
-        status: 'failed',
-        errorMessage: err?.message || String(err),
-      })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(
+      workItemId,
+      revId,
+      'failed',
+      err?.message || String(err)
+    );
     console.error(
       `[router] Failed routing work item ${workItemId} rev ${revId}:`,
       err

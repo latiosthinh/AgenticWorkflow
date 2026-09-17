@@ -1,9 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { simpleGit } from 'simple-git';
-import { eq, and } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { dedupEvents } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
 import {
   getWorkItemDetails,
   flagTicketBlocked,
@@ -50,15 +48,7 @@ export async function processWorkItemRework(
   let worktreePath: string | undefined;
 
   const markEventCompleted = () => {
-    db.update(dedupEvents)
-      .set({ status: 'completed' })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(workItemId, revId, 'completed');
   };
 
   try {
@@ -79,13 +69,17 @@ export async function processWorkItemRework(
       protectTestFiles(worktreeResult.worktreePath);
 
     // 2. Fetch cumulative diff against base commit
-    let baseRef = options?.baseBranch || 'origin/main';
+    let baseRef = options?.baseBranch;
     let baseRefResolved = false;
-    try {
-      await git.raw(['rev-parse', '--verify', baseRef]);
-      baseRefResolved = true;
-    } catch {
-      const candidates = ['origin/main', 'origin/master', 'main', 'master'];
+    if (baseRef) {
+      try {
+        await git.raw(['rev-parse', '--verify', baseRef]);
+        baseRefResolved = true;
+      } catch {}
+    }
+
+    if (!baseRefResolved) {
+      const candidates = ['master', 'main', 'origin/main', 'origin/master'];
       for (const candidate of candidates) {
         try {
           await git.raw(['rev-parse', '--verify', candidate]);
@@ -100,7 +94,7 @@ export async function processWorkItemRework(
 
     if (!baseRefResolved) {
       throw new Error(
-        `Unable to resolve valid base branch reference for cumulative diff. Checked: ${baseRef}, origin/main, origin/master, main, master`
+        `Unable to resolve valid base branch reference for cumulative diff. Checked: ${baseRef}, master, main, origin/main, origin/master`
       );
     }
 
@@ -313,18 +307,12 @@ export async function processWorkItemRework(
       await cleanupWorktree(process.cwd(), worktreePath).catch(() => {});
     }
 
-    db.update(dedupEvents)
-      .set({
-        status: 'failed',
-        errorMessage: err?.message || String(err),
-      })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(
+      workItemId,
+      revId,
+      'failed',
+      err?.message || String(err)
+    );
 
     console.error(
       `[rework-worker] Failed processing rework for work item ${workItemId} rev ${revId}:`,

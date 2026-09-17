@@ -1,10 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { simpleGit } from 'simple-git';
-import { eq, and } from 'drizzle-orm';
 import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
-import { db } from '../db/index.js';
-import { dedupEvents } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
 import {
   getWorkItemDetails,
   buildPlanQuestionPatch,
@@ -309,51 +307,31 @@ export async function processWorkItemExecute(
           }
         }
 
-        db.update(dedupEvents)
-          .set({ status: 'completed' })
-          .where(
-            and(
-              eq(dedupEvents.workItemId, workItemId),
-              eq(dedupEvents.revId, revId)
-            )
-          )
-          .run();
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
 
         console.log(
           `[execute-worker] Plan locked for ticket ${workItemId} with developer answers. Ready for Phase 3 implementation.`
         );
         return;
       } else {
-        db.update(dedupEvents)
-          .set({
-            status: 'skipped',
-            errorMessage: 'Work item awaiting input; awaiting human developer reply',
-          })
-          .where(
-            and(
-              eq(dedupEvents.workItemId, workItemId),
-              eq(dedupEvents.revId, revId)
-            )
-          )
-          .run();
+        stateStore.updateDedupStatus(
+          workItemId,
+          revId,
+          'skipped',
+          'Work item awaiting input; awaiting human developer reply'
+        );
         return;
       }
     }
 
     // Step 3: Fresh 'In Dev' Execution Flow
     if (workItem.state !== 'In Dev') {
-      db.update(dedupEvents)
-        .set({
-          status: 'skipped',
-          errorMessage: `Ticket state is '${workItem.state}', expected 'In Dev'`,
-        })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(
+        workItemId,
+        revId,
+        'skipped',
+        `Ticket state is '${workItem.state}', expected 'In Dev'`
+      );
       return;
     }
 
@@ -411,15 +389,7 @@ export async function processWorkItemExecute(
         await mcpSession.close();
         mcpSession = undefined;
 
-        db.update(dedupEvents)
-          .set({ status: 'completed' })
-          .where(
-            and(
-              eq(dedupEvents.workItemId, workItemId),
-              eq(dedupEvents.revId, revId)
-            )
-          )
-          .run();
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
         return;
       } else {
         const cp = await createPlanCheckpoint({
@@ -452,15 +422,7 @@ export async function processWorkItemExecute(
         await runExecutionPipeline(workItem, revId, worktreeResult, options);
         worktreeResult = undefined;
 
-        db.update(dedupEvents)
-          .set({ status: 'completed' })
-          .where(
-            and(
-              eq(dedupEvents.workItemId, workItemId),
-              eq(dedupEvents.revId, revId)
-            )
-          )
-          .run();
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
         return;
       }
     } catch (innerErr: any) {
@@ -475,18 +437,12 @@ export async function processWorkItemExecute(
       throw innerErr;
     }
   } catch (err: any) {
-    db.update(dedupEvents)
-      .set({
-        status: 'failed',
-        errorMessage: err?.message || String(err),
-      })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(
+      workItemId,
+      revId,
+      'failed',
+      err?.message || String(err)
+    );
 
     console.error(
       `[execute-worker] Failed processing execution for work item ${workItemId} rev ${revId}:`,
