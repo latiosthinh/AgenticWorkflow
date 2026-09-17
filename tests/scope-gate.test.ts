@@ -29,6 +29,12 @@ import { workItemQueueManager } from '../src/queue/lane-manager.js';
 import { env } from '../src/config/env.js';
 import { stateStore, resetStateStore } from '../src/state/index.js';
 import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
+import { routeWorkItemEvent } from '../src/execute/router.js';
+import { processWorkItemExecute } from '../src/execute/worker.js';
+
+vi.mock('../src/execute/worker.js', () => ({
+  processWorkItemExecute: vi.fn(),
+}));
 
 describe('PM Scope-Lock Gate - Packet & Schema (Task 1)', () => {
   it('defines ScopeLockState type contract with all required lifecycle properties', () => {
@@ -987,4 +993,209 @@ describe('PM Scope-Lock Gate - Scope Watchdog & ADO Reconciler (SCOPE-02 watchdo
     }
   });
 });
+
+describe('PM Scope-Lock Gate - Router Verdict Dispatch & Step 3 Guard (SCOPE-03 router)', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
+  beforeEach(() => {
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+    adoClient.setWorkItemTrackingApi(null);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('router scope verdict: routes [approve-scope], [reject-scope], and [reset-scope] verdicts', async () => {
+    const mockWitApi = {
+      getWorkItem: vi.fn(),
+      getRevision: vi.fn(),
+      updateWorkItem: vi.fn().mockResolvedValue({ id: 5001 }),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    // 1. [approve-scope]
+    const workItemIdApprove = 5001;
+    mockWitApi.getWorkItem.mockResolvedValueOnce({
+      id: workItemIdApprove,
+      rev: 2,
+      fields: {
+        'System.Title': 'Approve Scope Ticket',
+        'System.State': 'Ready to Dev',
+        'System.Tags': 'backend; [awaiting-scope-lock]',
+        'System.History': 'Approving scope [approve-scope]',
+      },
+    });
+    mockWitApi.getRevision.mockResolvedValueOnce({
+      id: workItemIdApprove,
+      rev: 1,
+      fields: {
+        'System.State': 'New',
+        'System.Tags': 'backend; [awaiting-scope-lock]',
+      },
+    });
+
+    stateStore.recordDedupEvent(workItemIdApprove, 2, 'hash-5001');
+    await routeWorkItemEvent(workItemIdApprove, 2);
+
+    const ticketApprove = await stateStore.getTicketState(workItemIdApprove);
+    expect(ticketApprove?.scopeLock?.status).toBe('locked');
+    expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+    expect(stateStore.getDedupEvent(workItemIdApprove, 2)?.status).toBe('completed');
+
+    // 2. [reject-scope]
+    const workItemIdReject = 5002;
+    mockWitApi.getWorkItem.mockResolvedValueOnce({
+      id: workItemIdReject,
+      rev: 2,
+      fields: {
+        'System.Title': 'Reject Scope Ticket',
+        'System.State': 'New',
+        'System.Tags': 'backend; [awaiting-scope-lock]',
+        'System.History': '[reject-scope] Acceptance criteria missing performance specs.',
+      },
+    });
+    mockWitApi.getRevision.mockResolvedValueOnce({
+      id: workItemIdReject,
+      rev: 1,
+      fields: {
+        'System.State': 'New',
+        'System.Tags': 'backend; [awaiting-scope-lock]',
+      },
+    });
+
+    stateStore.recordDedupEvent(workItemIdReject, 2, 'hash-5002');
+    await routeWorkItemEvent(workItemIdReject, 2);
+
+    const ticketReject = await stateStore.getTicketState(workItemIdReject);
+    expect(ticketReject?.scopeLock?.status).toBe('rejected');
+    expect(ticketReject?.scopeLock?.iterationCount).toBe(1);
+    expect(ticketReject?.scopeLock?.feedback).toBe('Acceptance criteria missing performance specs.');
+    expect(stateStore.getDedupEvent(workItemIdReject, 2)?.status).toBe('completed');
+
+    // 3. [reset-scope]
+    const workItemIdReset = 5003;
+    // Pre-populate ticket with 3 rejections and blocked
+    await workItemQueueManager.runInLane(workItemIdReset, async () => {
+      await stateStore.updateTicketState(workItemIdReset, (draft) => {
+        draft.scopeLock = {
+          status: 'blocked',
+          iterationCount: 3,
+          requestedAt: new Date().toISOString(),
+          lockedAt: null,
+          lockedBy: null,
+          feedback: 'Too many failures',
+          remindedAt: null,
+          escalatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      });
+    });
+
+    mockWitApi.getWorkItem.mockResolvedValueOnce({
+      id: workItemIdReset,
+      rev: 2,
+      fields: {
+        'System.Title': 'Reset Scope Ticket',
+        'System.State': 'Blocked',
+        'System.Tags': 'backend; [scope-unresolved]',
+        'System.History': 'PM updated criteria [reset-scope] please re-evaluate',
+      },
+    });
+    mockWitApi.getRevision.mockResolvedValueOnce({
+      id: workItemIdReset,
+      rev: 1,
+      fields: {
+        'System.State': 'Blocked',
+        'System.Tags': 'backend; [scope-unresolved]',
+      },
+    });
+
+    stateStore.recordDedupEvent(workItemIdReset, 2, 'hash-5003');
+    await routeWorkItemEvent(workItemIdReset, 2);
+
+    const ticketReset = await stateStore.getTicketState(workItemIdReset);
+    expect(ticketReset?.scopeLock?.iterationCount).toBe(0);
+    expect(ticketReset?.scopeLock?.escalatedAt).toBeNull();
+    expect(stateStore.getDedupEvent(workItemIdReset, 2)?.status).toBe('completed');
+  });
+
+  it('router Step 3 guard: refuses In Dev dispatch when ticket is not scope-locked and marks dedup skipped', async () => {
+    const workItemId = 5004;
+    const revId = 1;
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        rev: revId,
+        fields: {
+          'System.Title': 'Unlocked In Dev Ticket',
+          'System.State': 'In Dev',
+          'System.Tags': 'backend',
+        },
+      }),
+      updateWorkItem: vi.fn(),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-5004');
+    await routeWorkItemEvent(workItemId, revId);
+
+    expect(processWorkItemExecute).not.toHaveBeenCalled();
+    const dedup = stateStore.getDedupEvent(workItemId, revId);
+    expect(dedup?.status).toBe('skipped');
+    expect(dedup?.errorMessage).toContain('In Dev dispatch refused: ticket is not scope-locked');
+  });
+
+  it('router Step 3 pass: dispatches to processWorkItemExecute when ticket scope is locked', async () => {
+    const workItemId = 5005;
+    const revId = 1;
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        const now = new Date().toISOString();
+        draft.scopeLock = {
+          status: 'locked',
+          iterationCount: 1,
+          requestedAt: now,
+          lockedAt: now,
+          lockedBy: 'pm@example.com',
+          feedback: null,
+          remindedAt: null,
+          escalatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+    });
+
+    const mockWitApi = {
+      getWorkItem: vi.fn().mockResolvedValue({
+        id: workItemId,
+        rev: revId,
+        fields: {
+          'System.Title': 'Locked In Dev Ticket',
+          'System.State': 'In Dev',
+          'System.Tags': 'backend; [scope-locked]',
+        },
+      }),
+      updateWorkItem: vi.fn(),
+    };
+    adoClient.setWorkItemTrackingApi(mockWitApi as any);
+
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-5005');
+    const executeOptions = { maxDiffLoc: 150 };
+    await routeWorkItemEvent(workItemId, revId, executeOptions);
+
+    expect(processWorkItemExecute).toHaveBeenCalledWith(workItemId, revId, executeOptions);
+  });
+});
+
 
