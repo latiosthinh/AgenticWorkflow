@@ -18,6 +18,7 @@ import { processQaVerification } from '../qa/worker.js';
 import { processDeploymentWorkflow } from '../deploy/worker.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
+import { resolveRoutingStep } from '../pipeline/taxonomy.js';
 
 function parseDiffStat(statStr?: string): { totalLoc: number; filesChanged: number } {
   if (!statStr) return { totalLoc: 50, filesChanged: 2 };
@@ -93,71 +94,90 @@ export async function routeWorkItemEvent(
       } else {
         await processWorkItemRework(workItemId, revId, verdict.feedback, options);
       }
-    } else if (workItem.state === 'New') {
-      await processWorkItemAudit(workItemId, revId);
-    } else if (
-      workItem.state === 'In Dev' ||
-      (workItem.tags && workItem.tags.includes('[awaiting-input]'))
-    ) {
-      await processWorkItemExecute(workItemId, revId, options);
-    } else if (workItem.state === 'Dev Done') {
-      const ticket = await stateStore.getTicketState(workItemId);
-      const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0
-        ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
-        : undefined;
-
-      const testSummary = evidence
-        ? {
-            suite: evidence.testSuite,
-            totalTests: evidence.totalTests,
-            passed: evidence.passed,
-            failed: evidence.failed,
-            durationMs: evidence.durationMs,
-          }
-        : {
-            suite: 'vitest',
-            totalTests: 1,
-            passed: 1,
-            failed: 0,
-            durationMs: 100,
-          };
-
-      const diffStat = parseDiffStat(evidence?.gitDiffStat);
-
-      const prDescription = formatPrDescription({
-        workItemId,
-        title: workItem.title,
-        acceptanceCriteria: workItem.acceptanceCriteria,
-        testSummary,
-        diffStat,
-      });
-
-      const slug = slugify(workItem.title);
-      const sourceBranch = `task/ticket-${workItemId}-${slug}`;
-
-      await createOrGetPullRequest({
-        workItemId,
-        title: workItem.title,
-        sourceBranch,
-        description: prDescription,
-        projectId: env.ADO_PROJECT,
-        repositoryId: env.ADO_REPOSITORY_ID,
-      });
-
-      stateStore.updateDedupStatus(workItemId, revId, 'completed');
-    } else if (workItem.state === 'Ready for QA') {
-      await processQaVerification(workItemId, options);
-      stateStore.updateDedupStatus(workItemId, revId, 'completed');
-    } else if (workItem.state === 'Ready to Deploy') {
-      await processDeploymentWorkflow(workItemId, revId, options);
-      stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else {
-      stateStore.updateDedupStatus(
-        workItemId,
-        revId,
-        'skipped',
-        `Ticket state '${workItem.state}' has no active handler`
-      );
+      const step = resolveRoutingStep(workItem.state, workItem.tags);
+
+      if (!step) {
+        stateStore.updateDedupStatus(
+          workItemId,
+          revId,
+          'skipped',
+          `Ticket state '${workItem.state}' has no active handler`
+        );
+        return;
+      }
+
+      switch (step.step) {
+        case 1:
+          await processWorkItemAudit(workItemId, revId);
+          break;
+        case 3:
+          await processWorkItemExecute(workItemId, revId, options);
+          break;
+        case 4: {
+          const ticket = await stateStore.getTicketState(workItemId);
+          const evidence = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+            ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
+            : undefined;
+
+          const testSummary = evidence
+            ? {
+                suite: evidence.testSuite,
+                totalTests: evidence.totalTests,
+                passed: evidence.passed,
+                failed: evidence.failed,
+                durationMs: evidence.durationMs,
+              }
+            : {
+                suite: 'vitest',
+                totalTests: 1,
+                passed: 1,
+                failed: 0,
+                durationMs: 100,
+              };
+
+          const diffStat = parseDiffStat(evidence?.gitDiffStat);
+
+          const prDescription = formatPrDescription({
+            workItemId,
+            title: workItem.title,
+            acceptanceCriteria: workItem.acceptanceCriteria,
+            testSummary,
+            diffStat,
+          });
+
+          const slug = slugify(workItem.title);
+          const sourceBranch = `task/ticket-${workItemId}-${slug}`;
+
+          await createOrGetPullRequest({
+            workItemId,
+            title: workItem.title,
+            sourceBranch,
+            description: prDescription,
+            projectId: env.ADO_PROJECT,
+            repositoryId: env.ADO_REPOSITORY_ID,
+          });
+
+          stateStore.updateDedupStatus(workItemId, revId, 'completed');
+          break;
+        }
+        case 6:
+          await processQaVerification(workItemId, options);
+          stateStore.updateDedupStatus(workItemId, revId, 'completed');
+          break;
+        case 7:
+          await processDeploymentWorkflow(workItemId, revId, options);
+          stateStore.updateDedupStatus(workItemId, revId, 'completed');
+          break;
+        default:
+          stateStore.updateDedupStatus(
+            workItemId,
+            revId,
+            'skipped',
+            `Ticket state '${workItem.state}' has no active handler`
+          );
+          break;
+      }
     }
   } catch (err: any) {
     stateStore.updateDedupStatus(
