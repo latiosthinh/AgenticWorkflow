@@ -1,19 +1,31 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { processWorkItemAudit } from '../src/auditor/worker.js';
 import { adoClient } from '../src/ado/client.js';
-import { db, sqlite } from '../src/db/index.js';
-import { dedupEvents, auditLogs } from '../src/db/schema.js';
-import { eq, and } from 'drizzle-orm';
-import { Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import { buildApp } from '../src/index.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
-import crypto from 'node:crypto';
 import { env } from '../src/config/env.js';
+import { stateStore, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 
 describe('Background Audit Worker Pipeline', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM dedup_events; DELETE FROM audit_log;');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   it('Case 1: transitions passing ticket to Ready to Dev, logs audit, and completes dedup', async () => {
@@ -37,15 +49,7 @@ describe('Background Audit Worker Pipeline', () => {
 
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-1001',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-1001');
 
     await processWorkItemAudit(workItemId, revId);
 
@@ -67,24 +71,18 @@ describe('Background Audit Worker Pipeline', () => {
     expect(historyOp.value).toContain('<strong>[L1 Evidence] Contract Audit: PASSED</strong>');
     expect(historyOp.value).toContain('<!-- [automated-agent] -->');
 
-    // Verify SQLite auditLogs has verdict 'passed'
-    const log = db
-      .select()
-      .from(auditLogs)
-      .where(and(eq(auditLogs.workItemId, workItemId), eq(auditLogs.revId, revId)))
-      .get();
-    expect(log).toBeDefined();
-    expect(log?.verdict).toBe('passed');
-    expect(log?.model).toBe('gpt-4o');
-    expect(log?.criteriaSummary).toBeTruthy();
+    // Verify StateStore ticket state has auditLogs entry
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket).toBeDefined();
+    expect(ticket?.auditLogs).toHaveLength(1);
+    expect(ticket?.auditLogs[0].verdict).toBe('passed');
+    expect(ticket?.auditLogs[0].model).toBe('gpt-4o');
+    expect(ticket?.auditLogs[0].criteriaSummary).toBeTruthy();
 
-    // Verify dedupEvents status is 'completed'
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('completed');
+    // Verify dedup marker status is 'completed'
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(dedup.status).toBe('completed');
   });
 
   it('Case 2: retains failing ticket in New, posts feedback comment, and logs audit', async () => {
@@ -107,15 +105,7 @@ describe('Background Audit Worker Pipeline', () => {
 
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-1002',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-1002');
 
     await processWorkItemAudit(workItemId, revId);
 
@@ -134,22 +124,16 @@ describe('Background Audit Worker Pipeline', () => {
     expect(historyOp.value).toContain('Retained in New');
     expect(historyOp.value).toContain('<!-- [automated-agent] -->');
 
-    // Verify SQLite auditLogs has verdict 'failed'
-    const log = db
-      .select()
-      .from(auditLogs)
-      .where(and(eq(auditLogs.workItemId, workItemId), eq(auditLogs.revId, revId)))
-      .get();
-    expect(log).toBeDefined();
-    expect(log?.verdict).toBe('failed');
+    // Verify StateStore ticket state has auditLogs entry with verdict 'failed'
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket).toBeDefined();
+    expect(ticket?.auditLogs).toHaveLength(1);
+    expect(ticket?.auditLogs[0].verdict).toBe('failed');
 
-    // Verify dedupEvents status is 'completed'
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('completed');
+    // Verify dedup marker status is 'completed'
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(dedup.status).toBe('completed');
   });
 
   it('Case 3: skips audit without patching when ticket is already in In Dev', async () => {
@@ -172,37 +156,22 @@ describe('Background Audit Worker Pipeline', () => {
 
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-1003',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-1003');
 
     await processWorkItemAudit(workItemId, revId);
 
     // Verify no ADO mutations occurred
     expect(mockWitApi.updateWorkItem).not.toHaveBeenCalled();
 
-    // Verify no audit log record was inserted
-    const logs = db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.workItemId, workItemId))
-      .all();
-    expect(logs).toHaveLength(0);
+    // Verify no ticket state was created for skipped item
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket).toBeNull();
 
-    // Verify dedupEvents status is 'skipped'
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('skipped');
-    expect(dedup?.errorMessage).toContain("Ticket state is 'In Dev', expected 'New'");
+    // Verify dedup marker status is 'skipped'
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(dedup.status).toBe('skipped');
+    expect(dedup.errorMessage).toContain("Ticket state is 'In Dev', expected 'New'");
   });
 
   it('marks dedupEvents as failed when unhandled exception occurs', async () => {
@@ -216,25 +185,14 @@ describe('Background Audit Worker Pipeline', () => {
 
     adoClient.setWorkItemTrackingApi(mockWitApi as any);
 
-    db.insert(dedupEvents)
-      .values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-1004',
-        receivedAt: new Date(),
-      })
-      .run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-1004');
 
     await expect(processWorkItemAudit(workItemId, revId)).rejects.toThrow('Network connection timeout');
 
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('failed');
-    expect(dedup?.errorMessage).toContain('Network connection timeout');
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(dedup.status).toBe('failed');
+    expect(dedup.errorMessage).toContain('Network connection timeout');
   });
 
   it('processes webhook event through Fastify routes and lane queue end-to-end', async () => {
@@ -290,20 +248,14 @@ describe('Background Audit Worker Pipeline', () => {
     await workItemQueueManager.getLane(workItemId).onIdle();
 
     // Verify background worker processed the audit
-    const log = db
-      .select()
-      .from(auditLogs)
-      .where(and(eq(auditLogs.workItemId, workItemId), eq(auditLogs.revId, revId)))
-      .get();
-    expect(log).toBeDefined();
-    expect(log?.verdict).toBe('passed');
+    const ticket = await stateStore.getTicketState(workItemId);
+    expect(ticket).toBeDefined();
+    expect(ticket?.auditLogs).toHaveLength(1);
+    expect(ticket?.auditLogs[0].verdict).toBe('passed');
 
-    const dedup = db
-      .select()
-      .from(dedupEvents)
-      .where(and(eq(dedupEvents.workItemId, workItemId), eq(dedupEvents.revId, revId)))
-      .get();
-    expect(dedup?.status).toBe('completed');
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    const dedup = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(dedup.status).toBe('completed');
 
     await app.close();
   });

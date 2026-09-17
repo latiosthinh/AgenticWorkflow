@@ -1,90 +1,120 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { db, sqlite, purgeOldDedupEvents } from '../src/db/index.js';
-import { dedupEvents } from '../src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { env } from '../src/config/env.js';
+import { stateStore, purgeOldDedupEvents, resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 
-describe('SQLite Deduplication Store', () => {
+describe('File-Backed Deduplication Store', () => {
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
+
   beforeEach(() => {
-    sqlite.exec('DELETE FROM dedup_events');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
   });
 
-  it('atomically inserts a dedup event', () => {
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
+  });
+
+  it('records dedup event atomically with flag wx and returns isDuplicate: false on first call', () => {
     const workItemId = 1001;
     const revId = 1;
     const payloadHash = 'hash-abc-123';
 
-    const result = db.insert(dedupEvents).values({
-      workItemId,
-      revId,
-      status: 'pending',
-      payloadHash,
-    }).run();
+    const result = stateStore.recordDedupEvent(workItemId, revId, payloadHash);
 
-    expect(result.changes).toBe(1);
+    expect(result.isDuplicate).toBe(false);
+    expect(result.event.workItemId).toBe(workItemId);
+    expect(result.event.revId).toBe(revId);
+    expect(result.event.status).toBe('pending');
+    expect(result.event.payloadHash).toBe(payloadHash);
 
-    const rows = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).all();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].workItemId).toBe(workItemId);
-    expect(rows[0].revId).toBe(revId);
-    expect(rows[0].status).toBe('pending');
-    expect(rows[0].payloadHash).toBe(payloadHash);
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    expect(fs.existsSync(markerPath)).toBe(true);
+
+    const fileContent = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(fileContent.workItemId).toBe(workItemId);
+    expect(fileContent.revId).toBe(revId);
+    expect(fileContent.status).toBe('pending');
+    expect(fileContent.payloadHash).toBe(payloadHash);
+    expect(fileContent.receivedAt).toBeDefined();
   });
 
-  it('throws SQLITE_CONSTRAINT_PRIMARYKEY on duplicate (workItemId, revId) insert', () => {
+  it('returns isDuplicate: true on second call with identical (workItemId, revId)', () => {
     const workItemId = 1002;
     const revId = 1;
 
-    db.insert(dedupEvents).values({
-      workItemId,
-      revId,
-      status: 'pending',
-      payloadHash: 'hash-first',
-    }).run();
+    const first = stateStore.recordDedupEvent(workItemId, revId, 'hash-first');
+    expect(first.isDuplicate).toBe(false);
 
-    expect(() => {
-      db.insert(dedupEvents).values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-duplicate',
-      }).run();
-    }).toThrowError(/UNIQUE constraint failed|PRIMARY KEY/i);
-
-    try {
-      db.insert(dedupEvents).values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash: 'hash-duplicate',
-      }).run();
-    } catch (err: any) {
-      expect(err.code).toBe('SQLITE_CONSTRAINT_PRIMARYKEY');
-    }
+    const second = stateStore.recordDedupEvent(workItemId, revId, 'hash-duplicate');
+    expect(second.isDuplicate).toBe(true);
+    expect(second.event.workItemId).toBe(workItemId);
+    expect(second.event.revId).toBe(revId);
   });
 
-  it('purges records older than retentionDays and keeps recent ones', () => {
-    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  it('updates dedup status and persists changes to JSON marker file', () => {
+    const workItemId = 1003;
+    const revId = 1;
 
-    db.insert(dedupEvents).values({
-      workItemId: 2001,
-      revId: 1,
-      payloadHash: 'hash-old',
-      receivedAt: tenDaysAgo,
-    }).run();
+    stateStore.recordDedupEvent(workItemId, revId, 'hash-xyz');
+    stateStore.updateDedupStatus(workItemId, revId, 'completed');
 
-    db.insert(dedupEvents).values({
-      workItemId: 2002,
-      revId: 1,
-      payloadHash: 'hash-recent',
-      receivedAt: twoDaysAgo,
-    }).run();
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    let content = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(content.status).toBe('completed');
+
+    stateStore.updateDedupStatus(workItemId, revId, 'failed', 'Evaluation timeout');
+    content = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(content.status).toBe('failed');
+    expect(content.errorMessage).toBe('Evaluation timeout');
+  });
+
+  it('purges dedup records older than retentionDays and preserves recent records', () => {
+    const workItemIdOld = 2001;
+    const workItemIdRecent = 2002;
+    const revId = 1;
+
+    stateStore.recordDedupEvent(workItemIdOld, revId, 'hash-old');
+    const oldMarkerPath = path.join(harness.tempDir, 'dedup', `${workItemIdOld}-${revId}.json`);
+
+    // Backdate mtime by 10 days
+    const tenDaysAgoSec = (Date.now() - 10 * 24 * 60 * 60 * 1000) / 1000;
+    fs.utimesSync(oldMarkerPath, tenDaysAgoSec, tenDaysAgoSec);
+
+    stateStore.recordDedupEvent(workItemIdRecent, revId, 'hash-recent');
+    const recentMarkerPath = path.join(harness.tempDir, 'dedup', `${workItemIdRecent}-${revId}.json`);
 
     const purgeResult = purgeOldDedupEvents(7);
     expect(purgeResult.changes).toBe(1);
 
-    const remaining = db.select().from(dedupEvents).all();
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0].workItemId).toBe(2002);
+    expect(fs.existsSync(oldMarkerPath)).toBe(false);
+    expect(fs.existsSync(recentMarkerPath)).toBe(true);
+  });
+
+  it('handles high concurrency with Promise.all across 10 calls: exactly 1 success and 9 duplicates', async () => {
+    const workItemId = 3001;
+    const revId = 1;
+
+    const calls = Array.from({ length: 10 }, (_, i) =>
+      Promise.resolve().then(() =>
+        stateStore.recordDedupEvent(workItemId, revId, `hash-concurrent-${i}`)
+      )
+    );
+
+    const results = await Promise.all(calls);
+    const successes = results.filter((r) => !r.isDuplicate);
+    const duplicates = results.filter((r) => r.isDuplicate);
+
+    expect(successes).toHaveLength(1);
+    expect(duplicates).toHaveLength(9);
+
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    expect(fs.existsSync(markerPath)).toBe(true);
   });
 });

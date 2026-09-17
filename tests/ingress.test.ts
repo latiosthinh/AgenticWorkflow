@@ -1,17 +1,20 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyRawBody from 'fastify-raw-body';
 import { webhookRoutes, registerWorkItemHandler } from '../src/ingress/routes.js';
 import { startTunnel } from '../src/ingress/poller.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
-import { db, sqlite } from '../src/db/index.js';
-import { dedupEvents } from '../src/db/schema.js';
 import { env } from '../src/config/env.js';
-import { eq } from 'drizzle-orm';
+import { resetStateStore } from '../src/state/index.js';
+import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 
 describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
   let app: FastifyInstance;
+  let harness: TestStateStoreContext;
+  const originalStateDir = env.STATE_STORE_DIR;
 
   beforeAll(async () => {
     registerWorkItemHandler(async () => {});
@@ -31,7 +34,15 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
   });
 
   beforeEach(() => {
-    sqlite.exec('DELETE FROM dedup_events');
+    harness = createTestStateStore();
+    (env as any).STATE_STORE_DIR = harness.tempDir;
+    resetStateStore();
+  });
+
+  afterEach(() => {
+    harness.cleanup();
+    (env as any).STATE_STORE_DIR = originalStateDir;
+    resetStateStore();
   });
 
   function createSignature(payload: string, secret = env.ADO_WEBHOOK_SECRET): string {
@@ -139,11 +150,12 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
       revId,
     });
 
-    const rows = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).all();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].workItemId).toBe(workItemId);
-    expect(rows[0].revId).toBe(revId);
-    expect(rows[0].status).toBe('pending');
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    expect(fs.existsSync(markerPath)).toBe(true);
+    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(marker.workItemId).toBe(workItemId);
+    expect(marker.revId).toBe(revId);
+    expect(marker.status).toBe('pending');
   });
 
   it('returns HTTP 200 duplicate_ignored on duplicate revId delivery', async () => {
@@ -207,9 +219,11 @@ describe('Fastify Ingress Webhook Routes & Queue Lanes', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'bot_echo_ignored' });
 
-    const rows = db.select().from(dedupEvents).where(eq(dedupEvents.workItemId, workItemId)).all();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].status).toBe('skipped');
+    const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);
+    expect(fs.existsSync(markerPath)).toBe(true);
+    const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+    expect(marker.workItemId).toBe(workItemId);
+    expect(marker.status).toBe('skipped');
   });
 
   it('returns HTTP 200 bot_echo_ignored when history contains [automated-agent]', async () => {
