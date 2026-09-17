@@ -278,7 +278,7 @@ export async function processWorkItemExecute(
           pendingCheckpoint.planMarkdown ||
           'Implementation plan locked with developer clarifications.';
 
-        await lockPlanCheckpoint(pendingCheckpoint.id, history);
+        await lockPlanCheckpoint(pendingCheckpoint.id, history, undefined, workItemId);
 
         const lockedComment = formatPlanLockedComment(
           lockedPlanMarkdown,
@@ -400,7 +400,7 @@ export async function processWorkItemExecute(
           estimatedFiles: plan.estimatedFiles,
           testStrategy: plan.testStrategy,
         });
-        await updateCheckpointStatus(cp.id, 'locked');
+        await updateCheckpointStatus(cp.id, 'locked', undefined, workItemId);
 
         const comment = formatPlanLockedComment(
           plan.planMarkdown,

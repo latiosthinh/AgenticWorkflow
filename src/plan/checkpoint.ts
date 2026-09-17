@@ -58,13 +58,14 @@ export async function getPendingCheckpoint(
 export async function lockPlanCheckpoint(
   id: number | undefined,
   answers: string,
-  updatedPlan?: string
+  updatedPlan?: string,
+  explicitWorkItemId?: number
 ): Promise<void> {
   if (id === undefined) return;
 
-  let targetWorkItemId: number | undefined;
+  let targetWorkItemId = explicitWorkItemId;
   const currentLane = laneContext.getStore();
-  if (currentLane?.workItemId) {
+  if (!targetWorkItemId && currentLane?.workItemId) {
     const ticket = await stateStore.getTicketState(currentLane.workItemId);
     if (ticket?.planCheckpoints?.some((cp) => cp.id === id)) {
       targetWorkItemId = currentLane.workItemId;
@@ -73,9 +74,15 @@ export async function lockPlanCheckpoint(
 
   if (!targetWorkItemId) {
     const tickets = await stateStore.listTickets();
-    const matching = tickets.find((t) => t.planCheckpoints?.some((cp) => cp.id === id));
-    if (matching) {
-      targetWorkItemId = matching.workItemId;
+    const matching = tickets.filter((t) => t.planCheckpoints?.some((cp) => cp.id === id));
+    if (matching.length === 1) {
+      targetWorkItemId = matching[0].workItemId;
+    } else if (matching.length > 1) {
+      throw new Error(
+        `Cannot lock checkpoint ${id}: ambiguous lookup across multiple tickets (${matching
+          .map((t) => t.workItemId)
+          .join(', ')}). Explicit workItemId must be provided.`
+      );
     }
   }
 
@@ -107,13 +114,14 @@ export async function lockPlanCheckpoint(
 export async function updateCheckpointStatus(
   id: number | undefined,
   status: 'pending_human_input' | 'resumed' | 'locked' | 'blocked' | 'expired',
-  answers?: string
+  answers?: string,
+  explicitWorkItemId?: number
 ): Promise<void> {
   if (id === undefined) return;
 
-  let targetWorkItemId: number | undefined;
+  let targetWorkItemId = explicitWorkItemId;
   const currentLane = laneContext.getStore();
-  if (currentLane?.workItemId) {
+  if (!targetWorkItemId && currentLane?.workItemId) {
     const ticket = await stateStore.getTicketState(currentLane.workItemId);
     if (ticket?.planCheckpoints?.some((cp) => cp.id === id)) {
       targetWorkItemId = currentLane.workItemId;
@@ -122,9 +130,15 @@ export async function updateCheckpointStatus(
 
   if (!targetWorkItemId) {
     const tickets = await stateStore.listTickets();
-    const matching = tickets.find((t) => t.planCheckpoints?.some((cp) => cp.id === id));
-    if (matching) {
-      targetWorkItemId = matching.workItemId;
+    const matching = tickets.filter((t) => t.planCheckpoints?.some((cp) => cp.id === id));
+    if (matching.length === 1) {
+      targetWorkItemId = matching[0].workItemId;
+    } else if (matching.length > 1) {
+      throw new Error(
+        `Cannot update checkpoint ${id}: ambiguous lookup across multiple tickets (${matching
+          .map((t) => t.workItemId)
+          .join(', ')}). Explicit workItemId must be provided.`
+      );
     }
   }
 
