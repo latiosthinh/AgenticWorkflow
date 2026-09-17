@@ -5,7 +5,7 @@ import { env } from './config/env.js';
 import { webhookRoutes, registerWorkItemHandler } from './ingress/routes.js';
 import { routeWorkItemEvent } from './execute/router.js';
 import { startPlanWatchdog } from './plan/watchdog.js';
-import { purgeOldDedupEvents, sqlite } from './db/index.js';
+import { purgeOldDedupEvents } from './state/index.js';
 import { workItemQueueManager } from './queue/lane-manager.js';
 import { pruneOrphanedWorktrees } from './sandbox/worktree.js';
 
@@ -79,9 +79,6 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
 
       await workItemQueueManager.drainAll();
       console.log('[shutdown] Work item queue lanes drained.');
-
-      sqlite.close();
-      console.log('[shutdown] SQLite connection closed.');
 
       if (signal) {
         process.exit(0);

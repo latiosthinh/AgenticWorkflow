@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'node:crypto';
-import { eq, and } from 'drizzle-orm';
 import { verifyHmac } from './hmac.js';
 import { isBotEcho } from './bot-shield.js';
-import { db } from '../db/index.js';
-import { dedupEvents } from '../db/schema.js';
+import { stateStore } from '../state/index.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
 import { env } from '../config/env.js';
 import { processWorkItemAudit } from '../auditor/worker.js';
@@ -66,24 +64,14 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       const prRevId =
         (crypto.createHash('sha256').update(rawBody || '').digest().readInt32BE(0) >>> 0) || 1;
 
-      // SQLite atomic deduplication check
-      try {
-        db.insert(dedupEvents).values({
-          workItemId,
-          revId: prRevId,
-          status: 'pending',
-          payloadHash,
-          receivedAt: new Date(),
-        }).run();
-      } catch (err: any) {
-        if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-          request.log.warn(
-            { workItemId, pullRequestId: resource?.pullRequestId },
-            'Duplicate PR delivery ignored'
-          );
-          return reply.code(200).send({ status: 'duplicate_ignored' });
-        }
-        throw err;
+      // File-backed atomic deduplication check
+      const { isDuplicate } = stateStore.recordDedupEvent(workItemId, prRevId, payloadHash);
+      if (isDuplicate) {
+        request.log.warn(
+          { workItemId, pullRequestId: resource?.pullRequestId },
+          'Duplicate PR delivery ignored'
+        );
+        return reply.code(200).send({ status: 'duplicate_ignored' });
       }
 
       reply.code(202).send({
@@ -97,32 +85,18 @@ export async function webhookRoutes(fastify: FastifyInstance) {
           if (activePrHandler) {
             await activePrHandler(payload);
           }
-          db.update(dedupEvents)
-            .set({ status: 'completed' })
-            .where(
-              and(
-                eq(dedupEvents.workItemId, workItemId),
-                eq(dedupEvents.revId, prRevId)
-              )
-            )
-            .run();
+          stateStore.updateDedupStatus(workItemId, prRevId, 'completed');
         } catch (err: any) {
           request.log.error(
             { err, workItemId, pullRequestId: resource?.pullRequestId },
             'Background PR event processing failed'
           );
-          db.update(dedupEvents)
-            .set({
-              status: 'failed',
-              errorMessage: err?.message || String(err),
-            })
-            .where(
-              and(
-                eq(dedupEvents.workItemId, workItemId),
-                eq(dedupEvents.revId, prRevId)
-              )
-            )
-            .run();
+          stateStore.updateDedupStatus(
+            workItemId,
+            prRevId,
+            'failed',
+            err?.message || String(err)
+          );
         }
       });
       return;
@@ -148,34 +122,21 @@ export async function webhookRoutes(fastify: FastifyInstance) {
     if (echoCheck.isEcho) {
       request.log.info({ workItemId, revId, reason: echoCheck.reason }, 'Bot echo dropped');
       try {
-        db.insert(dedupEvents).values({
-          workItemId,
-          revId,
-          status: 'skipped',
-          payloadHash,
-          receivedAt: new Date(),
-        }).run();
+        const { isDuplicate } = stateStore.recordDedupEvent(workItemId, revId, payloadHash);
+        if (!isDuplicate) {
+          stateStore.updateDedupStatus(workItemId, revId, 'skipped', echoCheck.reason);
+        }
       } catch {
         // Ignore duplicate entry if already recorded
       }
       return reply.code(200).send({ status: 'bot_echo_ignored' });
     }
 
-    // SQLite atomic deduplication check
-    try {
-      db.insert(dedupEvents).values({
-        workItemId,
-        revId,
-        status: 'pending',
-        payloadHash,
-        receivedAt: new Date(),
-      }).run();
-    } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-        request.log.warn({ workItemId, revId }, 'Duplicate delivery ignored');
-        return reply.code(200).send({ status: 'duplicate_ignored' });
-      }
-      throw err;
+    // File-backed atomic deduplication check
+    const { isDuplicate } = stateStore.recordDedupEvent(workItemId, revId, payloadHash);
+    if (isDuplicate) {
+      request.log.warn({ workItemId, revId }, 'Duplicate delivery ignored');
+      return reply.code(200).send({ status: 'duplicate_ignored' });
     }
 
     // Acknowledge immediately in <100ms
@@ -186,8 +147,9 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       if (activeHandler) {
         try {
           await activeHandler(workItemId, revId);
-        } catch (err) {
+        } catch (err: any) {
           request.log.error({ err, workItemId, revId }, 'Background work item processing failed');
+          stateStore.updateDedupStatus(workItemId, revId, 'failed', err?.message || String(err));
         }
       }
     });

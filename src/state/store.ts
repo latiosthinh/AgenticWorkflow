@@ -249,12 +249,34 @@ export class FileStateStore implements StateStore {
 
     const markerPath = path.join(this.dedupDir, `${workItemId}-${revId}.json`);
     if (fs.existsSync(markerPath)) {
-      const record = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as DedupRecord;
-      record.status = status;
-      if (errorMessage !== undefined) {
-        record.errorMessage = errorMessage;
+      try {
+        const record = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as DedupRecord;
+        if ((record.status === 'skipped' || record.status === 'failed') && status === 'completed') {
+          return;
+        }
+        record.status = status;
+        if (errorMessage !== undefined) {
+          record.errorMessage = errorMessage;
+        }
+        writeCrashAtomicSync(markerPath, JSON.stringify(record, null, 2));
+      } catch {
+        // Ignore transient read/write collision
       }
-      writeCrashAtomicSync(markerPath, JSON.stringify(record, null, 2));
+    }
+  }
+
+  public getDedupEvent(workItemId: number, revId: number): DedupRecord | null {
+    if (!Number.isInteger(workItemId) || workItemId <= 0 || !Number.isInteger(revId) || revId < 0) {
+      return null;
+    }
+    const markerPath = path.join(this.dedupDir, `${workItemId}-${revId}.json`);
+    if (!fs.existsSync(markerPath)) {
+      return null;
+    }
+    try {
+      return JSON.parse(fs.readFileSync(markerPath, 'utf8')) as DedupRecord;
+    } catch {
+      return null;
     }
   }
 

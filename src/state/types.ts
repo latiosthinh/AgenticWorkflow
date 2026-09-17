@@ -170,4 +170,5 @@ export interface StateStore {
     errorMessage?: string
   ): void;
   purgeOldDedupEvents(retentionDays?: number): { changes: number };
+  getDedupEvent?(workItemId: number, revId: number): DedupRecord | null;
 }

@@ -1,6 +1,3 @@
-import { eq, and } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { dedupEvents, auditLogs } from '../db/schema.js';
 import {
   getWorkItemDetails,
   transitionToReadyToDev,
@@ -8,6 +5,7 @@ import {
 } from '../ado/work-item.js';
 import { formatL1AuditComment } from '../ado/formatter.js';
 import { auditTicketContract } from './evaluator.js';
+import { stateStore } from '../state/index.js';
 
 export async function processWorkItemAudit(
   workItemId: number,
@@ -19,18 +17,12 @@ export async function processWorkItemAudit(
 
     // Step 2: Only audit tickets in 'New' state
     if (workItem.state !== 'New') {
-      db.update(dedupEvents)
-        .set({
-          status: 'skipped',
-          errorMessage: `Ticket state is '${workItem.state}', expected 'New'`,
-        })
-        .where(
-          and(
-            eq(dedupEvents.workItemId, workItemId),
-            eq(dedupEvents.revId, revId)
-          )
-        )
-        .run();
+      stateStore.updateDedupStatus(
+        workItemId,
+        revId,
+        'skipped',
+        `Ticket state is '${workItem.state}', expected 'New'`
+      );
       return;
     }
 
@@ -41,18 +33,22 @@ export async function processWorkItemAudit(
       acceptanceCriteria: workItem.acceptanceCriteria,
     });
 
-    // Step 4: Persist audit outcome in SQLite auditLogs table
-    db.insert(auditLogs)
-      .values({
-        workItemId,
-        revId,
-        verdict: result.passed ? 'passed' : 'failed',
-        reasons: JSON.stringify(result.reasons),
-        criteriaSummary: result.criteria_summary,
-        model: 'gpt-4o',
-        evaluatedAt: new Date(),
-      })
-      .run();
+    // Step 4: Persist audit outcome via stateStore.updateTicketState
+    await stateStore.updateTicketState(
+      workItemId,
+      (draft) => {
+        draft.revId = revId;
+        draft.auditLogs.push({
+          revId,
+          verdict: result.passed ? 'passed' : 'failed',
+          reasons: JSON.stringify(result.reasons),
+          criteriaSummary: result.criteria_summary,
+          model: 'gpt-4o',
+          evaluatedAt: new Date().toISOString(),
+        });
+      },
+      `## L1 Audit Verdict: ${result.passed ? 'PASSED' : 'FAILED'}\n${result.criteria_summary}`
+    );
 
     // Step 5 & 6: Format HTML comment and transition or post feedback
     const htmlComment = formatL1AuditComment(result);
@@ -63,28 +59,9 @@ export async function processWorkItemAudit(
       await postFeedbackComment(workItemId, htmlComment);
     }
 
-    db.update(dedupEvents)
-      .set({ status: 'completed' })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(workItemId, revId, 'completed');
   } catch (err: any) {
-    db.update(dedupEvents)
-      .set({
-        status: 'failed',
-        errorMessage: err?.message || String(err),
-      })
-      .where(
-        and(
-          eq(dedupEvents.workItemId, workItemId),
-          eq(dedupEvents.revId, revId)
-        )
-      )
-      .run();
+    stateStore.updateDedupStatus(workItemId, revId, 'failed', err?.message || String(err));
     console.error(
       `[auditor-worker] Failed processing audit for work item ${workItemId} rev ${revId}:`,
       err
