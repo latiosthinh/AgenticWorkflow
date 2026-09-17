@@ -76,7 +76,7 @@ export async function routeWorkItemEvent(
     });
 
     if (verdict.type === 'reset_rework') {
-      resetCircuitBreaker(workItemId);
+      await resetCircuitBreaker(workItemId);
       stateStore.updateDedupStatus(workItemId, revId, 'completed');
     } else if (verdict.type === 'approve') {
       await updateWorkItemTags(
