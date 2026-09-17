@@ -2,7 +2,29 @@ import sanitizeHtml from 'sanitize-html';
 import { stateStore } from '../state/index.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
 
-export interface L1L6EvidenceSummary {
+export class MissingEvidenceError extends Error {
+  constructor(
+    message: string,
+    public readonly level?: string,
+    public readonly workItemId?: number
+  ) {
+    super(message);
+    this.name = 'MissingEvidenceError';
+  }
+}
+
+export interface L7SummaryDetails {
+  status: 'RECORDED' | 'VERIFIED' | 'COMPLETED' | 'PENDING';
+  takeaways: string;
+  actionItems: string[];
+  runbookDiffPrUrl?: string | null;
+  skillPrUrl?: string | null;
+  gateFriction?: Record<string, unknown> | null;
+  trendDeltas?: Record<string, unknown> | null;
+  completedAt?: string | null;
+}
+
+export interface L1L7EvidenceSummary {
   workItemId: number;
   l1: {
     verdict: string;
@@ -36,30 +58,59 @@ export interface L1L6EvidenceSummary {
     windowMinutes: number;
     breached: boolean;
   };
+  l7?: L7SummaryDetails | null;
 }
 
-export async function compileL1L6EvidenceIndex(
-  workItemId: number
-): Promise<L1L6EvidenceSummary> {
-  const ticket = await stateStore.getTicketState(workItemId);
+export type L1L6EvidenceSummary = L1L7EvidenceSummary;
 
-  const l1Record = ticket?.auditLogs && ticket.auditLogs.length > 0
+export async function compileL1L7EvidenceIndex(
+  workItemId: number,
+  options?: { failClosed?: boolean }
+): Promise<L1L7EvidenceSummary> {
+  const ticket = await stateStore.getTicketState(workItemId);
+  if (!ticket) {
+    throw new MissingEvidenceError(`Ticket #${workItemId} not found in state store`, undefined, workItemId);
+  }
+
+  const l1Record = ticket.auditLogs && ticket.auditLogs.length > 0
     ? ticket.auditLogs[ticket.auditLogs.length - 1]
     : undefined;
 
-  const l3Local = ticket?.l3Evidence && ticket.l3Evidence.length > 0
+  const l3Local = ticket.l3Evidence && ticket.l3Evidence.length > 0
     ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
     : undefined;
 
-  const l3Qa = ticket?.qaEvidence ?? undefined;
+  const l3Qa = ticket.qaEvidence ?? undefined;
 
-  const l5Record = ticket?.deploymentRecords && ticket.deploymentRecords.length > 0
+  const l5Record = ticket.deploymentRecords && ticket.deploymentRecords.length > 0
     ? ticket.deploymentRecords[ticket.deploymentRecords.length - 1]
     : undefined;
 
-  const l6Record = ticket?.telemetryEvaluations && ticket.telemetryEvaluations.length > 0
+  const l6Record = ticket.telemetryEvaluations && ticket.telemetryEvaluations.length > 0
     ? ticket.telemetryEvaluations[ticket.telemetryEvaluations.length - 1]
     : undefined;
+
+  const l7Record = (ticket.retroRecords && ticket.retroRecords.length > 0)
+    ? ticket.retroRecords[ticket.retroRecords.length - 1]
+    : (ticket.l7Evidence ?? undefined);
+
+  if (options?.failClosed === true) {
+    if (!l1Record) {
+      throw new MissingEvidenceError(`Missing required L1 contract audit record for #${workItemId}`, 'L1', workItemId);
+    }
+    if (!l3Local && !l3Qa) {
+      throw new MissingEvidenceError(`Missing required L3 test evidence for #${workItemId}`, 'L3', workItemId);
+    }
+    if (!l5Record) {
+      throw new MissingEvidenceError(`Missing required L5 deployment record for #${workItemId}`, 'L5', workItemId);
+    }
+    if (!l6Record || l6Record.breached) {
+      throw new MissingEvidenceError(`Missing or breached L6 telemetry record for #${workItemId}`, 'L6', workItemId);
+    }
+    if (!l7Record || !l7Record.takeaways) {
+      throw new MissingEvidenceError(`Missing required L7 continuous feedback record for #${workItemId}`, 'L7', workItemId);
+    }
+  }
 
   let l1Reasons: string[] = ['Definition of Done verified'];
   if (l1Record?.reasons) {
@@ -71,7 +122,21 @@ export async function compileL1L6EvidenceIndex(
     }
   }
 
-  const summary: L1L6EvidenceSummary = {
+  let l7Summary: L7SummaryDetails | null = null;
+  if (l7Record) {
+    l7Summary = {
+      status: 'RECORDED',
+      takeaways: l7Record.takeaways,
+      actionItems: l7Record.actionItems,
+      runbookDiffPrUrl: l7Record.runbookDiffPrUrl,
+      skillPrUrl: l7Record.skillPrUrl,
+      gateFriction: l7Record.gateFriction,
+      trendDeltas: l7Record.trendDeltas,
+      completedAt: l7Record.completedAt,
+    };
+  }
+
+  const summary: L1L7EvidenceSummary = {
     workItemId,
     l1: {
       verdict: l1Record?.verdict === 'passed' ? 'PASSED' : 'VERIFIED',
@@ -105,9 +170,10 @@ export async function compileL1L6EvidenceIndex(
       windowMinutes: l6Record?.windowMinutes || 30,
       breached: Boolean(l6Record?.breached),
     },
+    l7: l7Summary,
   };
 
-  // Persist to TicketState evidenceIndex
+  // Persist to TicketState evidenceIndex within runInLane
   await workItemQueueManager.runInLane(workItemId, async () => {
     await stateStore.updateTicketState(workItemId, (draft) => {
       draft.evidenceIndex = {
@@ -117,6 +183,7 @@ export async function compileL1L6EvidenceIndex(
         l4Summary: JSON.stringify(summary.l4),
         l5Summary: JSON.stringify(summary.l5),
         l6Summary: JSON.stringify(summary.l6),
+        l7Summary: summary.l7 ? JSON.stringify(summary.l7) : null,
         completedAt: new Date().toISOString(),
       };
     });
@@ -125,7 +192,17 @@ export async function compileL1L6EvidenceIndex(
   return summary;
 }
 
-export function formatEvidenceIndexComment(summary: L1L6EvidenceSummary): string {
+/**
+ * @deprecated Use compileL1L7EvidenceIndex instead.
+ */
+export async function compileL1L6EvidenceIndex(
+  workItemId: number,
+  options?: { failClosed?: boolean }
+): Promise<L1L7EvidenceSummary> {
+  return compileL1L7EvidenceIndex(workItemId, options);
+}
+
+export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string {
   const { workItemId, l1, l2, l3, l4, l5, l6 } = summary;
 
   const html = `
