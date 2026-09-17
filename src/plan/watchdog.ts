@@ -29,54 +29,66 @@ export async function checkPlanCheckpointTimeouts(): Promise<{
           const escalationComment =
             '<strong>[Plan Checkpoint] Escalation: Work Item Blocked</strong><p>Clarification questions have been unanswered for over 72 hours. Marking work item Blocked.</p><!-- [automated-agent] -->';
 
-          await adoClient.updateWorkItem(ticket.workItemId, [
-            {
-              op: Operation.Replace,
-              path: '/fields/System.State',
-              value: 'Blocked',
-            },
-            {
-              op: Operation.Add,
-              path: '/fields/System.History',
-              value: escalationComment,
-            },
-          ]);
-
           await workItemQueueManager.runInLane(ticket.workItemId, async () => {
+            const current = await stateStore.getTicketState(ticket.workItemId);
+            const match = current?.planCheckpoints.find((c) => c.id === cp.id);
+            if (!match || match.status !== 'pending_human_input' || match.escalatedAt) {
+              return;
+            }
+
+            await adoClient.updateWorkItem(ticket.workItemId, [
+              {
+                op: Operation.Replace,
+                path: '/fields/System.State',
+                value: 'Blocked',
+              },
+              {
+                op: Operation.Add,
+                path: '/fields/System.History',
+                value: escalationComment,
+              },
+            ]);
+
             await stateStore.updateTicketState(ticket.workItemId, (draft) => {
-              const match = draft.planCheckpoints.find((c) => c.id === cp.id);
-              if (match) {
-                match.status = 'blocked';
-                match.escalatedAt = new Date().toISOString();
-                match.updatedAt = new Date().toISOString();
+              const target = draft.planCheckpoints.find((c) => c.id === cp.id);
+              if (target && target.status === 'pending_human_input') {
+                target.status = 'blocked';
+                target.escalatedAt = new Date().toISOString();
+                target.updatedAt = new Date().toISOString();
               }
             });
-          });
 
-          escalated++;
+            escalated++;
+          });
         } else if (elapsed >= TWENTY_FOUR_HOURS_MS && !cp.remindedAt) {
           const reminderComment =
             '<strong>[Plan Reminder] Action Required: Unanswered Questions</strong><p>The implementation plan is awaiting developer reply. Please respond to the questions above to resume work.</p><!-- [automated-agent] -->';
 
-          await adoClient.updateWorkItem(ticket.workItemId, [
-            {
-              op: Operation.Add,
-              path: '/fields/System.History',
-              value: reminderComment,
-            },
-          ]);
-
           await workItemQueueManager.runInLane(ticket.workItemId, async () => {
+            const current = await stateStore.getTicketState(ticket.workItemId);
+            const match = current?.planCheckpoints.find((c) => c.id === cp.id);
+            if (!match || match.status !== 'pending_human_input' || match.remindedAt) {
+              return;
+            }
+
+            await adoClient.updateWorkItem(ticket.workItemId, [
+              {
+                op: Operation.Add,
+                path: '/fields/System.History',
+                value: reminderComment,
+              },
+            ]);
+
             await stateStore.updateTicketState(ticket.workItemId, (draft) => {
-              const match = draft.planCheckpoints.find((c) => c.id === cp.id);
-              if (match) {
-                match.remindedAt = new Date().toISOString();
-                match.updatedAt = new Date().toISOString();
+              const target = draft.planCheckpoints.find((c) => c.id === cp.id);
+              if (target && target.status === 'pending_human_input') {
+                target.remindedAt = new Date().toISOString();
+                target.updatedAt = new Date().toISOString();
               }
             });
-          });
 
-          reminded++;
+            reminded++;
+          });
         }
       } catch (itemErr) {
         console.error(
