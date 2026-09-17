@@ -478,12 +478,12 @@ export async function compileL1L6EvidenceIndex(
 |---|-------|---------|---------------|
 | A1 | `TicketState.retroRecords` array and `TicketState.l7Evidence` single-object are both supported as sources for L7 | Architecture Patterns | Negligible; checking both accommodates any array or single-object convention Phase 6 uses [VERIFIED: `src/state/types.ts`]. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Header assertion update in `tests/deploy-orchestrator.test.ts`**
    - What we know: `tests/deploy-orchestrator.test.ts` line 101 asserts `expect(html).toContain('[Golden Path Complete] Unified L1–L6 Evidence Index')`.
    - What's unclear: Whether to update this assertion in Phase 4 or keep both strings.
-   - Recommendation: Update `tests/deploy-orchestrator.test.ts` to expect `Unified L1–L7 Evidence Index` and `L7`, or include both in `formatEvidenceIndexComment` header during migration. Updating the test matches the Success Criteria cleanly.
+   - RESOLVED: Update `tests/deploy-orchestrator.test.ts` to expect `Unified L1–L7 Evidence Index` and `L7`. Updating the test matches the Success Criteria cleanly.
 
 ## Environment Availability
 
