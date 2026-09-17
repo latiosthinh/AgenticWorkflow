@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-09-17T10:35:13.852Z"
-last_activity: 2026-09-17 — completed Plan 01-01 (StateStore Migration foundation)
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-09-17T10:45:00.000Z"
+last_activity: 2026-09-17 — completed Plan 01-03 (Single-writer invariant & crash atomicity)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
-  percent: 40
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 ## Current Position
 
 Phase: 1 — StateStore Migration (in_progress)
-Plan: 01-02 (completed) — ingress deduplication and auditor worker StateStore migration
+Plan: 01-03 (completed) — single-writer invariant and Windows crash-atomic writes
 Status: In Progress
-Last activity: 2026-09-17 — completed Plan 01-02 (Ingress deduplication & auditor StateStore migration)
+Last activity: 2026-09-17 — completed Plan 01-03 (Single-writer invariant & crash atomicity)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -64,6 +64,7 @@ Progress: [████░░░░░░] 40%
 
 *Updated after each plan completion*
 | Phase 01 P02 | 4m | 2 tasks | 9 files |
+| Phase 01 P03 | 6m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -180,6 +181,9 @@ Recent decisions affecting current work:
 - [01-01]: Ephemeral mkdtemp test harness created to isolate StateStore file system tests.
 - [Phase 01]: Delegated stateStore methods through dynamic store reference with resetStateStore for seamless test directory rebinding
 - [Phase 01]: Protected terminal dedup statuses ('skipped', 'failed') from being overwritten by 'completed' in FileStateStore
+- [01-03]: Bound AsyncLocalStorage to per-work-item concurrency:1 lane queues, rejecting mutations outside matching lane context
+- [01-03]: Added orphan sibling temp file recovery (.workItemId.md.tmp.*) on read and update to preserve crash atomicity
+- [01-03]: Updated ingress routes to invoke background handlers via workItemQueueManager.runInLane to maintain ambient context
 
 ### Pending Todos
 
@@ -208,6 +212,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T10:35:13.846Z
-Stopped at: Completed 01-02-PLAN.md
-Resume: Next step 01-03-PLAN.md
+Last session: 2026-09-17T10:45:00.000Z
+Stopped at: Completed 01-03-PLAN.md
+Resume: Next step 01-04-PLAN.md
