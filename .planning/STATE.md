@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: in-progress
-stopped_at: Completed Phase 5 Plan 01 (05-01-PLAN.md)
-last_updated: "2026-09-17T23:17:54.467Z"
-last_activity: 2026-09-18 — completed Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
+stopped_at: Completed Phase 5 Plan 02 (05-02-PLAN.md)
+last_updated: "2026-09-18T06:25:00.000Z"
+last_activity: 2026-09-18 — completed Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 15
-  completed_plans: 13
-  percent: 87
+  completed_plans: 14
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 ## Current Position
 
 Phase: 5 — Prod Smoke Suite (in progress)
-Plan: 05-01 (completed) — Prod Smoke Suite Configuration & Health Probe
-Status: Phase 5 in progress — Next: Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
-Last activity: 2026-09-18 — completed Plan 05-01 (Prod Smoke Suite Configuration & Health Probe)
+Plan: 05-02 (completed) — Sandboxed Execution & 2-Strike Flake Filter
+Status: Phase 5 in progress — Next: Plan 05-03 (Worker Fail-Fast Sequencing & L6 Index)
+Last activity: 2026-09-18 — completed Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
 
-Progress: [█████████░] 87% (Wave B: Phase 5 in progress)
+Progress: [█████████░] 93% (Wave B: Phase 5 in progress)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 87% (Wave B: Phase 5 in progress)
 | Phase 04 P01 | 4m | 2 tasks | 3 files |
 | Phase 04 P02 | 4m | 2 tasks | 3 files |
 | Phase 05 P01 | 4m | 2 tasks | 5 files |
+| Phase 05 P02 | 4m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -227,6 +228,11 @@ Recent decisions affecting current work:
 - [05-01]: Verified commit SHA from response headers or JSON body with 7-character prefix match to detect stale slot swaps
 - [05-01]: Classified HTTP >= 500 as APP failures and HTTP 401/403 or network errors as INFRA failures
 - [05-01]: Initialized smokeRuns: [] in default TicketState creation in StateStore
+- [05-02]: Clamped smoke execution timeout to Math.min(timeoutMs, 300_000) with extendEnv: false and scrubbed known secrets (ADO_PAT, OPENAI_API_KEY, ADO_WEBHOOK_SECRET)
+- [05-02]: Classified smoke errors into INFRA (timeouts, 401/403, socket hang up, ECONNRESET) vs APP (>= 500, SHA mismatch, test assertions) to isolate harness blips from code regressions
+- [05-02]: Applied two-strike flake filter clearing flakes on sequential run 2 success and comparing SHA-256 fingerprints on run 2 failure
+- [05-02]: Serialized smokeRuns and smokeEvidence state persistence via workItemQueueManager.runInLane
+- [05-02]: Formatted sanitized bot-shielded alert comments with emergency rollback command for APP regressions
 
 ### Pending Todos
 
@@ -255,6 +261,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T06:17:00.000Z
-Stopped at: Completed Phase 5 Plan 01 (05-01-PLAN.md)
-Resume: Next: Phase 5 Plan 02 (05-02-PLAN.md)
+Last session: 2026-09-18T06:25:00.000Z
+Stopped at: Completed Phase 5 Plan 02 (05-02-PLAN.md)
+Resume: Next: Phase 5 Plan 03 (05-03-PLAN.md)

@@ -196,7 +196,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Smoke configuration in env.ts, StateStore types, and core HTTP/SHA health probe
-- [ ] 05-02-PLAN.md — Sandboxed execution, INFRA vs APP error classification, 2-strike flake filter, and alert formatter
+- [x] 05-02-PLAN.md — Sandboxed execution, INFRA vs APP error classification, 2-strike flake filter, and alert formatter
 - [ ] 05-03-PLAN.md — Deployment worker fail-fast sequencing, tag patching, and composite L6 evidence index
 **Parallelizable**: Yes — Wave B, parallel with Phases 3 & 4. Owns `deploy/smoke.ts` (NEW) + `deploy/worker.ts` smoke→telemetry sequencing ONLY — Phase 6 owns the final Done-patch re-sequencing in `deploy/worker.ts` (avoids a conflicting edit).
 
