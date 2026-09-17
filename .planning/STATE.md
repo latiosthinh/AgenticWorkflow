@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: completed
-stopped_at: Completed Phase 4 Plan 02 (04-02-PLAN.md)
-last_updated: "2026-09-18T00:00:00.000Z"
+status: in-progress
+stopped_at: Completed Phase 5 Plan 01 (05-01-PLAN.md)
+last_updated: "2026-09-17T23:17:54.467Z"
 last_activity: 2026-09-18 — completed Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_plans: 15
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 4 — L7 Evidence Index Extension (completed)
-Plan: 04-02 (completed) — Taxonomy Formatting & Fail-Closed Gates
-Status: Phase 4 complete — Next: Wave B (Phase 5: Prod Smoke Suite) / Wave C (Phase 6: Retro & L7 Output)
-Last activity: 2026-09-18 — completed Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
+Phase: 5 — Prod Smoke Suite (in progress)
+Plan: 05-01 (completed) — Prod Smoke Suite Configuration & Health Probe
+Status: Phase 5 in progress — Next: Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
+Last activity: 2026-09-18 — completed Plan 05-01 (Prod Smoke Suite Configuration & Health Probe)
 
-Progress: [████████░░] 80% (Wave B: Phase 4 complete)
+Progress: [█████████░] 87% (Wave B: Phase 5 in progress)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -59,7 +59,7 @@ Progress: [████████░░] 80% (Wave B: Phase 4 complete)
 
 **Recent Trend:**
 
-- Last 5 plans: 02-01 (3m), 03-01 (8m), 03-02 (6m), 03-03 (8m), 04-01 (4m)
+- Last 5 plans: 03-01 (8m), 03-02 (6m), 03-03 (8m), 04-01 (4m), 05-01 (4m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -74,6 +74,7 @@ Progress: [████████░░] 80% (Wave B: Phase 4 complete)
 | Phase 03 P03 | 8m | 2 tasks | 7 files |
 | Phase 04 P01 | 4m | 2 tasks | 3 files |
 | Phase 04 P02 | 4m | 2 tasks | 3 files |
+| Phase 05 P01 | 4m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -222,6 +223,10 @@ Recent decisions affecting current work:
 - [04-02]: Permit pending retro status with [PENDING — retro in progress] when failClosed is false for cutover tolerance
 - [04-02]: Enforce strict fail-closed MissingEvidenceError across L1-L7 when failClosed is true
 - [04-02]: Reject fallback operators (??, ||) in L7 evidence mapping verified via static grep assertion test
+- [05-01]: Enforced fail-closed check throwing descriptive error when PRODUCTION_SMOKE_URL is missing under NODE_ENV === 'production'
+- [05-01]: Verified commit SHA from response headers or JSON body with 7-character prefix match to detect stale slot swaps
+- [05-01]: Classified HTTP >= 500 as APP failures and HTTP 401/403 or network errors as INFRA failures
+- [05-01]: Initialized smokeRuns: [] in default TicketState creation in StateStore
 
 ### Pending Todos
 
@@ -250,6 +255,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T00:00:00.000Z
-Stopped at: Completed Phase 4 Plan 02 (04-02-PLAN.md)
-Resume: Next: Wave B (Phase 5: Prod Smoke Suite) or Wave C (Phase 6: Retro & L7 Output)
+Last session: 2026-09-18T06:17:00.000Z
+Stopped at: Completed Phase 5 Plan 01 (05-01-PLAN.md)
+Resume: Next: Phase 5 Plan 02 (05-02-PLAN.md)
