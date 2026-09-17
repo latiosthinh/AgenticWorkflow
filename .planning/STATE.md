@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: completed
-stopped_at: Completed Phase 3 Plan 03 (03-03-PLAN.md)
-last_updated: "2026-09-17T14:30:00.000Z"
-last_activity: 2026-09-17 — completed Plan 03-03 (Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
+status: in_progress
+stopped_at: Completed Phase 4 Plan 01 (04-01-PLAN.md)
+last_updated: "2026-09-18T00:00:00.000Z"
+last_activity: 2026-09-18 — completed Plan 04-01 (State Schema & Compiler Core Extension)
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 11
-  percent: 92
+  total_plans: 14
+  completed_plans: 12
+  percent: 86
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 3 — PM Scope-Lock Gate (completed)
-Plan: 03-03 (completed) — Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring
-Status: Phase 3 complete — Next: Wave B remaining parallel phases (Phase 4: L7 Evidence Index Extension / Phase 5: Prod Smoke Suite)
-Last activity: 2026-09-17 — completed Plan 03-03 (Scope Watchdog, Router Step 3 Guard, Lifecycle Replay, and Service Wiring)
+Phase: 4 — L7 Evidence Index Extension (in progress)
+Plan: 04-01 (completed) — State Schema & Compiler Core Extension
+Status: Plan 04-01 complete — Next: Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
+Last activity: 2026-09-18 — completed Plan 04-01 (State Schema & Compiler Core Extension)
 
-Progress: [█████░░░░░] 53% (Wave B: Phase 3 complete)
+Progress: [██████░░░░] 60% (Wave B: Phase 4 Plan 01 complete)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -38,9 +38,9 @@ Progress: [█████░░░░░] 53% (Wave B: Phase 3 complete)
 
 **Velocity:**
 
-- Total plans completed: 33
+- Total plans completed: 34
 - Average duration: 5.2 min
-- Total execution time: 1.96 hours
+- Total execution time: 2.03 hours
 
 **By Phase:**
 
@@ -59,7 +59,7 @@ Progress: [█████░░░░░] 53% (Wave B: Phase 3 complete)
 
 **Recent Trend:**
 
-- Last 5 plans: 05-01 (5m), 05-02 (4m), 05-03 (6m), 01-05 (15m), 02-01 (3m)
+- Last 5 plans: 02-01 (3m), 03-01 (8m), 03-02 (6m), 03-03 (8m), 04-01 (4m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -72,6 +72,7 @@ Progress: [█████░░░░░] 53% (Wave B: Phase 3 complete)
 | Phase 03 P01 | 8m | 2 tasks | 4 files |
 | Phase 03 P02 | 6m | 2 tasks | 4 files |
 | Phase 03 P03 | 8m | 2 tasks | 7 files |
+| Phase 04 P01 | 4m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,10 @@ Recent decisions affecting current work:
 - [03-03]: Scope watchdog reconciles dropped webhooks by checking ADO state for Ready to Dev or [scope-locked] tag, updating StateStore to locked without reminder/escalation
 - [03-03]: Router enforces fail-closed scope check at Step 3 In Dev, refusing dispatch with dedup status 'skipped' when scopeLock.status is not 'locked'
 - [03-03]: Scope watchdog lifecycle wired into Fastify server startup and graceful shutdown alongside plan watchdog
+- [04-01]: Exported L7EvidenceState interface with gateFriction, trendDeltas, and optional id/completedAt in StateStore types
+- [04-01]: Added additive l7Summary to EvidenceIndexState and retroRecords/l7Evidence to TicketState
+- [04-01]: Implemented compileL1L7EvidenceIndex extracting L1-L7 evidence and persisting l7Summary to StateStore inside runInLane
+- [04-01]: Exported MissingEvidenceError and backward-compatible compileL1L6EvidenceIndex alias returning L1L7EvidenceSummary
 
 ### Pending Todos
 
@@ -240,6 +245,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17T14:30:00.000Z
-Stopped at: Completed Phase 3 Plan 03 (03-03-PLAN.md)
-Resume: Next: Wave B parallel phases (Phase 4: L7 Evidence Index Extension / Phase 5: Prod Smoke Suite)
+Last session: 2026-09-18T00:00:00.000Z
+Stopped at: Completed Phase 4 Plan 01 (04-01-PLAN.md)
+Resume: Next: Phase 4 Plan 02 (Taxonomy Formatting & Fail-Closed Gates)

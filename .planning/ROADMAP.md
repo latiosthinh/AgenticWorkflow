@@ -178,7 +178,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — L7 state schema, core compileL1L7EvidenceIndex compiler, and deprecated alias
+- [x] 04-01-PLAN.md — L7 state schema, core compileL1L7EvidenceIndex compiler, and deprecated alias
 - [ ] 04-02-PLAN.md — Taxonomy-driven comment formatter, cutover tolerance, fail-closed gate, and zero-fabrication verification
 **Parallelizable**: Yes — Wave B, parallel with Phases 3 & 5. On the critical path (1 → 2 → 4 → 6 → 7). Owns `deploy/evidence-index.ts` only.
 
@@ -233,7 +233,7 @@ Plans:
 | 1. StateStore Migration | 5/5 | Complete | 2026-09-17 |
 | 2. Taxonomy Foundation | 2/2 | Complete | 2026-09-17 |
 | 3. PM Scope-Lock Gate | 3/3 | Complete | 2026-09-17 |
-| 4. L7 Evidence Index Extension | 0/2 | Not started | — |
+| 4. L7 Evidence Index Extension | 1/2 | In progress | — |
 | 5. Prod Smoke Suite | 0/3 | Not started | — |
 | 6. Retro & L7 Output | 0/3 | Not started | — |
 | 7. Docs Realignment & E2E Proof | 0/1 | Not started | — |
