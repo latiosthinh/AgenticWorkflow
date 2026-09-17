@@ -7,14 +7,14 @@ import * as schema from './schema.js';
 import { dedupEvents } from './schema.js';
 import { env } from '../config/env.js';
 
-if (env.DATABASE_PATH !== ':memory:') {
+if (env.DATABASE_PATH && env.DATABASE_PATH !== ':memory:') {
   const dir = path.dirname(env.DATABASE_PATH);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
 
-export const sqlite = new Database(env.DATABASE_PATH);
+export const sqlite = new Database(env.DATABASE_PATH || ':memory:');
 
 sqlite.pragma('journal_mode = WAL');
 sqlite.pragma('synchronous = NORMAL');
