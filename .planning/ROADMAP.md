@@ -222,7 +222,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
 | 1. StateStore Migration | 5/5 | Complete | 2026-09-17 |
-| 2. Taxonomy Foundation | 0/2 | Not started | — |
+| 2. Taxonomy Foundation | 2/2 | Complete | 2026-09-17 |
 | 3. PM Scope-Lock Gate | 0/3 | Not started | — |
 | 4. L7 Evidence Index Extension | 0/2 | Not started | — |
 | 5. Prod Smoke Suite | 0/3 | Not started | — |
