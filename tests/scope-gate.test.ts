@@ -596,6 +596,9 @@ describe('PM Scope-Lock Gate - Breaker & Gate Transition (SCOPE-03 breaker)', ()
     const resetTicket = await stateStore.getTicketState(workItemId);
     expect(resetTicket?.scopeLock?.iterationCount).toBe(0);
     expect(resetTicket?.scopeLock?.escalatedAt).toBeNull();
+    expect(resetTicket?.scopeLock?.remindedAt).toBeNull();
+    expect(resetTicket?.scopeLock?.status).toBe('pending');
+    expect(new Date(resetTicket?.scopeLock?.requestedAt!).getTime()).toBeGreaterThan(0);
   });
 
   it('SCOPE-02 approval: handleScopeApproval sets scopeLock.status to locked, records lockedAt and lockedBy, removes [awaiting-scope-lock], adds [scope-locked], and sets state to Ready to Dev', async () => {

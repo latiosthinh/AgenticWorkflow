@@ -66,12 +66,15 @@ export async function resetScopeBreaker(workItemId: number): Promise<void> {
   const mutate = async () => {
     await stateStore.updateTicketState(workItemId, (draft) => {
       if (draft.scopeLock) {
+        const now = new Date().toISOString();
         draft.scopeLock.iterationCount = 0;
         draft.scopeLock.escalatedAt = null;
+        draft.scopeLock.remindedAt = null;
+        draft.scopeLock.requestedAt = now;
         if (draft.scopeLock.status === 'blocked' || draft.scopeLock.status === 'rejected') {
           draft.scopeLock.status = 'pending';
         }
-        draft.scopeLock.updatedAt = new Date().toISOString();
+        draft.scopeLock.updatedAt = now;
       }
     });
   };
