@@ -97,7 +97,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 - [x] **Phase 1: StateStore Migration** — replace v1.0 SQLite/Drizzle with the file-backed `StateStore`: per-ticket markdown+frontmatter, atomic `wx` dedup markers, lane-enforced single-writer invariant, crash-atomic writes, watchdog scans + file lifecycle, and the 277-test harness ported to `mkdtemp` — the foundation everything persists on.
 - [x] **Phase 2: Taxonomy Foundation** — the v2 model (5 cols / 9 steps / actors ⚡👤 / L1–L7) as a data-driven source (`src/pipeline/taxonomy.ts`) driving the router; behavior-preserving for v1.0 paths, proven by lifecycle replay parity.
 - [x] **Phase 3: PM Scope-Lock Gate** — human 👤 PM scope verdict at Refinement Step 2; audit pass parks the ticket instead of auto-unlocking dev; unbypassable, undeadlockable, breaker-isolated.
-- [ ] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults.
+- [x] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults. (completed 2026-09-17)
 - [ ] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox.
 - [ ] **Phase 6: Retro & L7 Output** — retro takeaways + runbook + skill PR as the real L7 record in the ticket's `StateStore` file; awaited before Done, fail-closed; Done re-sequencing.
 - [ ] **Phase 7: Docs Realignment & E2E Proof** — docs/state matrix describe the BUILT file-backed system; one fixture ticket walks `New → Done → L1–L7` end-to-end on the `StateStore`.
@@ -179,7 +179,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — L7 state schema, core compileL1L7EvidenceIndex compiler, and deprecated alias
-- [ ] 04-02-PLAN.md — Taxonomy-driven comment formatter, cutover tolerance, fail-closed gate, and zero-fabrication verification
+- [x] 04-02-PLAN.md — Taxonomy-driven comment formatter, cutover tolerance, fail-closed gate, and zero-fabrication verification
 **Parallelizable**: Yes — Wave B, parallel with Phases 3 & 5. On the critical path (1 → 2 → 4 → 6 → 7). Owns `deploy/evidence-index.ts` only.
 
 ### Phase 5: Prod Smoke Suite

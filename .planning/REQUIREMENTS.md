@@ -38,8 +38,8 @@
 ### 3. EVID — L7 Continuous-Feedback Evidence + Index Extension (L1–L7)
 
 - [ ] **EVID-01**: System persists L7 Continuous-Feedback evidence in the ticket's `StateStore` record (retro section): retro takeaways (with mandatory action items — owner + priority + tracking ref), runbook-diff PR link (or a recorded "no change" auditable negative), skill PR link, and DORA-aligned trend deltas sourced from existing lifecycle state.
-- [ ] **EVID-02**: The unified evidence record + index extend L1–L6 → **L1–L7** (an additive `l7` field on the ticket state file — no schema migration, since state is file-backed) and the formatted work-item index comment renders all seven levels.
-- [ ] **EVID-03**: L7 is fail-closed — a ticket must NOT reach `Done` without a real persisted L7 record; missing/incomplete L7 throws and blocks the transition (mirrors the L6 telemetry fail-closed gate; no fabricated defaults copied from the v1.0 index's `?? 1` / `|| '0.05%'` precedent).
+- [x] **EVID-02**: The unified evidence record + index extend L1–L6 → **L1–L7** (an additive `l7` field on the ticket state file — no schema migration, since state is file-backed) and the formatted work-item index comment renders all seven levels.
+- [x] **EVID-03**: L7 is fail-closed — a ticket must NOT reach `Done` without a real persisted L7 record; missing/incomplete L7 throws and blocks the transition (mirrors the L6 telemetry fail-closed gate; no fabricated defaults copied from the v1.0 index's `?? 1` / `|| '0.05%'` precedent).
 
 ### 4. SMOKE — Automated Production Smoke-Test Suite (Release, Step 8)
 
@@ -106,8 +106,8 @@
 | SCOPE-02 | Phase 3 | Complete |
 | SCOPE-03 | Phase 3 | Complete |
 | EVID-01 | Phase 6 | Pending |
-| EVID-02 | Phase 4 | Pending |
-| EVID-03 | Phase 4 | Pending |
+| EVID-02 | Phase 4 | Complete |
+| EVID-03 | Phase 4 | Complete |
 | SMOKE-01 | Phase 5 | Pending |
 | SMOKE-02 | Phase 5 | Pending |
 | SMOKE-03 | Phase 5 | Pending |

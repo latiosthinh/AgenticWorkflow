@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: in_progress
-stopped_at: Completed Phase 4 Plan 01 (04-01-PLAN.md)
+status: completed
+stopped_at: Completed Phase 4 Plan 02 (04-02-PLAN.md)
 last_updated: "2026-09-18T00:00:00.000Z"
-last_activity: 2026-09-18 — completed Plan 04-01 (State Schema & Compiler Core Extension)
+last_activity: 2026-09-18 — completed Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 14
+  completed_phases: 4
+  total_plans: 12
   completed_plans: 12
-  percent: 86
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 4 — L7 Evidence Index Extension (in progress)
-Plan: 04-01 (completed) — State Schema & Compiler Core Extension
-Status: Plan 04-01 complete — Next: Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
-Last activity: 2026-09-18 — completed Plan 04-01 (State Schema & Compiler Core Extension)
+Phase: 4 — L7 Evidence Index Extension (completed)
+Plan: 04-02 (completed) — Taxonomy Formatting & Fail-Closed Gates
+Status: Phase 4 complete — Next: Wave B (Phase 5: Prod Smoke Suite) / Wave C (Phase 6: Retro & L7 Output)
+Last activity: 2026-09-18 — completed Plan 04-02 (Taxonomy Formatting & Fail-Closed Gates)
 
-Progress: [██████░░░░] 60% (Wave B: Phase 4 Plan 01 complete)
+Progress: [████████░░] 80% (Wave B: Phase 4 complete)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -73,6 +73,7 @@ Progress: [██████░░░░] 60% (Wave B: Phase 4 Plan 01 complete
 | Phase 03 P02 | 6m | 2 tasks | 4 files |
 | Phase 03 P03 | 8m | 2 tasks | 7 files |
 | Phase 04 P01 | 4m | 2 tasks | 3 files |
+| Phase 04 P02 | 4m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,10 @@ Recent decisions affecting current work:
 - [04-01]: Added additive l7Summary to EvidenceIndexState and retroRecords/l7Evidence to TicketState
 - [04-01]: Implemented compileL1L7EvidenceIndex extracting L1-L7 evidence and persisting l7Summary to StateStore inside runInLane
 - [04-01]: Exported MissingEvidenceError and backward-compatible compileL1L6EvidenceIndex alias returning L1L7EvidenceSummary
+- [04-02]: Dynamically derive stage columns for L1-L7 table rows from GOLDEN_PATH_V2 columns
+- [04-02]: Permit pending retro status with [PENDING — retro in progress] when failClosed is false for cutover tolerance
+- [04-02]: Enforce strict fail-closed MissingEvidenceError across L1-L7 when failClosed is true
+- [04-02]: Reject fallback operators (??, ||) in L7 evidence mapping verified via static grep assertion test
 
 ### Pending Todos
 
@@ -246,5 +251,5 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 ## Session Continuity
 
 Last session: 2026-09-18T00:00:00.000Z
-Stopped at: Completed Phase 4 Plan 01 (04-01-PLAN.md)
-Resume: Next: Phase 4 Plan 02 (Taxonomy Formatting & Fail-Closed Gates)
+Stopped at: Completed Phase 4 Plan 02 (04-02-PLAN.md)
+Resume: Next: Wave B (Phase 5: Prod Smoke Suite) or Wave C (Phase 6: Retro & L7 Output)
