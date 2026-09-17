@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: completed
-stopped_at: v2.0 roadmap RE-PLANNED — ROADMAP.md replaced (7 phases on the file-backed StateStore; state matrix + flow + locked constraints incl. single-machine ceiling + coverage 19/19), REQUIREMENTS.md traceability filled for all 19 rev-2 requirements; NOT yet committed (orchestrator commits after user approval)
-last_updated: "2026-09-17T10:15:32.891Z"
-last_activity: 2026-09-16 — v2.0 roadmap re-planned (7 phases, 19/19 requirements mapped)
+status: executing
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-09-17T10:35:13.852Z"
+last_activity: 2026-09-17 — completed Plan 01-01 (StateStore Migration foundation)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 20
+  completed_plans: 2
+  percent: 40
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 ## Current Position
 
 Phase: 1 — StateStore Migration (in_progress)
-Plan: 01-01 (completed) — foundational StateStore types, strict JSON frontmatter codec, path guards, and test harness
+Plan: 01-02 (completed) — ingress deduplication and auditor worker StateStore migration
 Status: In Progress
-Last activity: 2026-09-17 — completed Plan 01-01 (StateStore Migration foundation)
+Last activity: 2026-09-17 — completed Plan 01-02 (Ingress deduplication & auditor StateStore migration)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -63,6 +63,7 @@ Progress: [██░░░░░░░░] 20%
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 01 P02 | 4m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,8 @@ Recent decisions affecting current work:
 - [01-01]: File-backed StateStore foundation implemented using strict JSON frontmatter between triple-dash fences with path traversal guards.
 - [01-01]: Atomic file deduplication marker creation implemented via fs.writeFileSync with flag wx and 7-day TTL sweep.
 - [01-01]: Ephemeral mkdtemp test harness created to isolate StateStore file system tests.
+- [Phase 01]: Delegated stateStore methods through dynamic store reference with resetStateStore for seamless test directory rebinding
+- [Phase 01]: Protected terminal dedup statuses ('skipped', 'failed') from being overwritten by 'completed' in FileStateStore
 
 ### Pending Todos
 
@@ -205,6 +208,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-17
-Stopped at: Completed 01-01-PLAN.md (foundational StateStore types, strict JSON frontmatter codec, path traversal guards, test harness)
-Resume: Next step 01-02-PLAN.md (Ingress deduplication & lane-manager AsyncLocalStorage wiring)
+Last session: 2026-09-17T10:35:13.846Z
+Stopped at: Completed 01-02-PLAN.md
+Resume: Next step 01-03-PLAN.md
