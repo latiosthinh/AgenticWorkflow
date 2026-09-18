@@ -73,7 +73,15 @@ export async function compileL1L7EvidenceIndex(
   options?: { failClosed?: boolean }
 ): Promise<L1L7EvidenceSummary> {
   return workItemQueueManager.runInLane(workItemId, async () => {
-    const ticket = await stateStore.getTicketState(workItemId);
+    let ticket = await stateStore.getTicketState(workItemId);
+    let isArchived = false;
+    if (!ticket) {
+      const tickets = await stateStore.listTickets({ includeArchived: true });
+      ticket = tickets.find((t) => t.workItemId === workItemId) || null;
+      if (ticket) {
+        isArchived = true;
+      }
+    }
     if (!ticket) {
       throw new MissingEvidenceError(`Ticket #${workItemId} not found in state store`, undefined, workItemId);
     }
@@ -188,19 +196,21 @@ export async function compileL1L7EvidenceIndex(
       l7: l7Summary,
     };
 
-    // Persist to TicketState evidenceIndex within runInLane
-    await stateStore.updateTicketState(workItemId, (draft) => {
-      draft.evidenceIndex = {
-        l1Summary: JSON.stringify(summary.l1),
-        l2Summary: JSON.stringify(summary.l2),
-        l3Summary: JSON.stringify(summary.l3),
-        l4Summary: JSON.stringify(summary.l4),
-        l5Summary: JSON.stringify(summary.l5),
-        l6Summary: JSON.stringify(summary.l6),
-        l7Summary: summary.l7 ? JSON.stringify(summary.l7) : null,
-        completedAt: new Date().toISOString(),
-      };
-    });
+    // Persist to TicketState evidenceIndex within runInLane (only for active tickets)
+    if (!isArchived) {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.evidenceIndex = {
+          l1Summary: JSON.stringify(summary.l1),
+          l2Summary: JSON.stringify(summary.l2),
+          l3Summary: JSON.stringify(summary.l3),
+          l4Summary: JSON.stringify(summary.l4),
+          l5Summary: JSON.stringify(summary.l5),
+          l6Summary: JSON.stringify(summary.l6),
+          l7Summary: summary.l7 ? JSON.stringify(summary.l7) : null,
+          completedAt: new Date().toISOString(),
+        };
+      });
+    }
 
     return summary;
   });
