@@ -56,6 +56,9 @@ export function parseJsonlEvents(rawText: string): OpenCodeEvent[] {
 
 export function extractSessionId(events: OpenCodeEvent[]): string | undefined {
   for (const event of events) {
+    if (typeof event.sessionID === 'string' && event.sessionID) {
+      return event.sessionID;
+    }
     if (typeof event.session_id === 'string' && event.session_id) {
       return event.session_id;
     }
@@ -84,6 +87,11 @@ export function buildOpenCodeArgs(options: {
   model?: string;
   sessionId?: string;
 }): string[] {
+  let model = options.model || env.API_MODEL || 'gpt-4o';
+  if (model.startsWith('ag/') && !model.startsWith('9router/')) {
+    model = `9router/${model}`;
+  }
+
   const args = [
     'run',
     '--dir',
@@ -92,7 +100,7 @@ export function buildOpenCodeArgs(options: {
     '--format',
     'json',
     '-m',
-    options.model || 'gpt-4o',
+    model,
   ];
 
   if (options.sessionId) {
@@ -106,7 +114,9 @@ export function buildOpenCodeArgs(options: {
 function aggregateOutput(events: OpenCodeEvent[], fallbackStdout: string): string {
   const parts: string[] = [];
   for (const ev of events) {
-    if (typeof ev.message === 'string' && ev.message) {
+    if (typeof ev.part?.text === 'string' && ev.part.text) {
+      parts.push(ev.part.text);
+    } else if (typeof ev.message === 'string' && ev.message) {
       parts.push(ev.message);
     } else if (typeof ev.content === 'string' && ev.content) {
       parts.push(ev.content);
@@ -170,6 +180,7 @@ export async function runOpenCode(options: OpenCodeRunOptions): Promise<OpenCode
           forceKillAfterDelay: 2000,
           env: childEnv,
           extendEnv: false,
+          stdin: 'ignore',
           maxBuffer: 10 * 1024 * 1024,
         });
 

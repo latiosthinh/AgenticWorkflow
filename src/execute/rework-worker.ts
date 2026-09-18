@@ -127,7 +127,7 @@ export async function processWorkItemRework(
     // 4. Bounded code editing
     if (options?.mockCodeEdit) {
       await options.mockCodeEdit(worktreeResult.worktreePath, reworkPrompt);
-    } else if (env.LOCAL_AGENT_TYPE === 'opencode') {
+    } else if (env.LOCAL_AGENT_TYPE === 'opencode' && (env.NODE_ENV !== 'test' || options?.mockOpenCodeRunner)) {
       let openCodeSessionId = options?.openCodeSessionId;
       if (!openCodeSessionId) {
         const ticket = await stateStore.getTicketState(workItem.id);

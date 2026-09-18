@@ -80,7 +80,7 @@ async function runExecutionPipeline(
   // 2. Perform bounded code editing
   if (options?.mockCodeEdit) {
     await options.mockCodeEdit(worktreeResult.worktreePath);
-  } else if (env.LOCAL_AGENT_TYPE === 'opencode') {
+  } else if (env.LOCAL_AGENT_TYPE === 'opencode' && (env.NODE_ENV !== 'test' || options?.mockOpenCodeRunner)) {
     const prompt = `Implement the following requirement:\n\nTitle: ${workItem.title}\n\nDescription: ${workItem.description}\n\nAcceptance Criteria:\n${workItem.acceptanceCriteria}`;
     const runRes = await runOpenCode({
       cwd: worktreeResult.worktreePath,
