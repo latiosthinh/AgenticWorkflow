@@ -43,9 +43,9 @@
 
 ### 4. SMOKE — Automated Production Smoke-Test Suite (Release, Step 8)
 
-- [ ] **SMOKE-01**: On deployment (Release Step 8), the system runs an automated ⚡ production smoke suite BEFORE the telemetry window (fail-fast, don't burn 30 min on a dead deploy): health probe, deployed version/SHA verification (catches stale-slot swaps telemetry can't see), and critical-path read checks — via native `fetch` and/or sandboxed `execa` (read-only, credential-scrubbed, bounded timeout + egress).
-- [ ] **SMOKE-02**: Smoke failures classify INFRA vs APP with a 2-strike flake filter (reusing the QA fingerprint pattern) so a prod blip cannot trigger a false regression; a confirmed APP regression bounces the ticket to `In Dev` with `[deploy-regressed]` + reproduction diagnostics (no auto-rollback — GOV-01 deferred).
-- [ ] **SMOKE-03**: Smoke results persist to the ticket's `StateStore` record (smoke section) and feed L6 Prod-Confidence evidence; release confidence requires smoke PASS **and** telemetry-window PASS.
+- [x] **SMOKE-01**: On deployment (Release Step 8), the system runs an automated ⚡ production smoke suite BEFORE the telemetry window (fail-fast, don't burn 30 min on a dead deploy): health probe, deployed version/SHA verification (catches stale-slot swaps telemetry can't see), and critical-path read checks — via native `fetch` and/or sandboxed `execa` (read-only, credential-scrubbed, bounded timeout + egress).
+- [x] **SMOKE-02**: Smoke failures classify INFRA vs APP with a 2-strike flake filter (reusing the QA fingerprint pattern) so a prod blip cannot trigger a false regression; a confirmed APP regression bounces the ticket to `In Dev` with `[deploy-regressed]` + reproduction diagnostics (no auto-rollback — GOV-01 deferred).
+- [x] **SMOKE-03**: Smoke results persist to the ticket's `StateStore` record (smoke section) and feed L6 Prod-Confidence evidence; release confidence requires smoke PASS **and** telemetry-window PASS.
 
 ### 5. RETRO — Retro Takeaways, Runbooks & Skill Enhancement (Retro, Step 9)
 
@@ -108,9 +108,9 @@
 | EVID-01 | Phase 6 | Pending |
 | EVID-02 | Phase 4 | Complete |
 | EVID-03 | Phase 4 | Complete |
-| SMOKE-01 | Phase 5 | Pending |
-| SMOKE-02 | Phase 5 | Pending |
-| SMOKE-03 | Phase 5 | Pending |
+| SMOKE-01 | Phase 5 | Complete |
+| SMOKE-02 | Phase 5 | Complete |
+| SMOKE-03 | Phase 5 | Complete |
 | RETRO-01 | Phase 6 | Pending |
 | RETRO-02 | Phase 6 | Pending |
 | RETRO-03 | Phase 6 | Pending |

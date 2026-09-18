@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: in-progress
-stopped_at: Completed Phase 5 Plan 02 (05-02-PLAN.md)
-last_updated: "2026-09-18T06:25:00.000Z"
-last_activity: 2026-09-18 — completed Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
+status: completed
+stopped_at: Completed Phase 5 Plan 03 (05-03-PLAN.md)
+last_updated: "2026-09-18T06:30:00.000Z"
+last_activity: 2026-09-18 — completed Plan 05-03 (Worker Fail-Fast Sequencing & L6 Index)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 5 — Prod Smoke Suite (in progress)
-Plan: 05-02 (completed) — Sandboxed Execution & 2-Strike Flake Filter
-Status: Phase 5 in progress — Next: Plan 05-03 (Worker Fail-Fast Sequencing & L6 Index)
-Last activity: 2026-09-18 — completed Plan 05-02 (Sandboxed Execution & 2-Strike Flake Filter)
+Phase: 5 — Prod Smoke Suite (completed)
+Plan: 05-03 (completed) — Worker Fail-Fast Sequencing & L6 Index
+Status: Phase 5 complete — all 3 plans finished. Next: Phase 6 (Retro & L7 Output)
+Last activity: 2026-09-18 — completed Plan 05-03 (Worker Fail-Fast Sequencing & L6 Index)
 
-Progress: [█████████░] 93% (Wave B: Phase 5 in progress)
+Progress: [██████████] 100% (Wave B: Phase 5 complete)
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 93% (Wave B: Phase 5 in progress)
 | Phase 04 P02 | 4m | 2 tasks | 3 files |
 | Phase 05 P01 | 4m | 2 tasks | 5 files |
 | Phase 05 P02 | 4m | 2 tasks | 2 files |
+| Phase Phase 05 PP03 | 5m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,10 @@ Recent decisions affecting current work:
 - [05-02]: Applied two-strike flake filter clearing flakes on sequential run 2 success and comparing SHA-256 fingerprints on run 2 failure
 - [05-02]: Serialized smokeRuns and smokeEvidence state persistence via workItemQueueManager.runInLane
 - [05-02]: Formatted sanitized bot-shielded alert comments with emergency rollback command for APP regressions
+- [05-03]: Fail-fast smoke verification executed before opening 30-minute telemetry observation window
+- [05-03]: APP smoke regressions bounce work item to In Dev with tag [deploy-regressed] and emergency rollback command
+- [05-03]: INFRA smoke errors park work item in Ready to Deploy with tag [smoke-harness-error] for human operator review
+- [05-03]: Composite L6 evidence index aggregates both smoke verification status and telemetry observation metrics
 
 ### Pending Todos
 
@@ -261,6 +266,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T06:25:00.000Z
-Stopped at: Completed Phase 5 Plan 02 (05-02-PLAN.md)
-Resume: Next: Phase 5 Plan 03 (05-03-PLAN.md)
+Last session: 2026-09-18T06:30:00.000Z
+Stopped at: Completed Phase 5 Plan 03 (05-03-PLAN.md)
+Resume: Phase 5 complete; proceed to Phase 6 (Retro & L7 Output)
