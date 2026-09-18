@@ -12,7 +12,8 @@ describe('Authoritative ADO State Matrix Synchronization (TAX-02)', () => {
     const headerIdx = content.indexOf(matrixHeader);
     expect(headerIdx).toBeGreaterThan(-1);
 
-    const section = content.slice(headerIdx);
+    const nextHeaderIdx = content.indexOf('\n## ', headerIdx + matrixHeader.length);
+    const section = nextHeaderIdx === -1 ? content.slice(headerIdx) : content.slice(headerIdx, nextHeaderIdx);
     const tableLines = section
       .split('\n')
       .map((l) => l.trim())
@@ -29,10 +30,8 @@ describe('Authoritative ADO State Matrix Synchronization (TAX-02)', () => {
 
     tableLines.forEach((line, index) => {
       const stepDef = GOLDEN_PATH_V2[index];
-      const cells = line
-        .split('|')
-        .map((c) => c.trim())
-        .filter(Boolean);
+      const rawCells = line.split('|').map((c) => c.trim());
+      const cells = rawCells.slice(1, rawCells.length - 1);
 
       // Markdown row cells: [Column, Step, Actor, ADO State, Key Tags, Evidence, Gate/Hand-off]
       expect(cells[0]).toContain(stepDef.column);
