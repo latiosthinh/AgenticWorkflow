@@ -27,7 +27,14 @@ export async function harvestTicketLifecycleData(
 
   const smokeEvidence = ticket?.smokeEvidence;
   const scopeRejections = ticket?.scopeLock?.iterationCount || 0;
-  const qaStrikes = ticket?.qaRuns?.length || 0;
+  const lastQaRun =
+    ticket?.qaRuns && ticket.qaRuns.length > 0
+      ? ticket.qaRuns[ticket.qaRuns.length - 1]
+      : undefined;
+  const qaStrikes =
+    lastQaRun?.strikeCount !== undefined
+      ? lastQaRun.strikeCount
+      : ticket?.qaRuns?.filter((r) => r.status === 'failed' || r.status === 'flaked').length || 0;
   const smokeFlakes = ticket?.smokeEvidence?.flakeCleared ? 1 : 0;
 
   return {

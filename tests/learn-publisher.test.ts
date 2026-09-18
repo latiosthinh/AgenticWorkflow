@@ -95,6 +95,33 @@ describe('Learn Publisher & Harvester (RETRO-02, RETRO-01)', () => {
     expect(data.smokeFlakes).toBe(1);
   });
 
+  it('harvestTicketLifecycleData reports qaStrikes as 0 when single QA run passes cleanly (WR-02)', async () => {
+    const workItemId = 9106;
+
+    vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+      id: workItemId,
+      fields: {
+        'System.Title': 'Clean QA Ticket',
+      },
+    } as any);
+
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.qaRuns = [
+          {
+            runIndex: 1,
+            strikeCount: 0,
+            status: 'passed',
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      });
+    });
+
+    const data = await harvestTicketLifecycleData(workItemId);
+    expect(data.qaStrikes).toBe(0);
+  });
+
   it('stageAndPublishSkillPr stages both SKILL.md and RUNBOOK.md when runbook has changes', async () => {
     const workItemId = 9102;
     const skill: LearnedSkill = {
