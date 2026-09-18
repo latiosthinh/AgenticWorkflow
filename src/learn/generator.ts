@@ -1,6 +1,12 @@
 import { slugify } from '../utils/paths.js';
 import type { TicketLifecycleData, LearnedSkill } from './types.js';
 
+export function escapeYamlString(str: string): string {
+  if (!str) return '""';
+  const sanitized = str.replace(/[\r\n]+/g, ' ').replace(/"/g, '\\"');
+  return `"${sanitized}"`;
+}
+
 export function inferSkillDomain(title: string, description: string): 'backend' | 'frontend' | 'infra' | 'common' {
   const text = `${title} ${description}`.toLowerCase();
   if (/ui|react|css|html|frontend|button|component|page|view/i.test(text)) {
