@@ -6,6 +6,7 @@ import { webhookRoutes, registerWorkItemHandler } from './ingress/routes.js';
 import { routeWorkItemEvent } from './execute/router.js';
 import { startPlanWatchdog } from './plan/watchdog.js';
 import { startScopeWatchdog } from './scope/index.js';
+import { startPolling } from './ingress/poller.js';
 import { purgeOldDedupEvents } from './state/index.js';
 import { workItemQueueManager } from './queue/lane-manager.js';
 import { pruneOrphanedWorktrees } from './sandbox/worktree.js';
@@ -61,6 +62,9 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
 
   const watchdog = startPlanWatchdog();
   const scopeWatchdog = startScopeWatchdog();
+  const poller = env.ENABLE_ADO_POLLING && env.NODE_ENV !== 'test'
+    ? startPolling({ intervalMs: env.ADO_POLLING_INTERVAL_MS })
+    : null;
 
   const app = await buildApp();
 
@@ -73,6 +77,7 @@ export async function startServer(): Promise<{ app: FastifyInstance; stop: () =>
     }
 
     clearInterval(purgeInterval);
+    poller?.stop();
     watchdog.stop();
     scopeWatchdog.stop();
 

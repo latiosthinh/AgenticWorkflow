@@ -32,6 +32,8 @@ export const EnvSchema = z.object({
   TELEMETRY_WINDOW_MINUTES: z.coerce.number().default(30),
   TELEMETRY_ERROR_THRESHOLD_PERCENT: z.coerce.number().default(1.0),
   TELEMETRY_P95_LATENCY_THRESHOLD_MS: z.coerce.number().default(500),
+  ENABLE_ADO_POLLING: z.coerce.boolean().default(true),
+  ADO_POLLING_INTERVAL_MS: z.coerce.number().default(10_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
