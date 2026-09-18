@@ -14,16 +14,17 @@ import {
   type TelemetryEvaluationResult,
 } from './telemetry.js';
 import {
-  compileL1L6EvidenceIndex,
+  compileL1L7EvidenceIndex,
   formatEvidenceIndexComment,
-  type L1L6EvidenceSummary,
+  type L1L7EvidenceSummary,
 } from './evidence-index.js';
 import {
   executeTwoStrikeSmokeFilter,
   formatSmokeAlertComment,
   type TwoStrikeSmokeResult,
 } from './smoke.js';
-import { processLearningFeedbackLoop } from '../learn/worker.js';
+import { processLearningFeedbackLoop, type LearningProcessResult } from '../learn/worker.js';
+import { formatRetroAlertComment } from '../learn/retro.js';
 import {
   Operation,
   type JsonPatchDocument,
@@ -38,6 +39,11 @@ export interface ProcessDeployOptions {
   skipPreparation?: boolean;
   smokeUrl?: string;
   mockSmokeResult?: Partial<TwoStrikeSmokeResult>;
+  mockSkill?: any;
+  mockRunbook?: any;
+  mockRetroResult?: any;
+  mockPrCreator?: any;
+  repoRoot?: string;
 }
 
 export async function processDeploymentPreparation(
@@ -99,8 +105,13 @@ export async function processTelemetryEvaluation(
     windowMinutes?: number;
     commitSha?: string;
     rollbackCommand?: string;
+    mockSkill?: any;
+    mockRunbook?: any;
+    mockRetroResult?: any;
+    mockPrCreator?: any;
+    repoRoot?: string;
   }
-): Promise<{ result: TelemetryEvaluationResult; summary?: L1L6EvidenceSummary }> {
+): Promise<{ result: TelemetryEvaluationResult; summary?: L1L7EvidenceSummary }> {
   const details = await getWorkItemDetails(workItemId);
 
   let evalResult: TelemetryEvaluationResult;
@@ -152,7 +163,7 @@ export async function processTelemetryEvaluation(
     return { result: evalResult };
   }
 
-  // Telemetry Passed: Transition to Done with unified L1-L6 Evidence Index
+  // Telemetry Passed: Update deployment record inside lane
   await workItemQueueManager.runInLane(workItemId, async () => {
     await stateStore.updateTicketState(workItemId, (draft) => {
       if (draft.deploymentRecords && draft.deploymentRecords.length > 0) {
@@ -163,7 +174,51 @@ export async function processTelemetryEvaluation(
     });
   });
 
-  const evidenceSummary = await compileL1L6EvidenceIndex(workItemId);
+  // Await retrospective feedback loop before Done with 2-attempt retry cap
+  let retroOutcome: LearningProcessResult | undefined;
+  let retroError: Error | undefined;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      retroOutcome = await processLearningFeedbackLoop(workItemId, {
+        mockSkill: options?.mockSkill,
+        mockRunbook: options?.mockRunbook,
+        mockRetroResult: options?.mockRetroResult,
+        mockPrCreator: options?.mockPrCreator,
+        repoRoot: options?.repoRoot,
+      });
+      retroError = undefined;
+      break;
+    } catch (err: any) {
+      retroError = err;
+      console.warn(
+        `[deploy-worker] Retro feedback loop attempt ${attempt} failed for #${workItemId}:`,
+        err?.message
+      );
+    }
+  }
+
+  if (retroError || !retroOutcome) {
+    const alertComment = formatRetroAlertComment({
+      workItemId,
+      errorMessage: retroError?.message || 'Retrospective feedback loop failed after retry',
+    });
+    const tagPatch = buildTagPatch(details.tags, '[retro-failed]', '[deploying]');
+    await adoClient.updateWorkItem(workItemId, [
+      ...tagPatch,
+      {
+        op: Operation.Add,
+        path: '/fields/System.History',
+        value: alertComment,
+      },
+    ]);
+    throw new Error(
+      `Retrospective feedback loop failed after retry for #${workItemId}; Done transition halted`
+    );
+  }
+
+  // Compile L1-L7 evidence index fail-closed
+  const evidenceSummary = await compileL1L7EvidenceIndex(workItemId, { failClosed: true });
   const evidenceComment = formatEvidenceIndexComment(evidenceSummary);
 
   const tagPatch = buildTagPatch(
@@ -188,16 +243,7 @@ export async function processTelemetryEvaluation(
 
   await adoClient.updateWorkItem(workItemId, patch);
 
-  // Trigger Phase 8: LEARN feedback loop asynchronously upon Done transition
-  processLearningFeedbackLoop(workItemId)
-    .catch((err) => {
-      console.warn(`[deploy-worker] Background learning feedback loop failed for #${workItemId}:`, err?.message);
-    })
-    .finally(async () => {
-      await stateStore.archiveTicket(workItemId).catch((err) => {
-        console.warn(`[deploy-worker] Failed to archive ticket #${workItemId}:`, err?.message);
-      });
-    });
+  await stateStore.archiveTicket(workItemId);
 
   return { result: evalResult, summary: evidenceSummary };
 }
@@ -371,5 +417,10 @@ export async function processDeploymentWorkflow(
     mockMetrics: options?.mockMetrics,
     windowMinutes: options?.windowMinutes,
     commitSha,
+    mockSkill: options?.mockSkill,
+    mockRunbook: options?.mockRunbook,
+    mockRetroResult: options?.mockRetroResult,
+    mockPrCreator: options?.mockPrCreator,
+    repoRoot: options?.repoRoot,
   });
 }
