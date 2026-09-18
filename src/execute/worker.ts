@@ -47,6 +47,7 @@ import {
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
 import { runOpenCode } from './opencode-runner.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 
 export interface ProcessExecuteOptions {
   mockTestRunner?: () => Promise<TestRunResult>;
@@ -88,9 +89,21 @@ async function runExecutionPipeline(
       mockRunner: options?.mockOpenCodeRunner,
     });
     if (!runRes.success) {
-      throw new Error(
-        `OpenCode execution failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`
-      );
+      const diag = runRes.timedOut
+        ? 'OpenCode execution timed out'
+        : `OpenCode execution failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`;
+      const comment = `<h3>[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}</h3><pre>${runRes.error || runRes.output || diag}</pre>`;
+      await flagTicketBlocked(workItem.id, comment, 'repair-exhausted');
+      await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+      return;
+    }
+    if (runRes.sessionId) {
+      await workItemQueueManager.runInLane(workItem.id, async () => {
+        await stateStore.updateTicketState(workItem.id, (draft) => {
+          draft.agentSessionId = runRes.sessionId;
+          draft.lastAgentSessionId = runRes.sessionId;
+        });
+      });
     }
   }
 
@@ -374,9 +387,12 @@ export async function processWorkItemExecute(
       mcpSession = await createDynamicMcpTools({
         worktreePath: worktreeResult.worktreePath,
         tags,
-        knownSecrets: [env.ADO_PAT, env.OPENAI_API_KEY, env.ADO_WEBHOOK_SECRET].filter(
-          Boolean
-        ) as string[],
+        knownSecrets: [
+          env.ADO_PAT,
+          env.OPENAI_API_KEY,
+          env.API_KEY,
+          env.ADO_WEBHOOK_SECRET,
+        ].filter(Boolean) as string[],
       });
 
       // Formulate implementation plan

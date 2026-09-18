@@ -192,6 +192,8 @@ export interface TicketState {
   revId: number;
   createdAt: string;
   updatedAt: string;
+  agentSessionId?: string;
+  lastAgentSessionId?: string;
   auditLogs: AuditLogEntry[];
   planCheckpoints: PlanCheckpointState[];
   l3Evidence: L3EvidenceEntry[];

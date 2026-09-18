@@ -32,6 +32,7 @@ import {
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
 import { runOpenCode } from './opencode-runner.js';
+import { workItemQueueManager } from '../queue/lane-manager.js';
 
 export interface ProcessReworkOptions {
   mockTestRunner?: () => Promise<TestRunResult>;
@@ -127,16 +128,35 @@ export async function processWorkItemRework(
     if (options?.mockCodeEdit) {
       await options.mockCodeEdit(worktreeResult.worktreePath, reworkPrompt);
     } else if (env.LOCAL_AGENT_TYPE === 'opencode') {
+      let openCodeSessionId = options?.openCodeSessionId;
+      if (!openCodeSessionId) {
+        const ticket = await stateStore.getTicketState(workItem.id);
+        openCodeSessionId = ticket?.agentSessionId || ticket?.lastAgentSessionId;
+      }
       const runRes = await runOpenCode({
         cwd: worktreeResult.worktreePath,
         message: reworkPrompt,
-        sessionId: options?.openCodeSessionId,
+        sessionId: openCodeSessionId,
         mockRunner: options?.mockOpenCodeRunner,
       });
       if (!runRes.success) {
-        throw new Error(
-          `OpenCode rework failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`
-        );
+        const diag = runRes.timedOut
+          ? 'OpenCode rework timed out'
+          : `OpenCode rework failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`;
+        const comment = `<h3>[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}</h3><pre>${runRes.error || runRes.output || diag}</pre>`;
+        await flagTicketBlocked(workItem.id, comment, 'repair-exhausted');
+        await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+        worktreePath = undefined;
+        markEventCompleted();
+        return;
+      }
+      if (runRes.sessionId) {
+        await workItemQueueManager.runInLane(workItem.id, async () => {
+          await stateStore.updateTicketState(workItem.id, (draft) => {
+            draft.agentSessionId = runRes.sessionId;
+            draft.lastAgentSessionId = runRes.sessionId;
+          });
+        });
       }
     }
 

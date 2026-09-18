@@ -346,6 +346,7 @@ malformed non-json line
 
       const ticket = await stateStore.getTicketState(workItemId);
       expect(ticket?.l3Evidence).toHaveLength(1);
+      expect(ticket?.agentSessionId).toBe('ses_exec_01');
     });
 
     it('processWorkItemRework preserves sessionId and invokes OpenCode runner', async () => {
@@ -408,6 +409,167 @@ malformed non-json line
       expect(opencodeReworkCalled).toBe(true);
       expect(reworkArgs).toContain('--session');
       expect(reworkArgs).toContain('ses_prior_888');
+    });
+
+    it('processWorkItemRework loads agentSessionId from stateStore when options.openCodeSessionId is not provided', async () => {
+      (env as any).LOCAL_AGENT_TYPE = 'opencode';
+      const workItemId = 9912;
+      const revId = 2;
+      const branchName = `task/ticket-${workItemId}-opencode-session-load`;
+
+      await rootGit.raw(['branch', '-f', branchName, 'HEAD']);
+
+      let reworkArgs: string[] = [];
+
+      const mockWitApi = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: workItemId,
+          rev: revId,
+          fields: {
+            'System.Title': 'OpenCode Session Load',
+            'System.Description': 'Test loading session ID',
+            'Microsoft.VSTS.Common.AcceptanceCriteria': 'Handle edge case.',
+            'System.State': 'In Dev',
+            'System.Tags': 'backend; [awaiting-acceptance]',
+            'System.History': 'Address feedback. [reject-acceptance]',
+          },
+        }),
+        updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi as any);
+      stateStore.recordDedupEvent(workItemId, revId, 'hash-9912');
+
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.agentSessionId = 'ses_persisted_777';
+        });
+        await processWorkItemRework(workItemId, revId, 'Address feedback.', {
+          mockOpenCodeRunner: async (args, cwd) => {
+            reworkArgs = args;
+            fs.writeFileSync(path.join(cwd, 'rework_fix.ts'), 'export const fixed = true;\n');
+            return {
+              stdout: '{"type":"session","session_id":"ses_persisted_777"}\n{"type":"message","content":"Applied fix"}',
+              stderr: '',
+              exitCode: 0,
+            };
+          },
+          mockTestRunner: async () => ({
+            passed: true,
+            exitCode: 0,
+            stdout: 'Tests 1 passed (1)\nDuration 100ms',
+            stderr: '',
+            timedOut: false,
+            durationMs: 100,
+          }),
+        });
+      });
+
+      expect(reworkArgs).toContain('--session');
+      expect(reworkArgs).toContain('ses_persisted_777');
+    });
+
+    it('processWorkItemExecute flags ticket as Blocked and cleans up worktree on runOpenCode failure', async () => {
+      (env as any).LOCAL_AGENT_TYPE = 'opencode';
+      const workItemId = 9913;
+      const revId = 1;
+
+      let flaggedBlocked = false;
+      let blockedType = '';
+
+      const mockWitApi = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: workItemId,
+          rev: revId,
+          fields: {
+            'System.Title': 'OpenCode Failure Handling',
+            'System.Description': 'Failing opencode run',
+            'Microsoft.VSTS.Common.AcceptanceCriteria': 'Expect clean failure',
+            'System.State': 'In Dev',
+            'System.Tags': 'backend',
+          },
+        }),
+        updateWorkItem: vi.fn().mockImplementation(async (_id: number, patchDoc: any[]) => {
+          const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+          if (stateOp?.value === 'Blocked') {
+            flaggedBlocked = true;
+          }
+          const tagOp = patchDoc.find((op: any) => op.path === '/fields/System.Tags');
+          if (tagOp?.value?.includes('[repair-exhausted]')) {
+            blockedType = 'repair-exhausted';
+          }
+          return { id: workItemId };
+        }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi as any);
+      stateStore.recordDedupEvent(workItemId, revId, 'hash-9913');
+
+      await workItemQueueManager.runInLane(workItemId, () =>
+        processWorkItemExecute(workItemId, revId, {
+          mockOpenCodeRunner: async () => ({
+            stdout: '',
+            stderr: 'Fatal error: model out of memory',
+            exitCode: 1,
+          }),
+        })
+      );
+
+      expect(flaggedBlocked).toBe(true);
+      expect(blockedType).toBe('repair-exhausted');
+
+      // Verify worktree cleaned up
+      const worktreeDir = path.join(process.cwd(), '.worktrees', `ticket-${workItemId}-opencode-failure-handling`);
+      expect(fs.existsSync(worktreeDir)).toBe(false);
+    });
+
+    it('processWorkItemRework flags ticket as Blocked and cleans up worktree on runOpenCode failure', async () => {
+      (env as any).LOCAL_AGENT_TYPE = 'opencode';
+      const workItemId = 9914;
+      const revId = 2;
+      const branchName = `task/ticket-${workItemId}-opencode-rework-failure`;
+
+      await rootGit.raw(['branch', '-f', branchName, 'HEAD']);
+
+      let flaggedBlocked = false;
+
+      const mockWitApi = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: workItemId,
+          rev: revId,
+          fields: {
+            'System.Title': 'OpenCode Rework Failure',
+            'System.Description': 'Failing rework run',
+            'Microsoft.VSTS.Common.AcceptanceCriteria': 'Handle edge case.',
+            'System.State': 'In Dev',
+            'System.Tags': 'backend; [awaiting-acceptance]',
+            'System.History': 'Fix error. [reject-acceptance]',
+          },
+        }),
+        updateWorkItem: vi.fn().mockImplementation(async (_id: number, patchDoc: any[]) => {
+          const stateOp = patchDoc.find((op: any) => op.path === '/fields/System.State');
+          if (stateOp?.value === 'Blocked') {
+            flaggedBlocked = true;
+          }
+          return { id: workItemId };
+        }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi as any);
+      stateStore.recordDedupEvent(workItemId, revId, 'hash-9914');
+
+      await workItemQueueManager.runInLane(workItemId, () =>
+        processWorkItemRework(workItemId, revId, 'Fix error.', {
+          mockOpenCodeRunner: async () => ({
+            stdout: '',
+            stderr: 'Timeout',
+            exitCode: 124,
+            timedOut: true,
+          }),
+        })
+      );
+
+      expect(flaggedBlocked).toBe(true);
+
+      const worktreeDir = path.join(process.cwd(), '.worktrees', `ticket-${workItemId}-opencode-rework-failure`);
+      expect(fs.existsSync(worktreeDir)).toBe(false);
     });
   });
 });
