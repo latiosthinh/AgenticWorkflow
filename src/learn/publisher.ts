@@ -4,7 +4,7 @@ import sanitizeHtml from 'sanitize-html';
 import { slugify } from '../utils/paths.js';
 import { createOrGetPullRequest } from '../ado/git.js';
 import { env } from '../config/env.js';
-import type { LearnedSkill } from './types.js';
+import type { LearnedSkill, LearnedRunbook } from './types.js';
 
 export interface SkillPrCommentOptions {
   workItemId: number;
@@ -57,6 +57,7 @@ export function formatSkillPrComment(options: SkillPrCommentOptions): string {
 export interface StageAndPublishOptions {
   workItemId: number;
   skill: LearnedSkill;
+  runbook?: LearnedRunbook;
   repoRoot?: string;
   mockPrCreator?: typeof createOrGetPullRequest;
 }
@@ -64,37 +65,48 @@ export interface StageAndPublishOptions {
 export async function stageAndPublishSkillPr(
   options: StageAndPublishOptions
 ): Promise<{ pullRequestId: number; prUrl: string; branchName: string }> {
-  const { workItemId, skill, repoRoot = process.cwd(), mockPrCreator } = options;
+  const { workItemId, skill, runbook, repoRoot = process.cwd(), mockPrCreator } = options;
 
   const cleanSlug = slugify(skill.frontmatter.name);
   const branchName = `skills/learn-ticket-${workItemId}-${cleanSlug}`;
 
-  // Staging skill locally on disk
+  // Staging skill & runbook locally on disk under .claude/skills/<skill-name>/
   const skillDir = path.join(repoRoot, '.claude', 'skills', skill.frontmatter.name);
   fs.mkdirSync(skillDir, { recursive: true });
+
+  // 1. Stage SKILL.md
   fs.writeFileSync(path.join(skillDir, 'SKILL.md'), skill.markdownContent, 'utf8');
+
+  // 2. Stage RUNBOOK.md if changes present
+  if (runbook?.hasChanges && runbook.markdownContent) {
+    fs.writeFileSync(path.join(skillDir, 'RUNBOOK.md'), runbook.markdownContent, 'utf8');
+  }
 
   const prCreator = mockPrCreator || createOrGetPullRequest;
 
-  const prDescription = `## Learned Skill: ${skill.frontmatter.name}
+  const runbookSection = runbook?.hasChanges
+    ? `\n### Operational Runbook Updates\n\`\`\`markdown\n${runbook.markdownContent}\n\`\`\`\n`
+    : '\n### Operational Runbook Updates\n*(no operational changes required)*\n';
+
+  const prDescription = `## Learned Skill & Runbook: ${skill.frontmatter.name}
 
 ### Source Work Item Traceability
 - **Work Item**: AB#${workItemId}
 - **Domain**: \`${skill.frontmatter.domain}\`
 - **Summary**: ${skill.summary}
 
-### Extracted Patterns
+### Extracted Patterns (SKILL.md)
 \`\`\`markdown
 ${skill.markdownContent}
 \`\`\`
-
+${runbookSection}
 ---
 *Notice: Human review and merge (◆) mandatory before skills repository update takes effect.*
 `;
 
   const pr = await prCreator({
     workItemId,
-    title: `Add learned skill: ${skill.frontmatter.name}`,
+    title: `Add learned skill & runbook: ${skill.frontmatter.name}`,
     sourceBranch: branchName,
     targetBranch: env.ADO_DEFAULT_BRANCH || 'main',
     description: prDescription,

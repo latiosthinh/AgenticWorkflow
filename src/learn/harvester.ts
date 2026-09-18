@@ -25,6 +25,11 @@ export async function harvestTicketLifecycleData(
     reviewComments.push(details.history);
   }
 
+  const smokeEvidence = ticket?.smokeEvidence;
+  const scopeRejections = ticket?.scopeLock?.iterationCount || 0;
+  const qaStrikes = ticket?.qaRuns?.length || 0;
+  const smokeFlakes = ticket?.smokeEvidence?.flakeCleared ? 1 : 0;
+
   return {
     workItemId,
     title: details.title || 'Untitled Ticket',
@@ -39,5 +44,10 @@ export async function harvestTicketLifecycleData(
     errorRate: telemetry?.errorRate || '0.05%',
     p95LatencyMs: telemetry?.p95LatencyMs || 140,
     reviewComments,
+    smokePassed: Boolean(smokeEvidence ? smokeEvidence.status === 'passed' : true),
+    smokeStatus: smokeEvidence?.status || 'passed',
+    scopeRejections,
+    qaStrikes,
+    smokeFlakes,
   };
 }
