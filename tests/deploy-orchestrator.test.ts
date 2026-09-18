@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { stateStore, resetStateStore } from '../src/state/index.js';
 import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 import { workItemQueueManager } from '../src/queue/lane-manager.js';
@@ -33,6 +35,73 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
     (env as any).STATE_STORE_DIR = originalStateDir;
     resetStateStore();
   });
+
+  async function seedStandardPassingEvidence(workItemId: number) {
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        if (!draft.auditLogs.length) {
+          draft.auditLogs.push({
+            revId: 1,
+            verdict: 'passed',
+            reasons: JSON.stringify(['DoD verified']),
+            criteriaSummary: 'DoD Criteria complete',
+            model: 'gpt-4o',
+            evaluatedAt: new Date().toISOString(),
+          });
+        }
+        if (!draft.l3Evidence.length) {
+          draft.l3Evidence.push({
+            revId: 1,
+            testSuite: 'vitest',
+            totalTests: 10,
+            passed: 10,
+            failed: 0,
+            durationMs: 400,
+            coverageSummary: '90%',
+            gitDiffStat: '2 files changed',
+            createdAt: new Date().toISOString(),
+          });
+        }
+        if (!draft.deploymentRecords.length) {
+          draft.deploymentRecords.push({
+            pipelineRunId: `run-${workItemId}`,
+            stageName: 'DeployToProduction',
+            environmentName: 'Production',
+            commitSha: 'beefcafe1234',
+            status: 'pending_approval',
+            migrationRisk: 'low',
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
+    });
+  }
+
+  const defaultMockRetro = {
+    takeaways: 'Deployment verified and stable',
+    actionItems: [
+      {
+        action: 'Observe post-deploy metrics',
+        owner: 'Platform Team',
+        priority: 'P2' as const,
+        trackingRef: 'AB#7000',
+      },
+    ],
+    gateFriction: {
+      scopeRejections: 0,
+      reworkBounces: 0,
+      qaStrikes: 0,
+      smokeFlakes: 0,
+    },
+    trendDeltas: {
+      leadTimeMinutes: 15,
+      leadTimeDeltaMinutes: 0,
+      reworkBounces: 0,
+      reworkDelta: 0,
+      historicalDeployedCount: 1,
+      trend: 'stable' as const,
+    },
+  };
 
   describe('Evidence Index Aggregator & Formatter', () => {
     it('aggregates L1 through L6 evidence from respective tables', async () => {
@@ -161,6 +230,7 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
   describe('processTelemetryEvaluation', () => {
     it('transitions to Done with [golden-path-complete] when telemetry window passes', async () => {
       const workItemId = 7201;
+      await seedStandardPassingEvidence(workItemId);
 
       vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
         id: workItemId,
@@ -184,9 +254,17 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         windowMinutes: 30,
       };
 
+      const mockPrCreator = vi.fn().mockResolvedValue({
+        pullRequestId: 501,
+        url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/501',
+      });
+
       const { result, summary } = await processTelemetryEvaluation(workItemId, {
         mockMetrics,
         commitSha: '112233445566',
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
       });
 
       expect(result.breached).toBe(false);
@@ -315,6 +393,8 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         id: workItemId,
       } as any);
 
+      await seedStandardPassingEvidence(workItemId);
+
       const mockMetrics = {
         errorRatePercent: 0.05,
         p95LatencyMs: 140,
@@ -323,11 +403,19 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         windowMinutes: 30,
       };
 
+      const mockPrCreator = vi.fn().mockResolvedValue({
+        pullRequestId: 502,
+        url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/502',
+      });
+
       stateStore.recordDedupEvent(workItemId, 2, 'hash-7301');
 
       await routeWorkItemEvent(workItemId, 2, {
         mockMetrics,
         commitSha: '998877112233',
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
       });
 
       expect(updateSpy).toHaveBeenCalledWith(
@@ -483,6 +571,13 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
         id: workItemId,
       } as any);
 
+      await seedStandardPassingEvidence(workItemId);
+
+      const mockPrCreator = vi.fn().mockResolvedValue({
+        pullRequestId: 503,
+        url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/503',
+      });
+
       await processDeploymentWorkflow(workItemId, 1, {
         skipPreparation: true,
         mockSmokeResult: {
@@ -495,6 +590,9 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
           failedRequests: 0,
           windowMinutes: 30,
         },
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
       });
 
       expect(updateSpy).toHaveBeenCalledWith(
@@ -647,6 +745,289 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
       await expect(compileL1L7EvidenceIndex(workItemId, { failClosed: true })).rejects.toThrow(
         /Failed L6 smoke verification for #7405/
       );
+    });
+  });
+
+  describe('Awaited Retrospective, Retry Cap & Fail-Closed Gate (RETRO-01, RETRO-03, EVID-03)', () => {
+    it('verifies code-ordering: retro awaited and L7 persisted before Done transition', async () => {
+      const workItemId = 7501;
+      await seedStandardPassingEvidence(workItemId);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 3,
+        fields: {
+          'System.Title': 'Verify Ordering',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const callOrder: string[] = [];
+
+      const origUpdateTicket = stateStore.updateTicketState.bind(stateStore);
+      vi.spyOn(stateStore, 'updateTicketState').mockImplementation(async (id, mutator) => {
+        const res = await origUpdateTicket(id, mutator);
+        if (id === workItemId) {
+          const t = await stateStore.getTicketState(workItemId);
+          if (t?.l7Evidence && !callOrder.includes('l7-persisted')) {
+            callOrder.push('l7-persisted');
+          }
+        }
+        return res;
+      });
+
+      vi.spyOn(adoClient, 'updateWorkItem').mockImplementation(async (id, patch) => {
+        const hasDone = patch.some(
+          (op: any) => op.path === '/fields/System.State' && op.value === 'Done'
+        );
+        if (hasDone) {
+          callOrder.push('ado-done-patched');
+        }
+        return { id } as any;
+      });
+
+      const mockPrCreator = vi.fn().mockResolvedValue({
+        pullRequestId: 751,
+        url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/751',
+      });
+
+      await processTelemetryEvaluation(workItemId, {
+        mockMetrics: {
+          errorRatePercent: 0.05,
+          p95LatencyMs: 110,
+          totalRequests: 1000,
+          failedRequests: 0,
+          windowMinutes: 30,
+        },
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
+      });
+
+      expect(callOrder).toEqual(['l7-persisted', 'ado-done-patched']);
+    });
+
+    it('recovers if retro fails on attempt 1 and succeeds on attempt 2', async () => {
+      const workItemId = 7502;
+      await seedStandardPassingEvidence(workItemId);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 3,
+        fields: {
+          'System.Title': 'Retro Retry Success',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      let attempts = 0;
+      const mockPrCreator = vi.fn().mockImplementation(async () => {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error('Temporary network glitch during PR creation');
+        }
+        return {
+          pullRequestId: 752,
+          url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/752',
+        };
+      });
+
+      const { result, summary } = await processTelemetryEvaluation(workItemId, {
+        mockMetrics: {
+          errorRatePercent: 0.02,
+          p95LatencyMs: 120,
+          totalRequests: 1000,
+          failedRequests: 0,
+          windowMinutes: 30,
+        },
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
+      });
+
+      expect(attempts).toBe(2);
+      expect(result.breached).toBe(false);
+      expect(summary).toBeDefined();
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[golden-path-complete]'),
+          }),
+        ])
+      );
+    });
+
+    it('halts Done transition and tags [retro-failed] when retro fails on both attempts', async () => {
+      const workItemId = 7503;
+      await seedStandardPassingEvidence(workItemId);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 3,
+        fields: {
+          'System.Title': 'Retro Double Fault',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      let attempts = 0;
+      const mockPrCreator = vi.fn().mockImplementation(async () => {
+        attempts++;
+        throw new Error('Persistent GitHub/ADO outage');
+      });
+
+      await expect(
+        processTelemetryEvaluation(workItemId, {
+          mockMetrics: {
+            errorRatePercent: 0.02,
+            p95LatencyMs: 120,
+            totalRequests: 1000,
+            failedRequests: 0,
+            windowMinutes: 30,
+          },
+          mockRetroResult: defaultMockRetro,
+          mockPrCreator,
+          repoRoot: harness.tempDir,
+        })
+      ).rejects.toThrow(
+        /Retrospective feedback loop failed after retry for #7503; Done transition halted/
+      );
+
+      expect(attempts).toBe(2);
+
+      // Verify work item was updated with [retro-failed] and alert comment
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[retro-failed]'),
+          }),
+          expect.objectContaining({
+            path: '/fields/System.History',
+            value: expect.stringContaining('[L7 Retro Alert] Retrospective Generation Failed'),
+          }),
+        ])
+      );
+
+      // Verify state was NEVER changed to Done
+      expect(updateSpy).not.toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
+        ])
+      );
+    });
+
+    it('compileL1L7EvidenceIndex with failClosed: true throws MissingEvidenceError when retro record is missing', async () => {
+      const workItemId = 7504;
+      await seedStandardPassingEvidence(workItemId);
+
+      await workItemQueueManager.runInLane(workItemId, async () => {
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.telemetryEvaluations.push({
+            windowMinutes: 30,
+            errorRate: '0.02%',
+            p95LatencyMs: 140,
+            breached: 0,
+            evaluatedAt: new Date().toISOString(),
+          });
+        });
+      });
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toThrow(MissingEvidenceError);
+
+      await expect(
+        compileL1L7EvidenceIndex(workItemId, { failClosed: true })
+      ).rejects.toThrow(/Missing required L7 continuous feedback record for #7504/);
+    });
+
+    it('executes full processDeploymentWorkflow end-to-end (smoke pass -> telemetry pass -> retro pass -> Done)', async () => {
+      const workItemId = 7505;
+      await seedStandardPassingEvidence(workItemId);
+
+      vi.spyOn(adoClient, 'getRevision').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'End-to-end Golden Path',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      vi.spyOn(adoClient, 'getWorkItem').mockResolvedValue({
+        id: workItemId,
+        rev: 1,
+        fields: {
+          'System.Title': 'End-to-end Golden Path',
+          'System.State': 'Ready to Deploy',
+          'System.Tags': '[qa-verified]; [deploying]',
+        },
+      } as any);
+
+      const updateSpy = vi.spyOn(adoClient, 'updateWorkItem').mockResolvedValue({
+        id: workItemId,
+      } as any);
+
+      const mockPrCreator = vi.fn().mockResolvedValue({
+        pullRequestId: 755,
+        url: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/755',
+      });
+
+      await processDeploymentWorkflow(workItemId, 1, {
+        skipPreparation: true,
+        mockSmokeResult: {
+          outcome: 'passed',
+        },
+        mockMetrics: {
+          errorRatePercent: 0.01,
+          p95LatencyMs: 100,
+          totalRequests: 2000,
+          failedRequests: 0,
+          windowMinutes: 30,
+        },
+        mockRetroResult: defaultMockRetro,
+        mockPrCreator,
+        repoRoot: harness.tempDir,
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        workItemId,
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/fields/System.State', value: 'Done' }),
+          expect.objectContaining({
+            path: '/fields/System.Tags',
+            value: expect.stringContaining('[golden-path-complete]'),
+          }),
+          expect.objectContaining({
+            path: '/fields/System.History',
+            value: expect.stringContaining('[Golden Path Complete] Unified L1–L7 Evidence Index'),
+          }),
+        ])
+      );
+
+      const archivePath = path.join(harness.tempDir, 'archive', `${workItemId}.md`);
+      expect(fs.existsSync(archivePath)).toBe(true);
+      const content = fs.readFileSync(archivePath, 'utf8');
+      expect(content).toContain('Deployment verified and stable');
     });
   });
 });
