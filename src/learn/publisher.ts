@@ -71,7 +71,12 @@ export async function stageAndPublishSkillPr(
   const branchName = `skills/learn-ticket-${workItemId}-${cleanSlug}`;
 
   // Staging skill & runbook locally on disk under .claude/skills/<skill-name>/
-  const skillDir = path.join(repoRoot, '.claude', 'skills', skill.frontmatter.name);
+  const sanitizedSkillName = skill.frontmatter.name.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const skillsBase = path.resolve(repoRoot, '.claude', 'skills');
+  const skillDir = path.resolve(skillsBase, sanitizedSkillName);
+  if (!skillDir.startsWith(skillsBase + path.sep)) {
+    throw new Error(`Invalid skill name path traversal: ${skill.frontmatter.name}`);
+  }
   fs.mkdirSync(skillDir, { recursive: true });
 
   // 1. Stage SKILL.md

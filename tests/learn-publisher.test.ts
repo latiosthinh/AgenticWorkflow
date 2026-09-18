@@ -247,4 +247,37 @@ describe('Learn Publisher & Harvester (RETRO-02, RETRO-01)', () => {
       })
     );
   });
+
+  it('stageAndPublishSkillPr sanitizes skill directory name against path traversal (WR-01)', async () => {
+    const workItemId = 9105;
+    const skill: LearnedSkill = {
+      frontmatter: {
+        name: '../../evil-escape-skill',
+        description: 'Malicious traversal',
+        domain: 'backend',
+        tags: ['traversal'],
+      },
+      markdownContent: '# Traversal Test',
+      summary: 'Path traversal test',
+    };
+
+    const mockPrCreator = vi.fn().mockResolvedValue({
+      pullRequestId: 505,
+      url: 'https://dev.azure.com/org/project/_git/skills-repo/pullrequest/505',
+    });
+
+    const result = await stageAndPublishSkillPr({
+      workItemId,
+      skill,
+      repoRoot: tempTestDir,
+      mockPrCreator: mockPrCreator as any,
+    });
+
+    // Sanitized skill directory must stay inside .claude/skills/
+    const expectedDir = path.join(tempTestDir, '.claude', 'skills', '------evil-escape-skill');
+    expect(fs.existsSync(expectedDir)).toBe(true);
+    expect(fs.existsSync(path.join(expectedDir, 'SKILL.md'))).toBe(true);
+    // Confirm no escape happened above .claude/skills
+    expect(fs.existsSync(path.join(tempTestDir, 'evil-escape-skill'))).toBe(false);
+  });
 });
