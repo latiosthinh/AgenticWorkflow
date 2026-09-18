@@ -43,8 +43,8 @@ export async function generateSkillFromLifecycle(
 - Ensure error handling scrubs all sensitive tokens and returns sanitized diagnostics.`;
 
   const markdownContent = `---
-name: ${name}
-description: ${description}
+name: ${escapeYamlString(name)}
+description: ${escapeYamlString(description)}
 domain: ${domain}
 tags:
   - ${domain}

@@ -153,4 +153,26 @@ describe('Learning Harvester, Prompt Isolation & Skill Generation (LRN-01)', () 
     expect(skill.markdownContent).toContain('Rework Breaker Insights');
     expect(skill.markdownContent).toContain('2 bounces');
   });
+
+  it('escapes special characters and quotes in SKILL.md frontmatter (WR-03)', async () => {
+    const lifecycle = {
+      workItemId: 8004,
+      title: 'Fix: "Quoted" Title & Special : Chars',
+      description: 'Handling "weird" strings in YAML',
+      acceptanceCriteria: 'Escaped properly',
+      reworkBounces: 0,
+      reworkSourceGates: [],
+      unitTestsPassed: 1,
+      unitTestsTotal: 1,
+      qaPassed: true,
+      qaFlakeCleared: false,
+      errorRate: '0.0%',
+      p95LatencyMs: 50,
+      reviewComments: [],
+    };
+
+    const skill = await generateSkillFromLifecycle(lifecycle);
+
+    expect(skill.markdownContent).toContain('description: "Extracted best practices, testing strategies, and pitfall mitigations from ticket AB#8004: Fix: \\"Quoted\\" Title & Special : Chars"');
+  });
 });
