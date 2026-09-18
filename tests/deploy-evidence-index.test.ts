@@ -134,6 +134,35 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
     expect(persistedL7.actionItems).toEqual(['Add synthetic canary check']);
   });
 
+  it('compiles evidence index for archived tickets using targeted getArchivedTicketState lookup', async () => {
+    const workItemId = 8099;
+    await workItemQueueManager.runInLane(workItemId, async () => {
+      await stateStore.updateTicketState(workItemId, (draft) => {
+        draft.auditLogs.push({
+          revId: 1,
+          verdict: 'passed',
+          reasons: 'Done',
+          criteriaSummary: 'DoD complete',
+          model: 'gpt-4o',
+          evaluatedAt: new Date().toISOString(),
+        });
+      });
+    });
+
+    await stateStore.archiveTicket(workItemId);
+
+    // Active ticket is now null
+    expect(await stateStore.getTicketState(workItemId)).toBeNull();
+
+    // Archive lookup succeeds and does not invoke full listTickets scan
+    const listSpy = vi.spyOn(stateStore, 'listTickets');
+    const summary = await compileL1L7EvidenceIndex(workItemId);
+    expect(summary.workItemId).toBe(workItemId);
+    expect(summary.l1.verdict).toBe('PASSED');
+    expect(listSpy).not.toHaveBeenCalled();
+    listSpy.mockRestore();
+  });
+
   it('compileL1L6EvidenceIndex functions as a backward-compatible deprecated alias returning L1L7EvidenceSummary', async () => {
     const workItemId = 8002;
 

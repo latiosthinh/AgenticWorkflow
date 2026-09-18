@@ -204,6 +204,11 @@ describe('FileStateStore CRUD operations', () => {
     const parsed = parseTicketDocument<TicketState>(archivedContent);
     expect(parsed.frontmatter.workItemId).toBe(101);
     expect(parsed.body).toContain('Archived notes');
+
+    // Targeted archived lookup resolves in O(1)
+    const retrievedArchived = await harness.store.getArchivedTicketState?.(101);
+    expect(retrievedArchived).toEqual(parsed.frontmatter);
+    expect(await harness.store.getArchivedTicketState?.(999)).toBeNull();
   });
 });
 

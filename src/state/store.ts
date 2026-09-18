@@ -111,6 +111,18 @@ export class FileStateStore implements StateStore {
     return resolvedPath;
   }
 
+  public resolveArchivePath(workItemId: number): string {
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      throw new Error(`Invalid workItemId: expected positive integer, got ${workItemId}`);
+    }
+    const resolvedPath = path.resolve(this.archiveDir, `${workItemId}.md`);
+    const allowedDir = path.resolve(this.archiveDir);
+    if (!resolvedPath.startsWith(allowedDir + path.sep) && resolvedPath !== allowedDir) {
+      throw new Error(`Path traversal detected for workItemId ${workItemId}`);
+    }
+    return resolvedPath;
+  }
+
   private recoverOrphanTempFile(ticketPath: string, workItemId: number): boolean {
     if (fs.existsSync(ticketPath)) {
       return true;
@@ -166,6 +178,23 @@ export class FileStateStore implements StateStore {
     }
     try {
       const raw = fs.readFileSync(ticketPath, 'utf8');
+      const { frontmatter } = parseTicketDocument<TicketState>(raw);
+      return frontmatter;
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  public async getArchivedTicketState(workItemId: number): Promise<TicketState | null> {
+    const archivePath = this.resolveArchivePath(workItemId);
+    if (!fs.existsSync(archivePath)) {
+      return null;
+    }
+    try {
+      const raw = fs.readFileSync(archivePath, 'utf8');
       const { frontmatter } = parseTicketDocument<TicketState>(raw);
       return frontmatter;
     } catch (err: any) {
@@ -286,7 +315,7 @@ export class FileStateStore implements StateStore {
       return;
     }
 
-    const archivePath = path.resolve(this.archiveDir, `${workItemId}.md`);
+    const archivePath = this.resolveArchivePath(workItemId);
     if (process.platform === 'win32' && fs.existsSync(archivePath)) {
       fs.unlinkSync(archivePath);
     }

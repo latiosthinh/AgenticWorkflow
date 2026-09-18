@@ -76,8 +76,12 @@ export async function compileL1L7EvidenceIndex(
     let ticket = await stateStore.getTicketState(workItemId);
     let isArchived = false;
     if (!ticket) {
-      const tickets = await stateStore.listTickets({ includeArchived: true });
-      ticket = tickets.find((t) => t.workItemId === workItemId) || null;
+      if (stateStore.getArchivedTicketState) {
+        ticket = await stateStore.getArchivedTicketState(workItemId);
+      } else {
+        const tickets = await stateStore.listTickets({ includeArchived: true });
+        ticket = tickets.find((t) => t.workItemId === workItemId) || null;
+      }
       if (ticket) {
         isArchived = true;
       }

@@ -212,6 +212,7 @@ export interface TicketState {
 
 export interface StateStore {
   getTicketState(workItemId: number): Promise<TicketState | null>;
+  getArchivedTicketState?(workItemId: number): Promise<TicketState | null>;
   getTicketNotes(workItemId: number): Promise<string>;
   updateTicketState(
     workItemId: number,

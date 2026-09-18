@@ -9,6 +9,7 @@ let _store: StateStore = new FileStateStore(env.STATE_STORE_DIR);
 
 export const stateStore: StateStore = {
   getTicketState: (workItemId) => _store.getTicketState(workItemId),
+  getArchivedTicketState: (workItemId) => _store.getArchivedTicketState?.(workItemId) ?? Promise.resolve(null),
   getTicketNotes: (workItemId) => _store.getTicketNotes(workItemId),
   updateTicketState: (workItemId, mutator, notesAppend) =>
     _store.updateTicketState(workItemId, mutator, notesAppend),
