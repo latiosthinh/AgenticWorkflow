@@ -100,7 +100,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 - [x] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults. (completed 2026-09-17)
 - [x] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox. (completed 2026-09-18)
 - [x] **Phase 6: Retro & L7 Output** — retro takeaways + runbook + skill PR as the real L7 record in the ticket's `StateStore` file; awaited before Done, fail-closed; Done re-sequencing. (completed 2026-09-18)
-- [ ] **Phase 7: Docs Realignment & E2E Proof** — docs/state matrix describe the BUILT file-backed system; one fixture ticket walks `New → Done → L1–L7` end-to-end on the `StateStore`.
+- [x] **Phase 7: Docs Realignment & E2E Proof** — docs/state matrix describe the BUILT file-backed system; one fixture ticket walks `New → Done → L1–L7` end-to-end on the `StateStore`. (completed 2026-09-18)
 
 **Waves:** A (serial): 1 → 2 · **B (3-way parallel): 3 ∥ 4 ∥ 5** · C (serial): 6 · D (serial): 7.
 **Critical path:** 1 → 2 → 4 → 6 → 7. Schedule compression lives in Wave B.
@@ -230,7 +230,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md — E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment
+- [x] 07-01-PLAN.md — E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment
 **Parallelizable**: No — Wave D, serial (needs 1–6 complete).
 
 ---
@@ -249,6 +249,6 @@ Plans:
 | 4. L7 Evidence Index Extension | 2/2 | Complete | 2026-09-17 |
 | 5. Prod Smoke Suite | 3/3 | Complete | 2026-09-18 |
 | 6. Retro & L7 Output | 3/3 | Complete | 2026-09-18 |
-| 7. Docs Realignment & E2E Proof | 0/1 | Not started | — |
+| 7. Docs Realignment & E2E Proof | 1/1 | Complete | 2026-09-18 |
 
 **Requirement coverage:** 19/19 mapped, each to exactly one phase — STATE-01/02/03/04→1 · TAX-01/03→2 · SCOPE-01/02/03→3 · EVID-02/03→4 · SMOKE-01/02/03→5 · RETRO-01/02/03 + EVID-01→6 · TAX-02→7. No orphans, no double-maps.

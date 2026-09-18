@@ -67,11 +67,11 @@ v1.0 shipped (git tag `v1.0`, 2026-09-09): all 31 Golden Path requirements compl
 
 Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planning/REQUIREMENTS.md`):
 
-- [ ] **RESTRUCTURE**: Re-taxonomize the pipeline into 5 columns / 9 steps with actor roles (⚡/👤) + governance hand-offs; realign state matrix, evidence index, and docs.
-- [ ] **L7 EVIDENCE**: Add L7 Continuous-Feedback schema and extend the unified evidence index L1–L6 → L1–L7.
-- [ ] **PM SCOPE GATE**: Add human PM scope-review & verify (scope-lock) gate in REFINEMENT (Step 2) before EXECUTION begins.
-- [ ] **PROD SMOKE**: Add automated production smoke-test suite in RELEASE (Step 8) alongside the existing telemetry monitor (L6).
-- [ ] **RETRO OUTPUT**: Emit retro takeaways + runbook updates + skill enhancement as L7 evidence in RETRO (Step 9).
+- [x] **RESTRUCTURE**: Re-taxonomize the pipeline into 5 columns / 9 steps with actor roles (⚡/👤) + governance hand-offs; realign state matrix, evidence index, and docs.
+- [x] **L7 EVIDENCE**: Add L7 Continuous-Feedback schema and extend the unified evidence index L1–L6 → L1–L7.
+- [x] **PM SCOPE GATE**: Add human PM scope-review & verify (scope-lock) gate in REFINEMENT (Step 2) before EXECUTION begins.
+- [x] **PROD SMOKE**: Add automated production smoke-test suite in RELEASE (Step 8) alongside the existing telemetry monitor (L6).
+- [x] **RETRO OUTPUT**: Emit retro takeaways + runbook updates + skill enhancement as L7 evidence in RETRO (Step 9).
 
 ### Out of Scope
 
@@ -103,16 +103,16 @@ Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planni
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Golden Path 7-column standard adopted | Standardizes lifecycle into contract→execute→check→accept→merge→deploy→learn with explicit evidence | — Pending |
-| Six Evidence Levels (L1–L6) | Readiness verifiable at every stage, not subjective status | — Pending |
+| Golden Path 7-column standard adopted | Standardizes lifecycle into contract→execute→check→accept→merge→deploy→learn with explicit evidence | — Superseded by v2.0 (5 columns) |
+| Six Evidence Levels (L1–L6) | Readiness verifiable at every stage, not subjective status | — Superseded by v2.0 (L1–L7) |
 | QA stage restored (post-audit) | Original draft's tester loop was silently dropped by raw standard; integration verification needs its own gate | ✓ Applied |
 | Gated deploy + monitor in v1 (post-audit) | Golden Path includes Deploy/Monitor columns; human ◆ approval keeps governance | ✓ Applied |
 | Reuse existing ADO states (post-audit) | ACCEPT lives on `Dev Done`; no new board columns; less migration friction | ✓ Applied |
 | Native ADO gates (post-audit) | Branch policies enforce L2/L3/L4; Environments enforce L5 — least code, org-policy compliant | ✓ Applied |
 | Plan checkpoint non-blocking (post-audit) | `Q→human` releases sandbox; comment re-triggers; 24h ping — no idle resource holds | ✓ Applied |
 | Learning via PR only (post-audit) | Prevents self-modifying prompt-injection persistence in skills | ✓ Applied |
-| Interactive Plan Checkpoint (Q→human) | Clarifies ambiguity before codegen; prevents wasted tokens/rework | — Pending |
-| Shared rework breaker ≤2 | Bounds LLM cost and review ping-pong across Accept + PR review | — Pending |
+| Interactive Plan Checkpoint (Q→human) | Clarifies ambiguity before codegen; prevents wasted tokens/rework | ✓ Applied |
+| Shared rework breaker ≤2 | Bounds LLM cost and review ping-pong across Accept + PR review | ✓ Applied |
 | **Golden Path v2 model (5 cols / 9 steps / L1–L7)** | v2.0 restructure aligns pipeline to `.idea/v2.md`; explicit actor roles + governance hand-offs | ✓ v2.0 active |
 | **L7 Continuous-Feedback evidence** | Retro/skill output becomes a first-class audited evidence level, not just a skills PR | ✓ v2.0 active |
 | **Human PM scope-lock gate (Step 2)** | v1.0 auto-transitioned `New→Ready to Dev`; v2.0 adds a human scope verdict before EXECUTION | ✓ v2.0 active |

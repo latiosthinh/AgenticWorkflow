@@ -38,9 +38,8 @@ An autonomous, human-in-the-loop software development lifecycle (SDLC) automatio
 ### State Machine, Database & Queue
 | Technology | Version | Purpose | Why | Confidence |
 |------------|---------|---------|-----|------------|
-| **better-sqlite3** | `13.0.x` | Embedded database | Zero-ops local persistence. Synchronous C++ binding, microsecond reads/writes, WAL mode enables non-blocking concurrent reads. | HIGH |
-| **Drizzle ORM** | `0.45.x` | Relational query builder | Type-safe SQL, zero boilerplate, lightweight footprint. Generates fast SQLite migrations via `drizzle-kit`. Seamless upgrade path to Postgres if team scales. | HIGH |
-| **p-queue** | `9.3.x` | Concurrency throttle | In-memory concurrency controller. Limits active parallel agent test runs (e.g. max 2-3 parallel test suites) to prevent CPU starvation. | HIGH |
+| **StateStore (node:fs)** | `built-in` | File-backed persistence | Per-ticket markdown+frontmatter storage under `data/state/tickets/<id>.md`. Crash-atomic writes, zero C++ binaries. | HIGH |
+| **p-queue / LaneManager** | `9.3.x` / custom | Per-ticket serial lanes & throttle | Serializes mutations per work item (concurrency: 1 single-writer) and limits active test runs. | HIGH |
 ### Workspace & Execution Isolation
 | Technology | Version | Purpose | Why | Confidence |
 |------------|---------|---------|-----|------------|
@@ -62,9 +61,8 @@ An autonomous, human-in-the-loop software development lifecycle (SDLC) automatio
 | **Webhook Framework** | **Fastify 5** | Hono 4 | Hono is optimized for serverless/edge environments. Fastify provides a richer Node.js enterprise plugin ecosystem (`@fastify/sensible`, raw body caching for HMAC). |
 | **Agent / LLM Framework** | **Vercel AI SDK (`ai` 7)** | LangChain / LangGraph | LangChain has massive dependency trees, brittle abstractions, rapid API deprecations, and high token overhead. Vercel AI SDK provides direct, minimal tool execution loops and official MCP integration (`@ai-sdk/mcp`). |
 | **Agent / LLM Framework** | **Vercel AI SDK (`ai` 7)** | CrewAI / AutoGen | Opinionated multi-agent frameworks add multi-turn chatter, high latency, and unpredictable looping. Single-loop state machine with targeted tool sets is far more reliable for SDLC tasks. |
-| **Database & Persistence** | **better-sqlite3 + Drizzle** | PostgreSQL + Prisma | SQLite requires zero infrastructure setup for v1 local/single-team runner. Single `orchestrator.db` file with WAL mode handles required ACID transactions and locks. Prisma adds large binary engines and slow cold starts; Drizzle is lightweight and generates clean SQL. |
-| **Queue / Task Scheduler** | **SQLite table + p-queue** | Temporal | Temporal requires running a Temporal Server cluster, PostgreSQL/Cassandra, and external worker processes. Massive over-engineering for v1 single-team orchestrator. |
-| **Queue / Task Scheduler** | **SQLite table + p-queue** | BullMQ + Redis | BullMQ requires running and managing an external Redis instance. A transactional SQLite job lease table (`UPDATE jobs SET status = 'running' WHERE id = ...`) plus `p-queue` achieves crash-resilience with zero external dependencies. |
+| **Database & Persistence** | **File-backed StateStore** | SQLite / PostgreSQL | Zero-ops local markdown+frontmatter storage. Lane-serialized writes guarantee single-writer safety without native binary bindings or schema migrations. |
+| **Queue / Task Scheduler** | **LaneManager + p-queue** | BullMQ + Redis | In-process AsyncLocalStorage lane serialization avoids external Redis dependency while enforcing strict per-ticket write atomicity. |
 | **Git Automation** | **simple-git (Git CLI)** | isomorphic-git | `isomorphic-git` lacks support for Git worktrees, git-lfs, native credential helpers, and submodules. Native `git` CLI (v2.53 on host) is fast and supports full git functionality. |
 | **Process Execution** | **Execa 10** | `child_process.exec` (Native) | Native `exec` buffers output in memory (crashes on large test outputs), uses unsafe shell interpolation vulnerable to command injection, and lacks robust process tree termination on timeout. `execa` handles timeouts, signal cleanup, and argument array safety. |
 ## What NOT to Use (Strict Anti-Patterns)
@@ -83,7 +81,7 @@ An autonomous, human-in-the-loop software development lifecycle (SDLC) automatio
 | Core Runtime (Node 24 + TS 7) | **HIGH** | Verified directly on host machine (`node v24.0.2`, `git 2.53.0`). npm registry verified for TypeScript 7.0.2. |
 | Ingestion & ADO SDK | **HIGH** | `azure-devops-node-api` v17.0.0 official Microsoft docs verified via Context7. Fastify v5.12.3 verified on npm. |
 | LLM & MCP Integration | **HIGH** | `@modelcontextprotocol/sdk` v1.30.0 and `@ai-sdk/mcp` v2.0.45 verified. AI SDK v7.0.93 verified with native tool calling and MCP support. |
-| Persistence & Queue | **HIGH** | `better-sqlite3` v13.0.3 and `drizzle-orm` v0.45.2 verified. SQLite transactional locking eliminates external Redis overhead for v1. |
+| Persistence & Queue | **HIGH** | File-backed `StateStore` (`node:fs`) and `LaneManager` (`p-queue`) verified. Single-writer lane queue eliminates external Redis overhead for v1. |
 | Workspace & Runner | **HIGH** | `simple-git` v3.36.0 and `execa` v10.0.1 verified on npm. Standard production pattern for local process management. |
 ## Sources
 - **Microsoft Azure DevOps Client for Node.js (`azure-devops-node-api`)**: Context7 `/microsoft/azure-devops-node-api` & GitHub [microsoft/azure-devops-node-api](https://github.com/microsoft/azure-devops-node-api)
@@ -91,7 +89,7 @@ An autonomous, human-in-the-loop software development lifecycle (SDLC) automatio
 - **Model Context Protocol (MCP) Specification & SDK**: `@modelcontextprotocol/sdk` npm package, Context7 MCP specification
 - **Vercel AI SDK & MCP Client**: `@ai-sdk/mcp` & [ai-sdk.dev/docs/ai-sdk-core/mcp-tools](https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools)
 - **Fastify Web Framework**: Fastify v5 Documentation [fastify.dev](https://fastify.dev)
-- **SQLite Engine & Drizzle ORM**: [orm.drizzle.team](https://orm.drizzle.team)
+- **File-backed StateStore**: `node:fs` and `node:path` built-in persistence
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
