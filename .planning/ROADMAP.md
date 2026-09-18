@@ -213,7 +213,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Retro report, Zod action item validation, DORA trend metrics & runbook generation
+- [x] 06-01-PLAN.md — Retro report, Zod action item validation, DORA trend metrics & runbook generation
 - [ ] 06-02-PLAN.md — Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence
 - [ ] 06-03-PLAN.md — Deploy worker awaited retro sequencing, retry cap & fail-closed Done gate
 **Parallelizable**: No — Wave C, serial (harvests Phase 5's smoke results, persists through Phase 4's fail-closed compiler, re-sequences the same `deploy/worker.ts` Phase 5 touched).
@@ -245,7 +245,7 @@ Plans:
 | 3. PM Scope-Lock Gate | 3/3 | Complete | 2026-09-17 |
 | 4. L7 Evidence Index Extension | 2/2 | Complete | 2026-09-17 |
 | 5. Prod Smoke Suite | 3/3 | Complete | 2026-09-18 |
-| 6. Retro & L7 Output | 0/3 | Not started | — |
+| 6. Retro & L7 Output | 1/3 | In progress | — |
 | 7. Docs Realignment & E2E Proof | 0/1 | Not started | — |
 
 **Requirement coverage:** 19/19 mapped, each to exactly one phase — STATE-01/02/03/04→1 · TAX-01/03→2 · SCOPE-01/02/03→3 · EVID-02/03→4 · SMOKE-01/02/03→5 · RETRO-01/02/03 + EVID-01→6 · TAX-02→7. No orphans, no double-maps.
