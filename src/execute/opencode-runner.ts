@@ -20,7 +20,8 @@ export interface OpenCodeRunOptions {
   customEnv?: Record<string, string>;
   mockRunner?: (
     args: string[],
-    cwd: string
+    cwd: string,
+    childEnv?: NodeJS.ProcessEnv
   ) => Promise<{ stdout: string; stderr: string; exitCode: number; timedOut?: boolean }>;
 }
 
@@ -144,6 +145,14 @@ export async function runOpenCode(options: OpenCodeRunOptions): Promise<OpenCode
     if (options.customEnv.API_MODEL) childEnv.API_MODEL = options.customEnv.API_MODEL;
   }
 
+  // Map OPENAI_BASE_URL and OPENAI_API_KEY whenever API_ENDPOINT and API_KEY are provided
+  if (childEnv.API_ENDPOINT) {
+    childEnv.OPENAI_BASE_URL = options.customEnv?.OPENAI_BASE_URL || childEnv.API_ENDPOINT;
+  }
+  if (childEnv.API_KEY) {
+    childEnv.OPENAI_API_KEY = options.customEnv?.OPENAI_API_KEY || childEnv.API_KEY;
+  }
+
   let stdout = '';
   let stderr = '';
   let exitCode = 0;
@@ -152,7 +161,7 @@ export async function runOpenCode(options: OpenCodeRunOptions): Promise<OpenCode
 
   try {
     const res = options.mockRunner
-      ? await options.mockRunner(args, options.cwd)
+      ? await options.mockRunner(args, options.cwd, childEnv)
       : await execa(bin, args, {
           cwd: options.cwd,
           shell: false,
@@ -184,6 +193,8 @@ export async function runOpenCode(options: OpenCodeRunOptions): Promise<OpenCode
     env.ADO_WEBHOOK_SECRET,
     env.API_KEY,
     env.OPENAI_API_KEY,
+    options.customEnv?.API_KEY,
+    options.customEnv?.OPENAI_API_KEY,
   ].filter(Boolean) as string[];
 
   const scrubbedStdout = scrubOutput(stdout, knownSecrets);

@@ -163,6 +163,57 @@ malformed non-json line
       }
     });
 
+    it('scrubs options.customEnv secrets from output and errors', async () => {
+      const mock = async () => ({
+        stdout: 'Used custom-api-secret-123 and custom-openai-secret-456 in run',
+        stderr: 'Failed with custom-api-secret-123',
+        exitCode: 1,
+      });
+
+      const result = await runOpenCode({
+        cwd: '/test/cwd',
+        message: 'Do not leak custom secrets',
+        customEnv: {
+          API_KEY: 'custom-api-secret-123',
+          OPENAI_API_KEY: 'custom-openai-secret-456',
+        },
+        mockRunner: mock,
+      });
+
+      expect(result.output).not.toContain('custom-api-secret-123');
+      expect(result.output).not.toContain('custom-openai-secret-456');
+      expect(result.output).toContain('[REDACTED]');
+      expect(result.error).not.toContain('custom-api-secret-123');
+      expect(result.error).toContain('[REDACTED]');
+    });
+
+    it('maps OPENAI_BASE_URL and OPENAI_API_KEY when API_ENDPOINT and API_KEY are provided', async () => {
+      let capturedEnv: any;
+      const mock = async (_args: string[], _cwd: string, envPassed?: any) => {
+        capturedEnv = envPassed;
+        return {
+          stdout: '{"type":"message","content":"ok"}',
+          stderr: '',
+          exitCode: 0,
+        };
+      };
+
+      await runOpenCode({
+        cwd: '/test/cwd',
+        message: 'test env mapping',
+        customEnv: {
+          API_ENDPOINT: 'https://llm.custom.local/v1',
+          API_KEY: 'secret-custom-key',
+        },
+        mockRunner: mock,
+      });
+
+      expect(capturedEnv.API_ENDPOINT).toBe('https://llm.custom.local/v1');
+      expect(capturedEnv.API_KEY).toBe('secret-custom-key');
+      expect(capturedEnv.OPENAI_BASE_URL).toBe('https://llm.custom.local/v1');
+      expect(capturedEnv.OPENAI_API_KEY).toBe('secret-custom-key');
+    });
+
     it('handles process failure and captures error output', async () => {
       const mock = async () => ({
         stdout: '',
