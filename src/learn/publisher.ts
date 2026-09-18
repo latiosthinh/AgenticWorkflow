@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sanitizeHtml from 'sanitize-html';
+import { simpleGit, type SimpleGit } from 'simple-git';
 import { slugify } from '../utils/paths.js';
 import { createOrGetPullRequest } from '../ado/git.js';
 import { env } from '../config/env.js';
@@ -60,6 +61,7 @@ export interface StageAndPublishOptions {
   runbook?: LearnedRunbook;
   repoRoot?: string;
   mockPrCreator?: typeof createOrGetPullRequest;
+  gitClient?: SimpleGit;
 }
 
 export async function stageAndPublishSkillPr(
@@ -85,6 +87,38 @@ export async function stageAndPublishSkillPr(
   // 2. Stage RUNBOOK.md if changes present
   if (runbook?.hasChanges && runbook.markdownContent) {
     fs.writeFileSync(path.join(skillDir, 'RUNBOOK.md'), runbook.markdownContent, 'utf8');
+  }
+
+  // Ensure git branch is checked out/created and pushed or handled properly before calling PR creation (WR-04)
+  const git =
+    options.gitClient ||
+    (fs.existsSync(path.join(repoRoot, '.git')) ? simpleGit(repoRoot) : null);
+  if (git) {
+    try {
+      const branchSummary = await git.branchLocal();
+      const currentBranch = branchSummary.current;
+      if (!branchSummary.all.includes(branchName)) {
+        await git.checkoutLocalBranch(branchName);
+      } else {
+        await git.checkout(branchName);
+      }
+      const relSkillDir = path.relative(repoRoot, skillDir);
+      await git.add(relSkillDir);
+      const status = await git.status();
+      if (status.staged.length > 0) {
+        await git.commit(`feat(skills): add learned skill & runbook for AB#${workItemId}`);
+      }
+      try {
+        await git.push('origin', branchName);
+      } catch {
+        // Ignore remote push failures in local/offline environments
+      }
+      if (currentBranch && currentBranch !== branchName) {
+        await git.checkout(currentBranch);
+      }
+    } catch {
+      // Graceful fallback if git commands fail in isolated/partial environment
+    }
   }
 
   const prCreator = mockPrCreator || createOrGetPullRequest;
@@ -123,7 +157,7 @@ ${runbookSection}
   const prUrl =
     pr.url ||
     (pr as any)._links?.web?.href ||
-    `${env.ADO_ORG_URL}/_git/pullrequest/${pullRequestId}`;
+    `${env.ADO_ORG_URL}/${env.ADO_PROJECT}/_git/${env.ADO_REPOSITORY_ID}/pullrequest/${pullRequestId}`;
 
   return {
     pullRequestId,

@@ -307,4 +307,53 @@ describe('Learn Publisher & Harvester (RETRO-02, RETRO-01)', () => {
     // Confirm no escape happened above .claude/skills
     expect(fs.existsSync(path.join(tempTestDir, 'evil-escape-skill'))).toBe(false);
   });
+
+  it('stageAndPublishSkillPr checks out, commits, and pushes branch when git client is present (WR-04)', async () => {
+    const workItemId = 9107;
+    const skill: LearnedSkill = {
+      frontmatter: {
+        name: 'infra-cloud-vpc-peering',
+        description: 'VPC peering setup',
+        domain: 'infra',
+        tags: ['vpc'],
+      },
+      markdownContent: '# VPC Peering',
+      summary: 'VPC peering',
+    };
+
+    const mockGit = {
+      branchLocal: vi.fn().mockResolvedValue({ current: 'main', all: ['main'] }),
+      checkoutLocalBranch: vi.fn().mockResolvedValue(undefined),
+      checkout: vi.fn().mockResolvedValue(undefined),
+      add: vi.fn().mockResolvedValue(undefined),
+      status: vi.fn().mockResolvedValue({ staged: ['SKILL.md'] }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      push: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockPrCreator = vi.fn().mockResolvedValue({
+      pullRequestId: 507,
+      url: 'https://dev.azure.com/org/project/_git/skills-repo/pullrequest/507',
+    });
+
+    await stageAndPublishSkillPr({
+      workItemId,
+      skill,
+      repoRoot: tempTestDir,
+      mockPrCreator: mockPrCreator as any,
+      gitClient: mockGit as any,
+    });
+
+    expect(mockGit.branchLocal).toHaveBeenCalled();
+    expect(mockGit.checkoutLocalBranch).toHaveBeenCalledWith(
+      'skills/learn-ticket-9107-infra-cloud-vpc-peering'
+    );
+    expect(mockGit.add).toHaveBeenCalled();
+    expect(mockGit.commit).toHaveBeenCalledWith(expect.stringContaining('AB#9107'));
+    expect(mockGit.push).toHaveBeenCalledWith(
+      'origin',
+      'skills/learn-ticket-9107-infra-cloud-vpc-peering'
+    );
+    expect(mockGit.checkout).toHaveBeenCalledWith('main');
+  });
 });
