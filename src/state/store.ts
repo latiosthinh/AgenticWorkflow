@@ -250,25 +250,30 @@ export class FileStateStore implements StateStore {
     return state;
   }
 
-  public async listTickets(): Promise<TicketState[]> {
-    if (!fs.existsSync(this.ticketsDir)) {
-      return [];
+  public async listTickets(options?: { includeArchived?: boolean }): Promise<TicketState[]> {
+    const dirs = [this.ticketsDir];
+    if (options?.includeArchived && fs.existsSync(this.archiveDir)) {
+      dirs.push(this.archiveDir);
     }
-
-    const entries = fs.readdirSync(this.ticketsDir);
     const tickets: TicketState[] = [];
 
-    for (const entry of entries) {
-      if (!entry.endsWith('.md') || entry.startsWith('.')) {
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) {
         continue;
       }
-      const fullPath = path.join(this.ticketsDir, entry);
-      try {
-        const raw = fs.readFileSync(fullPath, 'utf8');
-        const { frontmatter } = parseTicketDocument<TicketState>(raw);
-        tickets.push(frontmatter);
-      } catch {
-        // Skip corrupt or non-ticket documents
+      const entries = fs.readdirSync(dir);
+      for (const entry of entries) {
+        if (!entry.endsWith('.md') || entry.startsWith('.')) {
+          continue;
+        }
+        const fullPath = path.join(dir, entry);
+        try {
+          const raw = fs.readFileSync(fullPath, 'utf8');
+          const { frontmatter } = parseTicketDocument<TicketState>(raw);
+          tickets.push(frontmatter);
+        } catch {
+          // Skip corrupt or non-ticket documents
+        }
       }
     }
 

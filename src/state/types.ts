@@ -218,7 +218,7 @@ export interface StateStore {
     mutator: (state: TicketState) => void | Promise<void>,
     notesAppend?: string
   ): Promise<TicketState>;
-  listTickets(): Promise<TicketState[]>;
+  listTickets(options?: { includeArchived?: boolean }): Promise<TicketState[]>;
   archiveTicket(workItemId: number): Promise<void>;
   recordDedupEvent(
     workItemId: number,

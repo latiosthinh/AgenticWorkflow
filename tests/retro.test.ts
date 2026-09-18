@@ -154,6 +154,66 @@ describe('Retrospective Synthesis, Action Item Validation & DORA Metrics (RETRO-
     expect(deltas.trend).toBe('improving');
   });
 
+  it('calculateDoraTrendDeltas includes archived historical deployed tickets (CR-01)', async () => {
+    const historicalId = 9020;
+    const currentId = 9021;
+    const baseTime = Date.now();
+
+    // Historical ticket: 60 minutes lead time, 2 rework bounces, deployed
+    await workItemQueueManager.runInLane(historicalId, async () => {
+      await stateStore.updateTicketState(historicalId, (draft) => {
+        draft.createdAt = new Date(baseTime - 180 * 60000).toISOString();
+        draft.deploymentRecords.push({
+          stageName: 'Production',
+          environmentName: 'prod',
+          commitSha: 'hist9020',
+          status: 'deployed',
+          createdAt: new Date(baseTime - 180 * 60000).toISOString(),
+          deployedAt: new Date(baseTime - 120 * 60000).toISOString(),
+        });
+        draft.reworkCycles = {
+          bounceCount: 2,
+          sourceGate: 'pr_review',
+          createdAt: new Date(baseTime - 180 * 60000).toISOString(),
+          updatedAt: new Date(baseTime - 120 * 60000).toISOString(),
+        };
+      });
+    });
+
+    // Move historical ticket to archive
+    await stateStore.archiveTicket(historicalId);
+
+    // Current ticket: 30 minutes lead time, 0 rework bounces
+    await workItemQueueManager.runInLane(currentId, async () => {
+      await stateStore.updateTicketState(currentId, (draft) => {
+        draft.createdAt = new Date(baseTime - 30 * 60000).toISOString();
+        draft.deploymentRecords.push({
+          stageName: 'Production',
+          environmentName: 'prod',
+          commitSha: 'curr9021',
+          status: 'deployed',
+          createdAt: new Date(baseTime - 30 * 60000).toISOString(),
+          deployedAt: new Date(baseTime).toISOString(),
+        });
+        draft.reworkCycles = {
+          bounceCount: 0,
+          sourceGate: 'accept',
+          createdAt: new Date(baseTime - 30 * 60000).toISOString(),
+          updatedAt: new Date(baseTime).toISOString(),
+        };
+      });
+    });
+
+    const currentTicket = await stateStore.getTicketState(currentId);
+    expect(currentTicket).not.toBeNull();
+
+    const deltas = await calculateDoraTrendDeltas(currentTicket!);
+    expect(deltas.historicalDeployedCount).toBe(1);
+    expect(deltas.leadTimeDeltaMinutes).toBe(-30);
+    expect(deltas.reworkDelta).toBe(-2);
+    expect(deltas.trend).toBe('improving');
+  });
+
   it('generateRetroReport produces structured takeaways, validated action items, gate friction summary, and DORA trend deltas', async () => {
     const workItemId = 9004;
     const lifecycle: TicketLifecycleData = {

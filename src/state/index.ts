@@ -12,7 +12,7 @@ export const stateStore: StateStore = {
   getTicketNotes: (workItemId) => _store.getTicketNotes(workItemId),
   updateTicketState: (workItemId, mutator, notesAppend) =>
     _store.updateTicketState(workItemId, mutator, notesAppend),
-  listTickets: () => _store.listTickets(),
+  listTickets: (options?: { includeArchived?: boolean }) => _store.listTickets(options),
   archiveTicket: (workItemId) => _store.archiveTicket(workItemId),
   recordDedupEvent: (workItemId, revId, payloadHash) =>
     _store.recordDedupEvent(workItemId, revId, payloadHash),

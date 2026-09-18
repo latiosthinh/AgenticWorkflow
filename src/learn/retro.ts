@@ -19,10 +19,11 @@ export const RetroActionItemSchema = z.object({
 export async function calculateDoraTrendDeltas(
   currentTicket: TicketState
 ): Promise<DoraTrendDeltas> {
-  const allTickets = await stateStore.listTickets();
+  const allTickets = await stateStore.listTickets({ includeArchived: true });
   const now = Date.now();
   const createdMs = currentTicket.createdAt ? new Date(currentTicket.createdAt).getTime() : now;
   const lastDeploy =
+    currentTicket.deploymentRecords?.findLast?.((d) => d.status === 'deployed') ||
     currentTicket.deploymentRecords?.find((d) => d.status === 'deployed') ||
     currentTicket.deploymentRecords?.[currentTicket.deploymentRecords.length - 1];
   const deployedMs = lastDeploy?.deployedAt ? new Date(lastDeploy.deployedAt).getTime() : now;
@@ -50,7 +51,9 @@ export async function calculateDoraTrendDeltas(
   let totalRework = 0;
   for (const t of deployedTickets) {
     const tCreated = t.createdAt ? new Date(t.createdAt).getTime() : now;
-    const tDeploy = t.deploymentRecords.find((d) => d.status === 'deployed');
+    const tDeploy =
+      t.deploymentRecords.findLast?.((d) => d.status === 'deployed') ||
+      t.deploymentRecords.find((d) => d.status === 'deployed');
     const tDeployed = tDeploy?.deployedAt ? new Date(tDeploy.deployedAt).getTime() : tCreated;
     totalLeadTime += Math.max(1, Math.round((tDeployed - tCreated) / 60000));
     totalRework += t.reworkCycles?.bounceCount || 0;
@@ -67,7 +70,12 @@ export async function calculateDoraTrendDeltas(
     reworkBounces: currentRework,
     reworkDelta,
     historicalDeployedCount: deployedTickets.length,
-    trend: leadTimeDeltaMinutes <= 0 && reworkDelta <= 0 ? 'improving' : 'regressing',
+    trend:
+      leadTimeDeltaMinutes === 0 && reworkDelta === 0
+        ? 'stable'
+        : leadTimeDeltaMinutes <= 0 && reworkDelta <= 0
+          ? 'improving'
+          : 'regressing',
   };
 }
 
