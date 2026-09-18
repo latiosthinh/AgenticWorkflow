@@ -271,6 +271,12 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 - None blocking. MEDIUM-confidence assumptions flagged for phase-level validation (see Pending Todos): ADO tag-write permissions (Phase 3), prod smoke egress under security posture (Phase 5).
 - Design constraint (not a blocker): single-machine persistence ceiling is load-bearing for the file-backed `StateStore` — recorded as `ponytail:` with STORE-01 deferred.
 
+## Quick Tasks Completed
+
+| ID | Task | Date | Status | Commit |
+|---|---|---|---|---|
+| 260918-qvo | Connect to local OpenCode agent via CLI runner and wire custom LLM API endpoint into config | 2026-09-18 | complete ✓ | a5fe2c3 |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
