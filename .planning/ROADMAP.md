@@ -98,7 +98,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 - [x] **Phase 2: Taxonomy Foundation** — the v2 model (5 cols / 9 steps / actors ⚡👤 / L1–L7) as a data-driven source (`src/pipeline/taxonomy.ts`) driving the router; behavior-preserving for v1.0 paths, proven by lifecycle replay parity.
 - [x] **Phase 3: PM Scope-Lock Gate** — human 👤 PM scope verdict at Refinement Step 2; audit pass parks the ticket instead of auto-unlocking dev; unbypassable, undeadlockable, breaker-isolated.
 - [x] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults. (completed 2026-09-17)
-- [ ] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox.
+- [x] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox. (completed 2026-09-18)
 - [x] **Phase 6: Retro & L7 Output** — retro takeaways + runbook + skill PR as the real L7 record in the ticket's `StateStore` file; awaited before Done, fail-closed; Done re-sequencing. (completed 2026-09-18)
 - [ ] **Phase 7: Docs Realignment & E2E Proof** — docs/state matrix describe the BUILT file-backed system; one fixture ticket walks `New → Done → L1–L7` end-to-end on the `StateStore`.
 
@@ -227,7 +227,10 @@ Plans:
   2. The authoritative state matrix in this ROADMAP is verified against `taxonomy.ts` by a test (matrix ↔ `GOLDEN_PATH_V2` agree on state, actor, evidence per step; governance hand-offs + Done criterion recorded) — the docs and the data cannot drift silently.
   3. The ADO state-transition router and evidence-index stage labels are provably driven by the v2 taxonomy, and `formatEvidenceIndexComment` copy, PROJECT.md, REQUIREMENTS.md, and docs/state-matrix describe the built 5-column/9-step/L1–L7 system on the `StateStore` — zero stale "eight stages" / "L1–L6" strings and zero stale SQLite/table/DDL references remain in user-facing evidence copy or planning docs.
 **Threat notes**: Docs must describe the built system — no doc finalization before Phases 3–6 are verified. Final sweep for drifted labels, stale v1 vocabulary, and SQLite-era storage wording voided by the OVERRIDE; leaked phase-status fragments in tables (the v1.0 matrix corruption) must not recur.
-**Plans**: 1 plan (estimated)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment
 **Parallelizable**: No — Wave D, serial (needs 1–6 complete).
 
 ---
