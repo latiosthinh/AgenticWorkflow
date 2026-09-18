@@ -162,6 +162,7 @@ export async function runSandboxedSmokeCommand(options: {
   const knownSecrets = [
     env.ADO_PAT,
     env.OPENAI_API_KEY,
+    env.API_KEY,
     env.ADO_WEBHOOK_SECRET,
   ].filter((s): s is string => Boolean(s));
 

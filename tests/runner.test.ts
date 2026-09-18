@@ -34,6 +34,8 @@ describe('subprocess runner', () => {
       expect(sanitized.CUSTOM_SAFE_FLAG).toBe('true');
       expect(sanitized.NODE_ENV).toBe('test');
       expect(sanitized.PATH).toBeDefined();
+      expect(sanitized.APPDATA).toBeDefined();
+      expect(sanitized.LOCALAPPDATA).toBeDefined();
     });
   });
 

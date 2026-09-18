@@ -22,6 +22,8 @@ export function sanitizeEnv(customEnv?: Record<string, string>): NodeJS.ProcessE
     PATHEXT: process.env.PATHEXT || '',
     TEMP: process.env.TEMP || '',
     TMP: process.env.TMP || '',
+    APPDATA: process.env.APPDATA || '',
+    LOCALAPPDATA: process.env.LOCALAPPDATA || '',
   };
 
   if (process.env.USERPROFILE) {
