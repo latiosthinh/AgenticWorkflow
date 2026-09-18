@@ -68,7 +68,7 @@ export async function processLearningFeedbackLoop(
     runbookDiffPrUrl: runbook.hasChanges ? prUrl : null,
     skillPrUrl: prUrl,
     gateFriction: retro.gateFriction,
-    trendDeltas: retro.trendDeltas as Record<string, unknown>,
+    trendDeltas: retro.trendDeltas as unknown as Record<string, unknown>,
     createdAt: now,
     completedAt: now,
   };
