@@ -173,6 +173,26 @@ describe('Production Smoke Suite - probeProductionHealth', () => {
     expect(result.actualSha).toBe('deadbeef0000');
     expect(result.error).toContain('stale slot swap detected');
   });
+
+  it('skips SHA mismatch check when expectedSha is branch name "main" or non-SHA', async () => {
+    const mockHeaders = new Headers({
+      'x-commit-sha': 'deadbeef0000',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: mockHeaders,
+        json: async () => ({}),
+      }))
+    );
+
+    const result = await probeProductionHealth('https://prod.example.com/health', 'main');
+    expect(result.healthy).toBe(true);
+    expect(result.status).toBe(200);
+    expect(result.actualSha).toBe('deadbeef0000');
+  });
 });
 
 describe('runSandboxedSmokeCommand', () => {

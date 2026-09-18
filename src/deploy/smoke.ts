@@ -107,17 +107,18 @@ export async function probeProductionHealth(
       // Body not JSON; header fallback
     }
 
-    if (expectedSha && actualSha) {
+    const isSha = (str?: string) => Boolean(str && /^[0-9a-f]{7,40}$/i.test(str));
+    if (isSha(expectedSha) && isSha(actualSha)) {
       const match =
-        actualSha.startsWith(expectedSha.slice(0, 7)) ||
-        expectedSha.startsWith(actualSha.slice(0, 7));
+        actualSha!.toLowerCase().startsWith(expectedSha!.slice(0, 7).toLowerCase()) ||
+        expectedSha!.toLowerCase().startsWith(actualSha!.slice(0, 7).toLowerCase());
       if (!match) {
         return {
           healthy: false,
           status: res.status,
           actualSha,
           classification: 'APP',
-          error: `Deployed commit SHA mismatch: expected ${expectedSha.slice(0, 8)}, observed ${actualSha.slice(0, 8)} (stale slot swap detected)`,
+          error: `Deployed commit SHA mismatch: expected ${expectedSha!.slice(0, 8)}, observed ${actualSha!.slice(0, 8)} (stale slot swap detected)`,
         };
       }
     }
