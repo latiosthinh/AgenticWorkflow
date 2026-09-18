@@ -86,6 +86,24 @@ describe('Production Smoke Suite - probeProductionHealth', () => {
     expect(result.actualSha).toBe('112233445566');
   });
 
+  it('handles non-string version or commitSha numbers in response body without throwing TypeError', async () => {
+    const mockHeaders = new Headers();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: mockHeaders,
+        json: async () => ({ version: 1.0, commitSha: 12345 }),
+      }))
+    );
+
+    const result = await probeProductionHealth('https://prod.example.com/health', 'feedface1111');
+    expect(result.healthy).toBe(true);
+    expect(result.status).toBe(200);
+    expect(result.actualSha).toBe('12345');
+  });
+
   it('classifies HTTP 500 as APP failure', async () => {
     vi.stubGlobal(
       'fetch',

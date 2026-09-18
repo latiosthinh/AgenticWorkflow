@@ -101,7 +101,10 @@ export async function probeProductionHealth(
     try {
       const body = await res.json();
       if (body && typeof body === 'object') {
-        actualSha = body.commitSha || body.gitSha || body.version || actualSha;
+        const raw = body.commitSha ?? body.gitSha ?? body.version;
+        if (raw !== undefined && raw !== null) {
+          actualSha = String(raw).trim();
+        }
       }
     } catch {
       // Body not JSON; header fallback
