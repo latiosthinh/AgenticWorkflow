@@ -293,6 +293,7 @@ export async function runSmokeSuite(options: {
   worktreePath?: string;
   smokeUrl?: string;
   testCommand?: string;
+  commandRunnerFn?: typeof runCommand;
 }): Promise<SmokeRunResult> {
   const start = Date.now();
   const probe = await probeProductionHealth(options.smokeUrl, options.commitSha);
@@ -315,10 +316,11 @@ export async function runSmokeSuite(options: {
     const cmdResult = await runSandboxedSmokeCommand({
       worktreePath: options.worktreePath,
       command: options.testCommand,
+      runnerFn: options.commandRunnerFn,
     });
     return {
       ...cmdResult,
-      durationMs: (Date.now() - start) + cmdResult.durationMs,
+      durationMs: Date.now() - start,
     };
   }
 

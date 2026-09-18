@@ -385,6 +385,41 @@ describe('runSmokeSuite', () => {
     expect(result.classification).toBe('NONE');
     expect(result.failures).toHaveLength(0);
   });
+
+  it('calculates total elapsed duration without double counting command duration when worktreePath provided', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'x-commit-sha': 'c0ffee0' }),
+        json: async () => ({ status: 'ok' }),
+      }))
+    );
+
+    // Mock runner for runSandboxedSmokeCommand
+    const mockRunner = vi.fn().mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return {
+        exitCode: 0,
+        stdout: 'ok',
+        stderr: '',
+        timedOut: false,
+      };
+    });
+
+    const result = await runSmokeSuite({
+      workItemId: 101,
+      commitSha: 'c0ffee0',
+      smokeUrl: 'https://prod.example.com/health',
+      worktreePath: '/tmp/worktree',
+      commandRunnerFn: mockRunner as any,
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.durationMs).toBeGreaterThanOrEqual(40);
+    expect(result.durationMs).toBeLessThan(10000);
+  });
 });
 
 describe('classifySmokeError', () => {
