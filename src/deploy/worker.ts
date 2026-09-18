@@ -386,7 +386,13 @@ export async function processDeploymentWorkflow(
 ): Promise<void> {
   const details = await getWorkItemDetails(workItemId, revId);
 
-  if (details.state !== 'Ready to Deploy') {
+  const isDeployFlow =
+    details.boardColumn?.toLowerCase() === 'in deployment' ||
+    details.boardColumn?.toLowerCase() === 'ready to release' ||
+    details.boardColumn?.toLowerCase() === 'in release' ||
+    details.state.toLowerCase() === 'ready to deploy';
+
+  if (!isDeployFlow) {
     return;
   }
 

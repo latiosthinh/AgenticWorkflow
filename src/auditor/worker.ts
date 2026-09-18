@@ -19,8 +19,12 @@ export async function processWorkItemAudit(
     // Step 1: Fetch work item details from ADO
     const workItem = await getWorkItemDetails(workItemId);
 
-    // Step 2: Only audit tickets in 'New' state
-    if (workItem.state !== 'New') {
+    // Step 2: Only audit tickets in 'New' state / 'To Do' column
+    const isRefinementFlow =
+      workItem.boardColumn?.toLowerCase() === 'to do' ||
+      ['new', 'to do', 'proposed'].includes(workItem.state.toLowerCase());
+
+    if (!isRefinementFlow) {
       stateStore.updateDedupStatus(
         workItemId,
         revId,

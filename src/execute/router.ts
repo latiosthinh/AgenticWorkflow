@@ -134,14 +134,17 @@ export async function routeWorkItemEvent(
           await processWorkItemRework(workItemId, revId, verdict.feedback, options);
         }
       } else {
-        const step = resolveRoutingStep(workItem.state, workItem.tags);
+        const stepKey = workItem.boardColumn || workItem.state;
+        const step = resolveRoutingStep(stepKey, workItem.tags);
 
         if (!step) {
           stateStore.updateDedupStatus(
             workItemId,
             revId,
             'skipped',
-            `Ticket state '${workItem.state}' has no active handler`
+            workItem.boardColumn
+              ? `Ticket state '${workItem.state}' (column '${workItem.boardColumn}') has no active handler`
+              : `Ticket state '${workItem.state}' has no active handler`
           );
           return;
         }
@@ -152,7 +155,12 @@ export async function routeWorkItemEvent(
             break;
           case 3: {
             const ticket = await stateStore.getTicketState(workItemId);
-            if (ticket?.scopeLock?.status !== 'locked' && !options?.skipScopeLockCheck) {
+            const hasScopeLock = ticket?.scopeLock?.status === 'locked';
+            const isDirectDevMove =
+              !ticket?.scopeLock &&
+              (workItem.boardColumn?.toLowerCase() === 'in dev' || workItem.state.toLowerCase() === 'doing');
+
+            if (!hasScopeLock && !options?.skipScopeLockCheck && !isDirectDevMove) {
               stateStore.updateDedupStatus(
                 workItemId,
                 revId,
@@ -161,6 +169,25 @@ export async function routeWorkItemEvent(
               );
               return;
             }
+
+            if (isDirectDevMove && !hasScopeLock) {
+              const now = new Date().toISOString();
+              await stateStore.updateTicketState(workItemId, (draft) => {
+                draft.scopeLock = {
+                  status: 'locked',
+                  iterationCount: 0,
+                  requestedAt: now,
+                  lockedAt: now,
+                  lockedBy: workItem.revisedBy || 'human-developer',
+                  feedback: null,
+                  remindedAt: null,
+                  escalatedAt: null,
+                  createdAt: now,
+                  updatedAt: now,
+                };
+              });
+            }
+
             await processWorkItemExecute(workItemId, revId, options);
             break;
           }

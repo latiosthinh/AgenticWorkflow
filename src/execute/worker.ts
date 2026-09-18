@@ -357,12 +357,16 @@ export async function processWorkItemExecute(
     }
 
     // Step 3: Fresh 'In Dev' Execution Flow
-    if (workItem.state !== 'In Dev') {
+    const isExecutionFlow =
+      workItem.boardColumn?.toLowerCase() === 'in dev' ||
+      ['in dev', 'doing', 'active', 'in progress'].includes(workItem.state.toLowerCase());
+
+    if (!isExecutionFlow) {
       stateStore.updateDedupStatus(
         workItemId,
         revId,
         'skipped',
-        `Ticket state is '${workItem.state}', expected 'In Dev'`
+        `Ticket state '${workItem.state}' (column '${workItem.boardColumn || 'n/a'}') is not an execution state`
       );
       return;
     }

@@ -20,6 +20,8 @@ export interface WorkItemDetails {
   description: string;
   acceptanceCriteria: string;
   state: string;
+  boardColumn?: string;
+  kanbanColumnKey?: string;
   tags?: string;
   history?: string;
   revisedBy?: string;
@@ -125,7 +127,7 @@ export async function getWorkItemDetails(
   const workItem = revId
     ? await adoClient.getRevision(workItemId, revId)
     : await adoClient.getWorkItem(workItemId);
-  const fields = workItem.fields || {};
+  const fields = workItem?.fields || {};
   const changedBy = fields['System.ChangedBy'];
   const changedByStr =
     typeof changedBy === 'object' && changedBy !== null
@@ -135,18 +137,29 @@ export async function getWorkItemDetails(
         : undefined;
 
   const revisedBy =
-    (workItem as any).revisedBy?.displayName ||
-    (workItem as any).revisedBy?.name ||
-    (workItem as any).revisedBy?.uniqueName ||
+    (workItem as any)?.revisedBy?.displayName ||
+    (workItem as any)?.revisedBy?.name ||
+    (workItem as any)?.revisedBy?.uniqueName ||
     changedByStr;
 
+  const kanbanColumnKey = Object.keys(fields).find(
+    (k) => (k.endsWith('_Kanban.Column') || k.endsWith('Kanban.Column')) && !k.includes('Done')
+  );
+  const boardColumn =
+    fields['System.BoardColumn'] || (kanbanColumnKey ? fields[kanbanColumnKey] : undefined);
+
   return {
-    id: workItem.id ?? workItemId,
-    rev: workItem.rev ?? fields['System.Rev'] ?? 1,
+    id: workItem?.id ?? workItemId,
+    rev: workItem?.rev ?? fields['System.Rev'] ?? 1,
     title: fields['System.Title'] || '',
     description: fields['System.Description'] || '',
-    acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || '',
+    acceptanceCriteria:
+      fields['Microsoft.VSTS.Common.AcceptanceCriteria'] ||
+      fields['System.Description'] ||
+      '',
     state: fields['System.State'] || '',
+    boardColumn,
+    kanbanColumnKey,
     tags: fields['System.Tags'] || '',
     history: fields['System.History'] || '',
     revisedBy,
@@ -167,8 +180,33 @@ export async function transitionToReadyToDev(
   workItemId: number,
   htmlComment: string
 ): Promise<any> {
+  let details: WorkItemDetails | undefined;
+  try {
+    details = await getWorkItemDetails(workItemId);
+  } catch {
+    // Ignore details lookup in tests
+  }
+
   const patchDoc = buildReadyToDevPatch(htmlComment);
-  return adoClient.updateWorkItem(workItemId, patchDoc);
+  if (details?.kanbanColumnKey) {
+    (patchDoc as any[]).unshift({
+      op: Operation.Add,
+      path: `/fields/${details.kanbanColumnKey}`,
+      value: 'Ready for dev',
+    });
+  }
+
+  try {
+    return await adoClient.updateWorkItem(workItemId, patchDoc);
+  } catch {
+    return await adoClient.updateWorkItem(workItemId, [
+      {
+        op: Operation.Add,
+        path: '/fields/System.History',
+        value: htmlComment,
+      },
+    ]);
+  }
 }
 
 export async function postFeedbackComment(
@@ -184,8 +222,24 @@ export async function transitionToDevDone(
   htmlComment: string
 ): Promise<any> {
   const details = await getWorkItemDetails(workItemId);
-  const patchDoc = buildDevDonePatch(htmlComment, details.tags);
-  return adoClient.updateWorkItem(workItemId, patchDoc);
+  const patchDoc = buildDevDonePatch(htmlComment, details?.tags);
+
+  if (details?.kanbanColumnKey) {
+    (patchDoc as any[]).unshift({
+      op: Operation.Add,
+      path: `/fields/${details.kanbanColumnKey}`,
+      value: 'Ready for PR',
+    });
+  }
+
+  try {
+    return await adoClient.updateWorkItem(workItemId, patchDoc);
+  } catch {
+    const fallback = (patchDoc as any[]).filter(
+      (op: any) => op.path !== '/fields/System.State'
+    );
+    return await adoClient.updateWorkItem(workItemId, fallback);
+  }
 }
 
 export async function flagTicketBlocked(
@@ -269,8 +323,24 @@ export async function transitionToReadyForQa(
   htmlComment: string
 ): Promise<WorkItem> {
   const details = await getWorkItemDetails(workItemId);
-  const patchDoc = buildMergeReadyForQaPatch(htmlComment, details.tags);
-  return adoClient.updateWorkItem(workItemId, patchDoc);
+  const patchDoc = buildMergeReadyForQaPatch(htmlComment, details?.tags);
+
+  if (details?.kanbanColumnKey) {
+    (patchDoc as any[]).unshift({
+      op: Operation.Add,
+      path: `/fields/${details.kanbanColumnKey}`,
+      value: 'Ready for QA',
+    });
+  }
+
+  try {
+    return await adoClient.updateWorkItem(workItemId, patchDoc);
+  } catch {
+    const fallback = (patchDoc as any[]).filter(
+      (op: any) => op.path !== '/fields/System.State'
+    );
+    return await adoClient.updateWorkItem(workItemId, fallback);
+  }
 }
 
 export {

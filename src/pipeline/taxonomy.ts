@@ -167,27 +167,42 @@ export function normalizeTags(
 }
 
 export function resolveRoutingStep(
-  state: string,
+  stateOrColumn: string,
   tags?: readonly string[] | string[] | string | null
 ): StepDefinition | undefined {
   const normalizedTags = normalizeTags(tags);
   if (normalizedTags.some((t) => t.includes('[awaiting-input]'))) {
     return getStepByNumber(3);
   }
-  switch (state) {
-    case 'New':
+  const key = stateOrColumn?.trim().toLowerCase();
+  switch (key) {
+    case 'new':
+    case 'to do':
+    case 'proposed':
       return getStepByNumber(1);
-    case 'Ready to Dev':
+    case 'ready to dev':
+    case 'ready for dev':
       return getStepByNumber(2);
-    case 'In Dev':
+    case 'in dev':
+    case 'doing':
+    case 'active':
+    case 'in progress':
       return getStepByNumber(3);
-    case 'Dev Done':
+    case 'dev done':
+    case 'ready for pr':
+    case 'in pr review':
+    case 'resolved':
       return getStepByNumber(4);
-    case 'Ready for QA':
+    case 'ready for qa':
+    case 'in qa':
       return getStepByNumber(6);
-    case 'Ready to Deploy':
+    case 'ready to deploy':
+    case 'ready to release':
+    case 'in deployment':
+    case 'in release':
       return getStepByNumber(7);
-    case 'Done':
+    case 'done':
+    case 'closed':
       return getStepByNumber(9);
     default:
       return undefined;

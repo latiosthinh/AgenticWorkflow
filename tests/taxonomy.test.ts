@@ -165,8 +165,11 @@ describe('Golden Path v2 Taxonomy Definition (TAX-01)', () => {
 describe('Taxonomy Resolution Helpers (TAX-03)', () => {
   it('resolves routing steps by ADO state and tags', () => {
     expect(resolveRoutingStep('New')?.step).toBe(1);
+    expect(resolveRoutingStep('To Do')?.step).toBe(1);
     expect(resolveRoutingStep('Ready to Dev')?.step).toBe(2);
+    expect(resolveRoutingStep('Ready for dev')?.step).toBe(2);
     expect(resolveRoutingStep('In Dev')?.step).toBe(3);
+    expect(resolveRoutingStep('Doing')?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', ['[awaiting-input]'])?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', 'backend; [awaiting-input]')?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', '[awaiting-input]; other-tag')?.step).toBe(3);
@@ -175,8 +178,14 @@ describe('Taxonomy Resolution Helpers (TAX-03)', () => {
     expect(resolveRoutingStep('AnyState', ['backend', ' [awaiting-input] '])?.step).toBe(3);
     expect(resolveRoutingStep('AnyState', ['other-tag, [awaiting-input]'])?.step).toBe(3);
     expect(resolveRoutingStep('Dev Done')?.step).toBe(4);
+    expect(resolveRoutingStep('Ready for PR')?.step).toBe(4);
+    expect(resolveRoutingStep('In PR Review')?.step).toBe(4);
     expect(resolveRoutingStep('Ready for QA')?.step).toBe(6);
+    expect(resolveRoutingStep('In QA')?.step).toBe(6);
     expect(resolveRoutingStep('Ready to Deploy')?.step).toBe(7);
+    expect(resolveRoutingStep('Ready to Release')?.step).toBe(7);
+    expect(resolveRoutingStep('In Deployment')?.step).toBe(7);
+    expect(resolveRoutingStep('In Release')?.step).toBe(7);
     expect(resolveRoutingStep('Done')?.step).toBe(9);
     expect(resolveRoutingStep('UnknownState')).toBeUndefined();
     expect(resolveRoutingStep('Blocked')).toBeUndefined();

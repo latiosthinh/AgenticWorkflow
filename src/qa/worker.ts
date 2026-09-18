@@ -43,7 +43,12 @@ export async function processQaVerification(
 ): Promise<TwoStrikeResult | void> {
   const workItem = await getWorkItemDetails(workItemId);
 
-  if (workItem.state !== 'Ready for QA') {
+  const isQaFlow =
+    workItem.boardColumn?.toLowerCase() === 'ready for qa' ||
+    workItem.boardColumn?.toLowerCase() === 'in qa' ||
+    workItem.state.toLowerCase() === 'ready for qa';
+
+  if (!isQaFlow) {
     return;
   }
 

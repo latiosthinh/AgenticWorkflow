@@ -52,8 +52,9 @@ export async function pollAdoWorkItems(): Promise<number> {
         const { isDuplicate } = stateStore.recordDedupEvent(item.id, revId, payloadHash);
         if (!isDuplicate) {
           dispatched++;
-          const state = details.fields?.['System.State'];
-          console.log(`[ado-poller] Detected new/modified work item #${item.id} rev ${revId} (State: ${state})`);
+          const column = details.fields?.['System.BoardColumn'] || 'n/a';
+          const state = details.fields?.['System.State'] || 'n/a';
+          console.log(`[ado-poller] Detected new/modified work item #${item.id} rev ${revId} (Column: '${column}', State: '${state}')`);
           workItemQueueManager.runInLane(item.id, async () => {
             try {
               await routeWorkItemEvent(item.id!, revId);
