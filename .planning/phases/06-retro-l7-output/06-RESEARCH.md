@@ -496,11 +496,11 @@ Operational guidance and health monitoring procedures for work item AB#${lifecyc
 | A2 | Runbooks reside under `.claude/skills/<skill-name>/RUNBOOK.md` in skills repo. | Architecture Patterns | Low; confirmed by CONTEXT.md decisions. |
 | A3 | Lead time measured from `ticket.createdAt` to `deployedAt`. | DORA Metrics | Low; standard DORA lead time definition for change lifecycle. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How to handle tickets where runbook has "no change"?**
    - *What we know:* EVID-01 states: "runbook-diff PR link (or a recorded 'no change' auditable negative)".
-   - *Recommendation:* When `hasChanges: false`, single PR contains only `SKILL.md`, `l7Record.runbookDiffPrUrl` is set to `null` (or `'no change'`), and comment copy renders `Runbook: (no change)` without breaking HTML links.
+   - *RESOLVED:* When `hasChanges: false`, single PR contains only `SKILL.md`, `l7Record.runbookDiffPrUrl` is set to `null`, and comment copy renders `Runbook: (no change)` without breaking HTML links.
 
 ## Environment Availability
 
