@@ -99,7 +99,7 @@ Every orchestrator-side transition above persists through the `StateStore` lane 
 - [x] **Phase 3: PM Scope-Lock Gate** — human 👤 PM scope verdict at Refinement Step 2; audit pass parks the ticket instead of auto-unlocking dev; unbypassable, undeadlockable, breaker-isolated.
 - [x] **Phase 4: L7 Evidence Index Extension** — unified evidence index L1–L6 → L1–L7 (additive field on the ticket state file — no migration) with a fail-closed compiler; no fabricated defaults. (completed 2026-09-17)
 - [ ] **Phase 5: Prod Smoke Suite** — automated ⚡ smoke runner at Release Step 8 before the telemetry window; INFRA-vs-APP 2-strike classification; read-only sandbox.
-- [ ] **Phase 6: Retro & L7 Output** — retro takeaways + runbook + skill PR as the real L7 record in the ticket's `StateStore` file; awaited before Done, fail-closed; Done re-sequencing.
+- [x] **Phase 6: Retro & L7 Output** — retro takeaways + runbook + skill PR as the real L7 record in the ticket's `StateStore` file; awaited before Done, fail-closed; Done re-sequencing. (completed 2026-09-18)
 - [ ] **Phase 7: Docs Realignment & E2E Proof** — docs/state matrix describe the BUILT file-backed system; one fixture ticket walks `New → Done → L1–L7` end-to-end on the `StateStore`.
 
 **Waves:** A (serial): 1 → 2 · **B (3-way parallel): 3 ∥ 4 ∥ 5** · C (serial): 6 · D (serial): 7.
@@ -215,7 +215,7 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Retro report, Zod action item validation, DORA trend metrics & runbook generation
 - [x] 06-02-PLAN.md — Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence
-- [ ] 06-03-PLAN.md — Deploy worker awaited retro sequencing, retry cap & fail-closed Done gate
+- [x] 06-03-PLAN.md — Deploy worker awaited retro sequencing, retry cap & fail-closed Done gate
 **Parallelizable**: No — Wave C, serial (harvests Phase 5's smoke results, persists through Phase 4's fail-closed compiler, re-sequences the same `deploy/worker.ts` Phase 5 touched).
 
 ### Phase 7: Docs Realignment & E2E Proof
@@ -245,7 +245,7 @@ Plans:
 | 3. PM Scope-Lock Gate | 3/3 | Complete | 2026-09-17 |
 | 4. L7 Evidence Index Extension | 2/2 | Complete | 2026-09-17 |
 | 5. Prod Smoke Suite | 3/3 | Complete | 2026-09-18 |
-| 6. Retro & L7 Output | 2/3 | In Progress|  |
+| 6. Retro & L7 Output | 3/3 | Complete | 2026-09-18 |
 | 7. Docs Realignment & E2E Proof | 0/1 | Not started | — |
 
 **Requirement coverage:** 19/19 mapped, each to exactly one phase — STATE-01/02/03/04→1 · TAX-01/03→2 · SCOPE-01/02/03→3 · EVID-02/03→4 · SMOKE-01/02/03→5 · RETRO-01/02/03 + EVID-01→6 · TAX-02→7. No orphans, no double-maps.

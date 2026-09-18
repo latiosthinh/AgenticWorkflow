@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: executing
-stopped_at: Completed Phase 5 Plan 03 (05-03-PLAN.md)
-last_updated: "2026-09-18T00:50:03.863Z"
-last_activity: 2026-09-18 — completed Plan 06-02 (Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence)
+stopped_at: Completed Phase 6 Plan 03 (06-03-PLAN.md)
+last_updated: "2026-09-18T08:00:00.000Z"
+last_activity: 2026-09-18 — completed Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 18
-  completed_plans: 17
-  percent: 94
+  completed_phases: 6
+  total_plans: 19
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 ## Current Position
 
-Phase: 6 — Retro & L7 Output
-Plan: 06-02 (completed) — Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence
-Status: In progress (2 of 3 plans complete). Next: Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
-Last activity: 2026-09-18 — completed Plan 06-02 (Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence)
+Phase: 6 — Retro & L7 Output (completed)
+Plan: 06-03 (completed) — Done transition re-sequencing, bounded retro retry & fail-closed L7 gate
+Status: Phase 6 complete (3 of 3 plans complete). Next: Phase 7 — Docs Realignment & E2E Proof
+Last activity: 2026-09-18 — completed Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
 
-Progress: [█████████░] 94%
+Progress: [█████████½] 95%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -79,6 +79,7 @@ Progress: [█████████░] 94%
 | Phase Phase 05 PP03 | 5m | 2 tasks | 4 files |
 | Phase 06 P01 | 4m | 2 tasks | 7 files |
 | Phase 06 P02 | 4m | 2 tasks | 5 files |
+| Phase 06 P03 | 6m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -246,6 +247,9 @@ Recent decisions affecting current work:
 - [06-02]: Stage both SKILL.md and RUNBOOK.md under .claude/skills/<name>/ in a single PR to eliminate review churn
 - [06-02]: Omit RUNBOOK.md from PR staging when hasChanges is false, marking PR description with (no operational changes required)
 - [06-02]: Persist complete L7EvidenceState to draft.retroRecords and draft.l7Evidence within workItemQueueManager.runInLane prior to ADO notification comment
+- [06-03]: Await processLearningFeedbackLoop before compileL1L7EvidenceIndex and Done patch, eliminating fire-and-forget background execution
+- [06-03]: Clamp retro feedback loop to 2-attempt retry; on double failure tag [retro-failed] with an alert comment and halt the Done transition
+- [06-03]: Compile L1-L7 evidence index with failClosed: true, guaranteeing a real persisted L7 record exists before patching Done
 
 ### Pending Todos
 
@@ -254,7 +258,7 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 - [Phase 1]: Decide frontmatter codec approach (hand-rolled parse/serialize — zero new deps), archive/TTL policy location (e.g. `data/state/archive/`) + sweep cadence, and the win32 rm-then-rename crash-safe ordering; StateStore root via zod env (default `data/state/`).
 - [Phase 3]: Validate ADO org permits bot tag-writes on `New`/`Ready to Dev` items; check tag collisions for `[awaiting-scope-lock]`/`[scope-locked]`; decide PM notification mechanism (comment vs @mention/System.AssignedTo).
 - [Phase 5]: Security-review the wider prod egress allowance (PRODUCTION_SMOKE_URL); decide smoke-suite authorship (target repo vs orchestrator-owned — changes worktree need).
-- [Phase 6]: Decide runbook destination (`.claude/skills/<name>/RUNBOOK.md` vs top-level `runbooks/`); confirm Step 9 needs no new human verdict token (skills-PR merge is the gate).
+- [Phase 6]: Runbook destination resolved (`.claude/skills/<name>/RUNBOOK.md`); confirmed Step 9 needs no new human verdict token (skills-PR merge is the gate).
 - [Backlog]: L2/L4 hardcoded evidence-index defaults — wire to `ado/policy.ts:verifyBranchPolicies` post-v2.0 (Open Decision #2, leave-and-log).
 - [Backlog]: STORE-01 — swap `StateStore` file backend → Postgres when multi-instance is needed (the `ponytail:` ceiling).
 
@@ -274,6 +278,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T06:30:00.000Z
-Stopped at: Completed Phase 5 Plan 03 (05-03-PLAN.md)
-Resume: Phase 5 complete; proceed to Phase 6 (Retro & L7 Output)
+Last session: 2026-09-18T08:00:00.000Z
+Stopped at: Completed Phase 6 Plan 03 (06-03-PLAN.md)
+Resume: Phase 6 complete; proceed to Phase 7 (Docs Realignment & E2E Proof)
