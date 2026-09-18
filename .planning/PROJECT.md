@@ -10,7 +10,8 @@ Deterministic, evidence-backed software delivery where AI agents autonomously pl
 
 ## Current State
 
-v1.0 shipped 2026-09-09 (git tag `v1.0`): all 8 Golden Path phases and 31 requirements complete, 277 tests passing. **Milestone v2.0 started** — full restructure to the Golden Path v2 model (5 columns / 9 steps / L1–L7).
+- **v2.0 shipped 2026-09-18 (git tag `v2.0`)**: 5 columns / 9 steps / L1–L7 evidence on file-backed `StateStore`, 437 tests passing green.
+- **v1.0 shipped 2026-09-09 (git tag `v1.0`)**: 8 Golden Path phases, 31 requirements complete.
 
 ## Current Milestone: v2.0 — Golden Path v2
 

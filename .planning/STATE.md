@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
 status: complete
-stopped_at: Completed Phase 7 Plan 01 (07-01-PLAN.md) — Milestone v2.0 complete
-last_updated: "2026-09-18T08:40:00.000Z"
-last_activity: 2026-09-18 — completed Plan 07-01 (E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment)
+stopped_at: Milestone v2.0 shipped & archived
+last_updated: "2026-09-18T09:15:00.000Z"
+last_activity: 2026-09-18 — Milestone v2.0 complete and archived
 progress:
   total_phases: 7
   completed_phases: 7
@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
+See: `.planning/PROJECT.md` (updated 2026-09-18)
 
-**Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts.
-**Current focus:** Milestone v2.0 complete — all 19 plans across 7 phases verified green on the **file-backed `StateStore`**.
+**Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts on a file-backed `StateStore`.
+**Current focus:** Milestone v2.0 shipped. Ready for next milestone or live deployment.
 
 ## Current Position
 
