@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: executing
-stopped_at: Completed Phase 6 Plan 03 (06-03-PLAN.md)
-last_updated: "2026-09-18T08:00:00.000Z"
-last_activity: 2026-09-18 — completed Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
+status: complete
+stopped_at: Completed Phase 7 Plan 01 (07-01-PLAN.md) — Milestone v2.0 complete
+last_updated: "2026-09-18T08:40:00.000Z"
+last_activity: 2026-09-18 — completed Plan 07-01 (E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment)
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 19
-  completed_plans: 18
-  percent: 95
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 
 **Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts.
-**Current focus:** Milestone v2.0 — full restructure to the v2 model (5 columns / 9 steps / L1–L7) on a **file-backed `StateStore`** (SQLite removed — binding post-research owner decision).
+**Current focus:** Milestone v2.0 complete — all 19 plans across 7 phases verified green on the **file-backed `StateStore`**.
 
 ## Current Position
 
-Phase: 6 — Retro & L7 Output (completed)
-Plan: 06-03 (completed) — Done transition re-sequencing, bounded retro retry & fail-closed L7 gate
-Status: Phase 6 complete (3 of 3 plans complete). Next: Phase 7 — Docs Realignment & E2E Proof
-Last activity: 2026-09-18 — completed Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
+Phase: 7 — Docs Realignment & E2E Proof (completed)
+Plan: 07-01 (completed) — E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment
+Status: Milestone v2.0 complete (all 7 phases / 19 plans complete). All 19 requirements satisfied.
+Last activity: 2026-09-18 — completed Plan 07-01 (E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment)
 
-Progress: [█████████½] 95%
+Progress: [██████████] 100%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -80,6 +80,7 @@ Progress: [█████████½] 95%
 | Phase 06 P01 | 4m | 2 tasks | 7 files |
 | Phase 06 P02 | 4m | 2 tasks | 5 files |
 | Phase 06 P03 | 6m | 2 tasks | 2 files |
+| Phase 07 P01 | 6m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -250,6 +251,9 @@ Recent decisions affecting current work:
 - [06-03]: Await processLearningFeedbackLoop before compileL1L7EvidenceIndex and Done patch, eliminating fire-and-forget background execution
 - [06-03]: Clamp retro feedback loop to 2-attempt retry; on double failure tag [retro-failed] with an alert comment and halt the Done transition
 - [06-03]: Compile L1-L7 evidence index with failClosed: true, guaranteeing a real persisted L7 record exists before patching Done
+- [07-01]: Added automated drift guard test parsing Authoritative ADO State Matrix in ROADMAP.md and verifying 9-step parity against GOLDEN_PATH_V2
+- [07-01]: Added fallback resolution for archived tickets via listTickets({ includeArchived: true }) in compileL1L7EvidenceIndex to support post-Done inspection without re-creating active ticket files
+- [07-01]: Realigned CLAUDE.md stack definition completely to file-backed StateStore (node:fs) and LaneManager (p-queue), eliminating all stale better-sqlite3 and drizzle-orm references
 
 ### Pending Todos
 
@@ -278,6 +282,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T08:00:00.000Z
-Stopped at: Completed Phase 6 Plan 03 (06-03-PLAN.md)
-Resume: Phase 6 complete; proceed to Phase 7 (Docs Realignment & E2E Proof)
+Last session: 2026-09-18T08:40:00.000Z
+Stopped at: Completed Phase 7 Plan 01 (07-01-PLAN.md) — Milestone v2.0 complete
+Resume: Milestone v2.0 complete (all 7 phases complete)
