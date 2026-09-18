@@ -147,6 +147,7 @@ export async function runSandboxedSmokeCommand(options: {
   command?: string;
   timeoutMs?: number;
   runnerFn?: typeof runCommand;
+  smokeUrl?: string;
 }): Promise<SmokeRunResult> {
   const rawCommand = options.command || env.SMOKE_TEST_COMMAND || 'npm run test:smoke';
   const parts = rawCommand.trim().split(/\s+/);
@@ -164,6 +165,8 @@ export async function runSandboxedSmokeCommand(options: {
     env.ADO_WEBHOOK_SECRET,
   ].filter((s): s is string => Boolean(s));
 
+  const smokeUrl = options.smokeUrl || env.PRODUCTION_SMOKE_URL;
+
   const execFn = options.runnerFn || runCommand;
   const start = Date.now();
   const result = await execFn(
@@ -172,6 +175,7 @@ export async function runSandboxedSmokeCommand(options: {
     {
       cwd: options.worktreePath,
       timeoutMs,
+      env: smokeUrl ? { PRODUCTION_SMOKE_URL: smokeUrl } : undefined,
     },
     knownSecrets
   );
@@ -317,6 +321,7 @@ export async function runSmokeSuite(options: {
       worktreePath: options.worktreePath,
       command: options.testCommand,
       runnerFn: options.commandRunnerFn,
+      smokeUrl: options.smokeUrl,
     });
     return {
       ...cmdResult,

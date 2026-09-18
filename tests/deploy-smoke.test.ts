@@ -329,6 +329,32 @@ describe('runSandboxedSmokeCommand', () => {
       ])
     );
   });
+
+  it('propagates PRODUCTION_SMOKE_URL in subprocess env options', async () => {
+    (env as any).PRODUCTION_SMOKE_URL = 'https://prod.example.com/health';
+
+    const mockRunner = vi.fn().mockResolvedValue({
+      exitCode: 0,
+      stdout: 'ok',
+      stderr: '',
+      timedOut: false,
+    });
+
+    await runSandboxedSmokeCommand({
+      worktreePath: '/tmp/worktree',
+      command: 'npm run test:smoke',
+      runnerFn: mockRunner as any,
+    });
+
+    expect(mockRunner).toHaveBeenCalledWith(
+      'npm',
+      ['run', 'test:smoke'],
+      expect.objectContaining({
+        env: { PRODUCTION_SMOKE_URL: 'https://prod.example.com/health' },
+      }),
+      expect.any(Array)
+    );
+  });
 });
 
 describe('runSmokeSuite', () => {
