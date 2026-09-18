@@ -1,5 +1,5 @@
 import { generateText, Output } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { appModel } from '../ai/provider.js';
 import { env } from '../config/env.js';
 import { PlanResultSchema, type PlanResult } from './schema.js';
 
@@ -57,7 +57,7 @@ ${ticket.acceptanceCriteria}
 `;
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: appModel,
     instructions:
       'You are an expert software engineering planner. Evaluate the ticket for clarity, technical decisions, and feasibility. ' +
       'If critical requirements are missing, ambiguous, or unresolved, set hasAmbiguities to true and formulate concise questions. ' +

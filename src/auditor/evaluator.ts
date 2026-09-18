@@ -1,5 +1,5 @@
 import { generateText, Output } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { appModel } from '../ai/provider.js';
 import { env } from '../config/env.js';
 import { AuditResultSchema, type AuditResult } from './schema.js';
 import { buildAuditorPrompt, type TicketInput } from './prompt.js';
@@ -152,7 +152,7 @@ export async function auditTicketContract(
   const promptConfig = buildAuditorPrompt(ticket);
 
   const result = await generateText({
-    model: openai('gpt-4o'),
+    model: appModel,
     instructions: promptConfig.instructions,
     prompt: promptConfig.prompt,
     output: Output.object({

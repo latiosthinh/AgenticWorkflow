@@ -87,7 +87,9 @@ export async function runQaSuite(
       cwd: worktreePath,
       timeoutMs: env.QA_TIMEOUT_MS,
     },
-    [env.ADO_PAT, env.OPENAI_API_KEY, env.ADO_WEBHOOK_SECRET]
+    [env.ADO_PAT, env.OPENAI_API_KEY, env.ADO_WEBHOOK_SECRET, env.API_KEY].filter(
+      Boolean
+    ) as string[]
   );
   const durationMs = Date.now() - start;
 
