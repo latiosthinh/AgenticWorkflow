@@ -5,7 +5,13 @@ import { GOLDEN_PATH_V2 } from '../src/pipeline/taxonomy.js';
 
 describe('Authoritative ADO State Matrix Synchronization (TAX-02)', () => {
   it('strictly matches GOLDEN_PATH_V2 taxonomy definitions in ROADMAP.md', () => {
-    const roadmapPath = path.resolve(process.cwd(), '.planning/ROADMAP.md');
+    const activeRoadmap = path.resolve(process.cwd(), '.planning/ROADMAP.md');
+    const archivedRoadmap = path.resolve(process.cwd(), '.planning/milestones/v2.0-ROADMAP.md');
+    const roadmapPath =
+      fs.existsSync(activeRoadmap) &&
+      fs.readFileSync(activeRoadmap, 'utf8').includes('## Authoritative ADO State Matrix')
+        ? activeRoadmap
+        : archivedRoadmap;
     const content = fs.readFileSync(roadmapPath, 'utf8');
 
     const matrixHeader = '## Authoritative ADO State Matrix (Golden Path v2 — 5 columns / 9 steps / L1–L7)';

@@ -46,12 +46,18 @@ import {
 } from '../test-runner/evidence.js';
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
+import { runOpenCode } from './opencode-runner.js';
 
 export interface ProcessExecuteOptions {
   mockTestRunner?: () => Promise<TestRunResult>;
   mockCodeEdit?: (worktreePath: string) => Promise<void>;
   maxDiffLoc?: number;
   autoProceedResumption?: boolean;
+  openCodeSessionId?: string;
+  mockOpenCodeRunner?: (
+    args: string[],
+    cwd: string
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number; timedOut?: boolean }>;
 }
 
 async function runExecutionPipeline(
@@ -73,6 +79,19 @@ async function runExecutionPipeline(
   // 2. Perform bounded code editing
   if (options?.mockCodeEdit) {
     await options.mockCodeEdit(worktreeResult.worktreePath);
+  } else if (env.LOCAL_AGENT_TYPE === 'opencode') {
+    const prompt = `Implement the following requirement:\n\nTitle: ${workItem.title}\n\nDescription: ${workItem.description}\n\nAcceptance Criteria:\n${workItem.acceptanceCriteria}`;
+    const runRes = await runOpenCode({
+      cwd: worktreeResult.worktreePath,
+      message: prompt,
+      sessionId: options?.openCodeSessionId,
+      mockRunner: options?.mockOpenCodeRunner,
+    });
+    if (!runRes.success) {
+      throw new Error(
+        `OpenCode execution failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`
+      );
+    }
   }
 
   // 3. Guard diff ceiling (<250 LOC)

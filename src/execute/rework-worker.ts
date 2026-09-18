@@ -31,12 +31,18 @@ import {
 } from '../accept/envelope.js';
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
+import { runOpenCode } from './opencode-runner.js';
 
 export interface ProcessReworkOptions {
   mockTestRunner?: () => Promise<TestRunResult>;
   mockCodeEdit?: (worktreePath: string, reworkPrompt?: string) => Promise<void>;
   maxDiffLoc?: number;
   baseBranch?: string;
+  openCodeSessionId?: string;
+  mockOpenCodeRunner?: (
+    args: string[],
+    cwd: string
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number; timedOut?: boolean }>;
 }
 
 export async function processWorkItemRework(
@@ -120,6 +126,18 @@ export async function processWorkItemRework(
     // 4. Bounded code editing
     if (options?.mockCodeEdit) {
       await options.mockCodeEdit(worktreeResult.worktreePath, reworkPrompt);
+    } else if (env.LOCAL_AGENT_TYPE === 'opencode') {
+      const runRes = await runOpenCode({
+        cwd: worktreeResult.worktreePath,
+        message: reworkPrompt,
+        sessionId: options?.openCodeSessionId,
+        mockRunner: options?.mockOpenCodeRunner,
+      });
+      if (!runRes.success) {
+        throw new Error(
+          `OpenCode rework failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`
+        );
+      }
     }
 
     // 5. Verify cumulative diff ceiling (<250 LOC)
