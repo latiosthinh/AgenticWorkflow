@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Golden Path v2
-status: in-progress
-stopped_at: Completed Phase 6 Plan 01 (06-01-PLAN.md)
-last_updated: "2026-09-18T07:45:00.000Z"
-last_activity: 2026-09-18 — completed Plan 06-01 (Retro Report Synthesis, Zod Action Item Validation & DORA Metrics)
+status: executing
+stopped_at: Completed Phase 5 Plan 03 (05-03-PLAN.md)
+last_updated: "2026-09-18T00:50:03.863Z"
+last_activity: 2026-09-18 — completed Plan 06-02 (Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 19
-  completed_plans: 16
-  percent: 84
+  total_plans: 18
+  completed_plans: 17
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-09-16 — milestone v2.0)
 ## Current Position
 
 Phase: 6 — Retro & L7 Output
-Plan: 06-01 (completed) — Retro Report Synthesis, Zod Action Item Validation & DORA Metrics
-Status: In progress (1 of 3 plans complete). Next: Plan 06-02 (Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence)
-Last activity: 2026-09-18 — completed Plan 06-01 (Retro Report Synthesis, Zod Action Item Validation & DORA Metrics)
+Plan: 06-02 (completed) — Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence
+Status: In progress (2 of 3 plans complete). Next: Plan 06-03 (Done transition re-sequencing, bounded retro retry & fail-closed L7 gate)
+Last activity: 2026-09-18 — completed Plan 06-02 (Harvester enhancement, single-PR dual-asset staging & StateStore L7 persistence)
 
-Progress: [████████░░] 84% (Wave C: Phase 6 in progress)
+Progress: [█████████░] 94%
 
 **Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
 
@@ -78,6 +78,7 @@ Progress: [████████░░] 84% (Wave C: Phase 6 in progress)
 | Phase 05 P02 | 4m | 2 tasks | 2 files |
 | Phase Phase 05 PP03 | 5m | 2 tasks | 4 files |
 | Phase 06 P01 | 4m | 2 tasks | 7 files |
+| Phase 06 P02 | 4m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -242,6 +243,9 @@ Recent decisions affecting current work:
 - [06-01]: Enforce strict Zod validation on retrospective action items with P1/P2/P3 priorities and trackingRef
 - [06-01]: Guard DORA trend metrics against zero-baseline historical deployed tickets returning delta=0 and trend=stable without NaN
 - [06-01]: Sanitize newlines and quotes in runbook titles and YAML frontmatter via escapeYamlString
+- [06-02]: Stage both SKILL.md and RUNBOOK.md under .claude/skills/<name>/ in a single PR to eliminate review churn
+- [06-02]: Omit RUNBOOK.md from PR staging when hasChanges is false, marking PR description with (no operational changes required)
+- [06-02]: Persist complete L7EvidenceState to draft.retroRecords and draft.l7Evidence within workItemQueueManager.runInLane prior to ADO notification comment
 
 ### Pending Todos
 

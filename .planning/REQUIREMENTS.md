@@ -37,7 +37,7 @@
 
 ### 3. EVID — L7 Continuous-Feedback Evidence + Index Extension (L1–L7)
 
-- [ ] **EVID-01**: System persists L7 Continuous-Feedback evidence in the ticket's `StateStore` record (retro section): retro takeaways (with mandatory action items — owner + priority + tracking ref), runbook-diff PR link (or a recorded "no change" auditable negative), skill PR link, and DORA-aligned trend deltas sourced from existing lifecycle state.
+- [x] **EVID-01**: System persists L7 Continuous-Feedback evidence in the ticket's `StateStore` record (retro section): retro takeaways (with mandatory action items — owner + priority + tracking ref), runbook-diff PR link (or a recorded "no change" auditable negative), skill PR link, and DORA-aligned trend deltas sourced from existing lifecycle state.
 - [x] **EVID-02**: The unified evidence record + index extend L1–L6 → **L1–L7** (an additive `l7` field on the ticket state file — no schema migration, since state is file-backed) and the formatted work-item index comment renders all seven levels.
 - [x] **EVID-03**: L7 is fail-closed — a ticket must NOT reach `Done` without a real persisted L7 record; missing/incomplete L7 throws and blocks the transition (mirrors the L6 telemetry fail-closed gate; no fabricated defaults copied from the v1.0 index's `?? 1` / `|| '0.05%'` precedent).
 
@@ -49,8 +49,8 @@
 
 ### 5. RETRO — Retro Takeaways, Runbooks & Skill Enhancement (Retro, Step 9)
 
-- [ ] **RETRO-01**: On release confidence (smoke + telemetry pass), the system runs the retro step BEFORE the `Done` transition (awaited, fail-closed per EVID-03): analyzes the ticket lifecycle (rework cycles, review comments, test/smoke fixes, telemetry) and produces retro takeaways with mandatory, tracked action items.
-- [ ] **RETRO-02**: Retro emits runbook updates (a `RUNBOOK.md` diff) or a recorded "no change", plus skill enhancement (`SKILL.md`), submitted as a SINGLE PR to the skills repo (never direct-commit; human merge required) with prompt-injection defenses (XML source isolation, escaped frontmatter, meta-directive override denial) — reusing the existing `learn/` publisher path.
+- [x] **RETRO-01**: On release confidence (smoke + telemetry pass), the system runs the retro step BEFORE the `Done` transition (awaited, fail-closed per EVID-03): analyzes the ticket lifecycle (rework cycles, review comments, test/smoke fixes, telemetry) and produces retro takeaways with mandatory, tracked action items.
+- [x] **RETRO-02**: Retro emits runbook updates (a `RUNBOOK.md` diff) or a recorded "no change", plus skill enhancement (`SKILL.md`), submitted as a SINGLE PR to the skills repo (never direct-commit; human merge required) with prompt-injection defenses (XML source isolation, escaped frontmatter, meta-directive override denial) — reusing the existing `learn/` publisher path.
 - [ ] **RETRO-03**: Retro artifacts (takeaways, runbook-diff PR link, skill PR link, trend deltas) persist as the L7 record (in the ticket's `StateStore` file) that gates `Done`; the ticket transitions to `Done` with the full L1–L7 evidence index and `[golden-path-complete]` tag, while the human PR merge stays async (skills/runbooks affect future runs only after merge, not the current ticket's Done).
 
 ---
@@ -105,14 +105,14 @@
 | SCOPE-01 | Phase 3 | Complete |
 | SCOPE-02 | Phase 3 | Complete |
 | SCOPE-03 | Phase 3 | Complete |
-| EVID-01 | Phase 6 | Pending |
+| EVID-01 | Phase 6 | Complete |
 | EVID-02 | Phase 4 | Complete |
 | EVID-03 | Phase 4 | Complete |
 | SMOKE-01 | Phase 5 | Complete |
 | SMOKE-02 | Phase 5 | Complete |
 | SMOKE-03 | Phase 5 | Complete |
-| RETRO-01 | Phase 6 | Pending |
-| RETRO-02 | Phase 6 | Pending |
+| RETRO-01 | Phase 6 | Complete |
+| RETRO-02 | Phase 6 | Complete |
 | RETRO-03 | Phase 6 | Pending |
 
 **Coverage:**
