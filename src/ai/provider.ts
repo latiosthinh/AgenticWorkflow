@@ -17,7 +17,7 @@ export async function customStreamFetch(
 
 export const customOpenAi = createOpenAI({
   baseURL: env.API_ENDPOINT || undefined,
-  apiKey: env.API_KEY || env.OPENAI_API_KEY,
+  apiKey: env.API_KEY || env.OPENAI_API_KEY || (env.API_ENDPOINT ? 'not-needed' : undefined),
   fetch: customStreamFetch,
 });
 

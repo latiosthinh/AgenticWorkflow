@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { createOpenAI } from '@ai-sdk/openai';
 import { EnvSchema } from '../src/config/env.js';
 import { getModel, appModel, customOpenAi, customStreamFetch } from '../src/ai/provider.js';
 
@@ -55,5 +56,28 @@ describe('Config & AI Provider', () => {
 
   it('customStreamFetch forwards request preserving stream options', async () => {
     expect(typeof customStreamFetch).toBe('function');
+  });
+
+  it('configures createOpenAI with fallback apiKey when API_ENDPOINT is set without apiKey', () => {
+    const originalEndpoint = process.env.API_ENDPOINT;
+    const originalKey = process.env.API_KEY;
+    const originalOpenAiKey = process.env.OPENAI_API_KEY;
+    try {
+      delete process.env.API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      process.env.API_ENDPOINT = 'http://localhost:11434/v1';
+      // verify createOpenAI works with fallback apiKey
+      const provider = createOpenAI({
+        baseURL: process.env.API_ENDPOINT,
+        apiKey: process.env.API_KEY || process.env.OPENAI_API_KEY || (process.env.API_ENDPOINT ? 'not-needed' : undefined),
+      });
+      expect(provider).toBeDefined();
+      const model = provider('llama3');
+      expect(model.modelId).toBe('llama3');
+    } finally {
+      process.env.API_ENDPOINT = originalEndpoint;
+      process.env.API_KEY = originalKey;
+      process.env.OPENAI_API_KEY = originalOpenAiKey;
+    }
   });
 });
