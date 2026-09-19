@@ -88,17 +88,56 @@
 
 ## Traceability
 
-Populated during roadmap creation. Every requirement maps to exactly one phase.
+Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2.1 phases numbered 8–13, continuing v2.0).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | — | Pending |
+| WIP-01 | Phase 8 | Pending |
+| WIP-02 | Phase 8 | Pending |
+| WIP-03 | Phase 8 | Pending |
+| WIP-04 | Phase 8 | Pending |
+| WIP-05 | Phase 8 | Pending |
+| SEC-01 | Phase 9 | Pending |
+| SEC-02 | Phase 9 | Pending |
+| SEC-03 | Phase 10 | Pending |
+| SEC-04 | Phase 10 | Pending |
+| SEC-05 | Phase 10 | Pending |
+| SEC-06 | Phase 10 | Pending |
+| CORE-01 | Phase 9 | Pending |
+| CORE-02 | Phase 9 | Pending |
+| CORE-03 | Phase 9 | Pending |
+| CORE-04 | Phase 10 | Pending |
+| REL-01 | Phase 11 | Pending |
+| REL-02 | Phase 11 | Pending |
+| REL-03 | Phase 11 | Pending |
+| REL-04 | Phase 11 | Pending |
+| REL-05 | Phase 11 | Pending |
+| REL-06 | Phase 11 | Pending |
+| REL-07 | Phase 11 | Pending |
+| REL-08 | Phase 11 | Pending |
+| REL-09 | Phase 10 | Pending |
+| REL-10 | Phase 11 | Pending |
+| REL-11 | Phase 11 | Pending |
+| CFG-01 | Phase 12 | Pending |
+| CFG-02 | Phase 12 | Pending |
+| CFG-03 | Phase 12 | Pending |
+| CFG-04 | Phase 12 | Pending |
+| QAL-01 | Phase 12 | Pending |
+| QAL-02 | Phase 12 | Pending |
+| QAL-03 | Phase 12 | Pending |
+| QAL-04 | Phase 12 | Pending |
+| QAL-05 | Phase 12 | Pending |
+| QAL-06 | Phase 12 | Pending |
+| E2E-01 | Phase 13 | Pending |
+| E2E-02 | Phase 13 | Pending |
 
 **Coverage:**
-- v2.1 requirements: 32 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 32 ❌
+- v2.1 requirements: 38 total (count corrected at roadmap creation — earlier "32" was stale; actual REQ-ID enumeration: WIP 5 + SEC 6 + CORE 4 + REL 11 + CFG 4 + QAL 6 + E2E 2 = 38)
+- Mapped to phases: 38 ✓
+- Unmapped: 0 ✓
+
+**Phase distribution:** Phase 8 (5) · Phase 9 (5) · Phase 10 (6) · Phase 11 (10) · Phase 12 (10) · Phase 13 (2)
 
 ---
 *Requirements defined: 2026-09-19 from full-project audit (`.planning/research/AUDIT-v2.1.md`)*
-*Last updated: 2026-09-19 after initial definition*
+*Last updated: 2026-09-19 — traceability populated at v2.1 roadmap creation (38/38 mapped to Phases 8–13)*

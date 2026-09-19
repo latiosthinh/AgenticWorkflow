@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Audit Remediation & Hardening
 status: planning
-stopped_at: Defining requirements for milestone v2.1
+stopped_at: Roadmap created for v2.1 — ready to plan Phase 8 (WIP Resolution)
 last_updated: "2026-09-19T00:00:00.000Z"
-last_activity: 2026-09-19 — Milestone v2.1 started from full-project audit
+last_activity: 2026-09-19 — v2.1 roadmap created (Phases 8–13, 38/38 requirements mapped)
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,14 +25,14 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-19 — Milestone v2.1 started from full-project audit; user decisions locked (opencode-only core, commit-forward WIP, skip research)
+Phase: 8 of 13 (WIP Resolution) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
+Plan: — (0 of TBD)
+Status: Ready to plan (`/gsd-plan-phase 8`)
+Last activity: 2026-09-19 — v2.1 roadmap created: 6 phases (8–13), 38/38 requirements mapped, serial phase chain (hub-file overlaps), E2E proof last
 
 Progress: [          ] 0%
 
-**Working tree warning:** dirty (5 modified files + untracked `src/cli/`) — milestone Phase 1 must resolve WIP (commit-forward decision) before other phases build on it.
+**Working tree warning:** dirty (5 modified files + untracked `src/cli/`) — Phase 8 (WIP Resolution) must commit-forward this diff with tests + gate-safe fallbacks before any other phase builds on it.
 
 ## Performance Metrics
 
@@ -259,6 +259,8 @@ Recent decisions affecting current work:
 - [v2.1 Decision]: Commit-forward the dirty WIP (provider 9router rewrite, evaluator/planner LLM fallbacks, opencode plan-skip) in Phase 1 with tests + gate-safe fallbacks (fallback recorded in evidence; planner fallback parks for human instead of auto-proceed).
 - [v2.1 Decision]: Skip domain research for v2.1 — remediation milestone, findings already evidence-backed.
 - [v2.1 Invariant]: AUDIT-v2.1.md §Done-well list (HMAC, wx-dedup, lane single-writer, sanitizing formatters, crash-atomic writes, fail-closed telemetry/smoke, circuit breakers, withRetry) must not regress — verifier checks against it.
+- [v2.1 Roadmap]: 6 phases (8–13), 38/38 requirements mapped exactly once (REQUIREMENTS.md "32 total" was a stale count — actual REQ-ID enumeration is 38). Structure: 8 WIP Resolution (first, commit-forward) → 9 Opencode-Only Honest Core (CRITICAL chain SEC-01/02 bundled with CORE-01/02/03 — same `execute/` file cluster; SEC-02's allowlist target depends on CORE-03's MCP wire-or-delete outcome) → 10 Security & Evidence Hardening (SEC-03..06 + CORE-04 + REL-09) → 11 Reliability (REL ×10) → 12 Config + Quality (CFG ×4 + QAL ×6) → 13 E2E Proof (last).
+- [v2.1 Roadmap]: Phase chain is SERIAL — hub files touched cross-category (`worker.ts` CORE/SEC/REL, `env.ts` CORE/SEC/REL/CFG, `router.ts` CORE/REL/QAL, `qa/worker.ts` CORE/REL, `scope/gate.ts` SEC/REL/QAL, `pr-router.ts` REL/QAL); file-level overlaps recorded in each phase's Depends-on. Plan-level waves (`parallelization: true`) inside phases where file sets are disjoint — Phase 12: CFG ∥ QAL structural, env.ts edits before `.env.example` regeneration, `package.json` edits serialized. Every code-touching phase carries a no-regression criterion (462-test suite + §Done-well invariants).
 
 ### Pending Todos
 
@@ -293,6 +295,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-18T08:40:00.000Z
-Stopped at: Completed Phase 7 Plan 01 (07-01-PLAN.md) — Milestone v2.0 complete
-Resume: Milestone v2.0 complete (all 7 phases complete)
+Last session: 2026-09-19T00:00:00.000Z
+Stopped at: v2.1 roadmap created (ROADMAP.md Phases 8–13 + STATE.md + REQUIREMENTS.md traceability, 38/38 mapped, state-matrix drift guard green)
+Resume: `/gsd-plan-phase 8` (WIP Resolution — must land first; working tree still dirty)
