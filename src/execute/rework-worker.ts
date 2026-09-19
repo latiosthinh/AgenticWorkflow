@@ -29,6 +29,7 @@ import {
   formatReworkPrompt,
   type CumulativeReworkEnvelope,
 } from '../accept/envelope.js';
+import { formatWorkerAlertComment } from '../ado/formatter.js';
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
 import { runOpenCode } from './opencode-runner.js';
@@ -143,7 +144,11 @@ export async function processWorkItemRework(
         const diag = runRes.timedOut
           ? 'OpenCode rework timed out'
           : `OpenCode rework failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`;
-        const comment = `<h3>[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}</h3><pre>${runRes.error || runRes.output || diag}</pre>`;
+        const comment = formatWorkerAlertComment(
+          `[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}`,
+          diag,
+          runRes.error || runRes.output
+        );
         await flagTicketBlocked(workItem.id, comment, 'repair-exhausted');
         await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
         worktreePath = undefined;
@@ -164,9 +169,13 @@ export async function processWorkItemRework(
     const cumulativeDiff = await calculateCumulativeDiff(git, baseCommit);
     const maxLoc = options?.maxDiffLoc ?? 250;
     if (cumulativeDiff.totalLoc > maxLoc) {
+      const comment = formatWorkerAlertComment(
+        '[Diff Ceiling Exceeded] Cumulative rework diff exceeded ceiling',
+        `Cumulative rework diff ${cumulativeDiff.totalLoc} LOC exceeds ${maxLoc} LOC ceiling`
+      );
       await flagTicketBlocked(
         workItem.id,
-        `<h3>[Diff Ceiling Exceeded] Cumulative rework diff ${cumulativeDiff.totalLoc} LOC exceeds ${maxLoc} LOC ceiling</h3>`,
+        comment,
         'diff-ceiling'
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -206,9 +215,13 @@ export async function processWorkItemRework(
     }
 
     if (!pkgDiffValid) {
+      const comment = formatWorkerAlertComment(
+        '[Contract Conflict] Unauthorized package dependencies added',
+        `Unauthorized package dependencies added: ${unauthorizedPackages.join(', ')}`
+      );
       await flagTicketBlocked(
         workItem.id,
-        `<h3>[Contract Conflict] Unauthorized package dependencies added: ${unauthorizedPackages.join(', ')}</h3>`,
+        comment,
         'contract-conflict'
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -221,9 +234,13 @@ export async function processWorkItemRework(
     const rawDiff = await git.raw(['diff', '--name-status', baseCommit]);
     const immutability = checkTestImmutability(rawDiff, lockedFiles);
     if (!immutability.valid) {
+      const comment = formatWorkerAlertComment(
+        '[Contract Conflict] Protected test files modified',
+        immutability.violations.join(', ')
+      );
       await flagTicketBlocked(
         workItem.id,
-        `<h3>[Contract Conflict] Protected test files modified: ${immutability.violations.join(', ')}</h3>`,
+        comment,
         'contract-conflict'
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -237,9 +254,13 @@ export async function processWorkItemRework(
       if (fs.existsSync(fullPath)) {
         const content = fs.readFileSync(fullPath, 'utf8');
         if (!hasValidAssertions(content)) {
+          const comment = formatWorkerAlertComment(
+            '[Contract Conflict] New test file lacks valid assertions',
+            `<code>${newTest}</code>`
+          );
           await flagTicketBlocked(
             workItem.id,
-            `<h3>[Contract Conflict] New test file lacks valid assertions: <code>${newTest}</code></h3>`,
+            comment,
             'contract-conflict'
           );
           await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -273,9 +294,14 @@ export async function processWorkItemRework(
     });
 
     if (!repairResult.success) {
+      const comment = formatWorkerAlertComment(
+        '[Repair Exhausted] Test self-repair budget exhausted',
+        `WIP branch created: <code>${repairResult.wipBranch}</code>`,
+        repairResult.diagnostics
+      );
       await flagTicketBlocked(
         workItem.id,
-        `<h3>[Repair Exhausted] Test self-repair budget exhausted</h3><p>WIP branch created: <code>${repairResult.wipBranch}</code></p><pre>${repairResult.diagnostics}</pre>`,
+        comment,
         'repair-exhausted'
       );
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);

@@ -29,6 +29,7 @@ import {
   formatPlanQuestionsComment,
   formatPlanLockedComment,
 } from '../plan/formatter.js';
+import { formatWorkerAlertComment } from '../ado/formatter.js';
 import {
   calculateCumulativeDiff,
   verifyPackageDependencies,
@@ -112,7 +113,11 @@ async function runExecutionPipeline(
       const diag = runRes.timedOut
         ? 'OpenCode execution timed out'
         : `OpenCode execution failed (exit ${runRes.exitCode}): ${runRes.error || runRes.output}`;
-      const comment = `<h3>[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}</h3><pre>${runRes.error || runRes.output || diag}</pre>`;
+      const comment = formatWorkerAlertComment(
+        `[Agent Execution Failed] ${runRes.timedOut ? 'Execution Timed Out' : 'Execution Failed'}`,
+        diag,
+        runRes.error || runRes.output
+      );
       await flagTicketBlocked(workItem.id, comment, 'repair-exhausted');
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
       return;
@@ -173,9 +178,13 @@ async function runExecutionPipeline(
   }
 
   if (!pkgDiffValid) {
+    const comment = formatWorkerAlertComment(
+      '[Contract Conflict] Unauthorized package dependencies added',
+      `Unauthorized package dependencies added: ${unauthorizedPackages.join(', ')}`
+    );
     await flagTicketBlocked(
       workItem.id,
-      `<h3>[Contract Conflict] Unauthorized package dependencies added: ${unauthorizedPackages.join(', ')}</h3>`,
+      comment,
       'contract-conflict'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -186,9 +195,13 @@ async function runExecutionPipeline(
   const rawDiff = await git.raw(['diff', '--name-status', baseCommit]);
   const immutabilityResult = checkTestImmutability(rawDiff, lockedFiles);
   if (!immutabilityResult.valid) {
+    const comment = formatWorkerAlertComment(
+      '[Contract Conflict] Protected test files modified',
+      immutabilityResult.violations.join(', ')
+    );
     await flagTicketBlocked(
       workItem.id,
-      `<h3>[Contract Conflict] Protected test files modified: ${immutabilityResult.violations.join(', ')}</h3>`,
+      comment,
       'contract-conflict'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -201,9 +214,13 @@ async function runExecutionPipeline(
     if (fs.existsSync(fullPath)) {
       const content = fs.readFileSync(fullPath, 'utf8');
       if (!hasValidAssertions(content)) {
+        const comment = formatWorkerAlertComment(
+          '[Contract Conflict] New test file lacks valid assertions',
+          `<code>${newTest}</code>`
+        );
         await flagTicketBlocked(
           workItem.id,
-          `<h3>[Contract Conflict] New test file lacks valid assertions: <code>${newTest}</code></h3>`,
+          comment,
           'contract-conflict'
         );
         await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
@@ -235,9 +252,14 @@ async function runExecutionPipeline(
   });
 
   if (!repairResult.success) {
+    const comment = formatWorkerAlertComment(
+      '[Repair Exhausted] Test self-repair budget exhausted',
+      `WIP branch created: <code>${repairResult.wipBranch}</code>`,
+      repairResult.diagnostics
+    );
     await flagTicketBlocked(
       workItem.id,
-      `<h3>[Repair Exhausted] Test self-repair budget exhausted</h3><p>WIP branch created: <code>${repairResult.wipBranch}</code></p><pre>${repairResult.diagnostics}</pre>`,
+      comment,
       'repair-exhausted'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);

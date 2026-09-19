@@ -4,6 +4,7 @@ import {
   Operation,
 } from 'azure-devops-node-api/interfaces/common/VSSInterfaces.js';
 import type { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces.js';
+import sanitizeHtml from 'sanitize-html';
 import { adoClient } from './client.js';
 import {
   buildDevDonePatch,
@@ -247,12 +248,20 @@ export async function flagTicketBlocked(
   htmlComment: string,
   type: 'contract-conflict' | 'repair-exhausted' | 'diff-ceiling'
 ): Promise<any> {
+  const sanitizedComment = sanitizeHtml(htmlComment, {
+    allowedTags: ['h3', 'p', 'pre', 'code', 'strong', 'ul', 'li', 'b', 'i', 'em', 'a'],
+    disallowedTagsMode: 'escape',
+  }).trim();
+  const safeComment = sanitizedComment.includes('<!-- [automated-agent] -->')
+    ? sanitizedComment
+    : `${sanitizedComment}\n<!-- [automated-agent] -->`;
+
   const details = await getWorkItemDetails(workItemId);
   let patchDoc: any;
   if (type === 'contract-conflict') {
-    patchDoc = buildContractConflictPatch(htmlComment, details.tags);
+    patchDoc = buildContractConflictPatch(safeComment, details.tags);
   } else if (type === 'repair-exhausted') {
-    patchDoc = buildRepairExhaustedPatch(htmlComment, details.tags);
+    patchDoc = buildRepairExhaustedPatch(safeComment, details.tags);
   } else {
     const tagPatches = buildTagPatch(
       details.tags,
@@ -269,7 +278,7 @@ export async function flagTicketBlocked(
       {
         op: Operation.Add,
         path: '/fields/System.History',
-        value: htmlComment,
+        value: safeComment,
       },
     ];
   }

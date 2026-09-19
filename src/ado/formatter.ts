@@ -130,4 +130,25 @@ Work item transitioned to **Ready for QA**.
 
   return `${sanitized.trim()}\n<!-- [automated-agent] -->`;
 }
+
+export function formatWorkerAlertComment(
+  title: string,
+  message: string,
+  details?: string
+): string {
+  const titleHtml = title.startsWith('<h') ? title : `<h3>${title}</h3>`;
+  const messageHtml = message.startsWith('<p>') ? message : `<p>${message}</p>`;
+  const detailsHtml = details
+    ? details.startsWith('<pre')
+      ? details
+      : `<pre>${details}</pre>`
+    : '';
+  const rawHtml = `${titleHtml}\n${messageHtml}${detailsHtml ? `\n${detailsHtml}` : ''}`;
+  const sanitized = sanitizeHtml(rawHtml, {
+    allowedTags: ['h3', 'p', 'pre', 'code', 'strong', 'ul', 'li', 'b', 'i', 'em'],
+    disallowedTagsMode: 'escape',
+  });
+
+  return `${sanitized.trim()}\n<!-- [automated-agent] -->`;
+}
 // ponytail: static Markdown to HTML formatter; add collapsible diff blocks in v2
