@@ -65,13 +65,25 @@ export interface PrDescriptionOptions {
 export function formatPrDescription(options: PrDescriptionOptions): string {
   const { workItemId, title, acceptanceCriteria, testSummary, diffStat } = options;
 
-  return `## AB#${workItemId} - ${title}
+  const sanitizedTitle = sanitizeHtml(title.replace(/[\r\n]+/g, ' '), {
+    allowedTags: [],
+    disallowedTagsMode: 'escape',
+  }).trim();
+
+  const sanitizedAc = acceptanceCriteria
+    ? sanitizeHtml(acceptanceCriteria, {
+        allowedTags: ['b', 'i', 'em', 'strong', 'code'],
+        disallowedTagsMode: 'escape',
+      })
+    : undefined;
+
+  return `## AB#${workItemId} - ${sanitizedTitle}
 
 ### L1 Requirements Verification
 - [x] Scope bounded within \`<250 LOC\` ceiling (\`${diffStat.totalLoc}\` LOC across ${diffStat.filesChanged} files)
 - [x] Test assertion files protected and unmodified
 - [x] Acceptance criteria verified:
-${acceptanceCriteria ? `> ${acceptanceCriteria.replace(/\n/g, '\n> ')}` : '> Standard Definition of Done'}
+${sanitizedAc ? `> ${sanitizedAc.replace(/\n/g, '\n> ')}` : '> Standard Definition of Done'}
 
 ### L3 Functional Evidence (Local Pre-PR)
 - **Suite**: \`${testSummary.suite}\`

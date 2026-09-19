@@ -4,7 +4,7 @@ import { detectScopeVerdict } from '../src/scope/verdict.js';
 import { detectAcceptanceVerdict } from '../src/accept/verdict.js';
 import { routeWorkItemEvent } from '../src/execute/router.js';
 import { adoClient } from '../src/ado/client.js';
-import { stateStore, resetStateStore } from '../src/state/index.js';
+import { stateStore, setStateStore, resetStateStore } from '../src/state/index.js';
 import { createTestStateStore, type TestStateStoreContext } from '../src/state/test-harness.js';
 
 describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
@@ -251,7 +251,7 @@ describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
 
     beforeEach(() => {
       harness = createTestStateStore();
-      resetStateStore(harness.store);
+      setStateStore(harness.store);
       warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       (env as any).APPROVER_IDS = 'authorized-pm@example.com';
@@ -266,6 +266,7 @@ describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
     afterEach(() => {
       (env as any).APPROVER_IDS = originalApproverIds;
       warnSpy.mockRestore();
+      resetStateStore();
       harness.cleanup();
     });
 

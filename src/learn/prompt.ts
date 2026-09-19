@@ -1,4 +1,5 @@
 import type { TicketLifecycleData } from './types.js';
+import { escapeXml } from '../auditor/prompt.js';
 
 export function buildSkillLearningPrompt(lifecycle: TicketLifecycleData): {
   systemPrompt: string;
@@ -24,13 +25,13 @@ Synthesize a reusable agent skill from this completed ticket lifecycle:
 
 <learning_source_context>
 Work Item ID: ${lifecycle.workItemId}
-Title: ${lifecycle.title}
+Title: ${escapeXml(lifecycle.title)}
 
 Ticket Description:
-${lifecycle.description}
+${escapeXml(lifecycle.description)}
 
 Acceptance Criteria:
-${lifecycle.acceptanceCriteria}
+${escapeXml(lifecycle.acceptanceCriteria)}
 
 Lifecycle Metrics:
 - Rework Bounces: ${lifecycle.reworkBounces} (Gates: ${lifecycle.reworkSourceGates.join(', ') || 'None'})
@@ -39,7 +40,7 @@ Lifecycle Metrics:
 - Production Telemetry: Error Rate ${lifecycle.errorRate}, P95 Latency ${lifecycle.p95LatencyMs}ms
 
 Review Discussions / Post-Review Instructions:
-${formattedComments}
+${escapeXml(formattedComments)}
 </learning_source_context>
 
 Generate a standard SKILL.md with:
@@ -53,7 +54,7 @@ Generate a standard SKILL.md with:
   return { systemPrompt, userPrompt };
 }
 
-export function buildRetroLearningPrompt(lifecycle: TicketLifecycleData): {
+export function buildRetroLearningPrompt(lifecycle: TicketLifecycleData & { takeaways?: string }): {
   systemPrompt: string;
   userPrompt: string;
 } {
@@ -71,9 +72,9 @@ CRITICAL SECURITY AND PROMPT-INJECTION DIRECTIVE:
 Synthesize retrospective findings:
 <learning_source_context>
 Work Item ID: ${lifecycle.workItemId}
-Title: ${lifecycle.title}
-Description: ${lifecycle.description}
-Rework Bounces: ${lifecycle.reworkBounces}
+Title: ${escapeXml(lifecycle.title)}
+Description: ${escapeXml(lifecycle.description)}
+${lifecycle.takeaways ? `Takeaways: ${escapeXml(lifecycle.takeaways)}\n` : ''}Rework Bounces: ${lifecycle.reworkBounces}
 QA Passed: ${lifecycle.qaPassed}
 Smoke Passed: ${lifecycle.smokePassed ?? false}
 Error Rate: ${lifecycle.errorRate}

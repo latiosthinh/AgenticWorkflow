@@ -1,4 +1,5 @@
 import { stateStore } from '../state/index.js';
+import sanitizeHtml from 'sanitize-html';
 import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 import { adoClient } from '../ado/client.js';
 import { buildTagPatch, postFeedbackComment } from '../ado/work-item.js';
@@ -256,8 +257,12 @@ export async function handleScopeApproval(
     }
   }
 
+  const sanitizedActor = actor
+    ? sanitizeHtml(actor, { allowedTags: [], disallowedTagsMode: 'escape' })
+    : undefined;
+
   const commentHtml = `<p><strong>[Scope Locked] Scope Approved by PM</strong></p><p>Scope lock approved${
-    actor ? ` by ${actor}` : ''
+    sanitizedActor ? ` by ${sanitizedActor}` : ''
   }. Work item transitioned to <strong>Ready to Dev</strong>.</p>\n<!-- [automated-agent] -->`;
 
   const patchDoc = buildScopeApprovedPatch(commentHtml, tags);
@@ -286,7 +291,10 @@ export async function handleScopeRejection(
     const patchDoc = buildScopeEscalationPatch(breaker.iterationCount, tags);
     await adoClient.updateWorkItem(workItemId, patchDoc);
   } else {
-    const commentHtml = `<p><strong>[Scope Rejected] Scope Changes Requested</strong></p><p>${feedback}</p>\n<!-- [automated-agent] -->`;
+    const sanitizedFeedback = sanitizeHtml(feedback, {
+      allowedTags: ['b', 'i', 'em', 'strong', 'code', 'p', 'br', 'ul', 'ol', 'li'],
+    });
+    const commentHtml = `<p><strong>[Scope Rejected] Scope Changes Requested</strong></p><p>${sanitizedFeedback}</p>\n<!-- [automated-agent] -->`;
     await postFeedbackComment(workItemId, commentHtml);
   }
 
