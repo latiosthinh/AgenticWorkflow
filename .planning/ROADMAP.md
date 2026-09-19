@@ -77,7 +77,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 10-01-PLAN.md — Approver allowlist for verdict tokens (SEC-03) + XML escaping & HTML sanitization (SEC-06)
-- [ ] 10-02-PLAN.md — 100% comment sanitization & loop-shielding in workers (SEC-04) + production push failure honesty (SEC-05)
+- [x] 10-02-PLAN.md — 100% comment sanitization & loop-shielding in workers (SEC-04) + production push failure honesty (SEC-05)
 - [ ] 10-03-PLAN.md — Zero fabricated evidence in router, QA, evidence index (CORE-04) + knownSecrets in repair loop (REL-09)
 
 ### Phase 11: Reliability Hardening
@@ -139,7 +139,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 |-------|-----------|----------------|--------|-----------|
 | 8. WIP Resolution | v2.1 | 2/2 | Complete   | 2026-09-19 |
 | 9. Opencode-Only Honest Core | v2.1 | 0/3 | Not started | - |
-| 10. Security & Evidence Hardening | v2.1 | 1/3 | In Progress|  |
+| 10. Security & Evidence Hardening | v2.1 | 2/3 | In Progress|  |
 | 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
 | 12. Config Hygiene & Quality Debt | v2.1 | 0/TBD | Not started | - |
 | 13. E2E Proof | v2.1 | 0/TBD | Not started | - |

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Overview
-status: in_progress
-stopped_at: Completed 10-01-PLAN.md (SEC-03 approver allowlist + SEC-06 XML/HTML sanitization); 547/547 green
-last_updated: "2026-09-20T02:35:00.000Z"
+status: executing
+stopped_at: Completed 10-02-PLAN.md (SEC-04 comment sanitization & loop shield + SEC-05 git push honesty); 567/567 green
+last_updated: "2026-09-20T02:46:00.000Z"
 last_activity: 2026-09-20
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
   completed_plans: 7
-  percent: 87
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 ## Current Position
 
 Phase: 10 of 13 (Security & Evidence Hardening) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
-Plan: 1 of 3 (10-01 complete)
-Status: In progress
+Plan: 3 of 3 (10-01, 10-02 complete)
+Status: Ready to execute
 Last activity: 2026-09-20
 
-Progress: [████████░░] 87%
+Progress: [█████████░] 88%
 
 **Working tree:** CLEAN — commit-forward gate (WIP-05) closed by 08-02: all WIP committed (prompt.ts verbatim, src/cli/ado.ts as-is per recorded QAL-03 decision), full suite 488/488 green, tsc clean.
 
@@ -85,6 +85,8 @@ Progress: [████████░░] 87%
 | Phase 08 P02 | 13m | 3 tasks | 11 files |
 | Phase 09 P01 | 13 | 2 tasks | 16 files |
 | Phase 09 P02 | 28m | 2 tasks | 5 files |
+| Phase 10 P01 | 12m | 2 tasks | 10 files |
+| Phase 10 P02 | 10m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -92,6 +94,12 @@ Progress: [████████░░] 87%
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+- [10-02]: Centralized formatWorkerAlertComment in src/ado/formatter.ts generates structured HTML with safe tags and trailing <!-- [automated-agent] -->.
+- [10-02]: flagTicketBlocked in src/ado/work-item.ts provides defense-in-depth by sanitizing htmlComment and ensuring loop-shield marker presence.
+- [10-02]: Git push errors under NODE_ENV === 'test' are tolerated with a warning to allow hermetic and offline test runs.
+- [10-02]: Git push errors under production fail closed: ticket is flagged Blocked with [contract-conflict], alert comment posted, dedup status marked failed, and worktree cleaned up without advancing to Dev Done.
+- [10-02]: executeRepairLoop records WIP push failures in returned diagnostics under production.
 
 - [Audit]: QA stage restored as Phase 6 (`Ready for QA` state, 2-strike flake filter, bounce ≤2).
 - [Audit]: v1 includes gated deploy + telemetry monitor (native ADO Environments approval, Azure Monitor 30-min window).
@@ -313,6 +321,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-19T19:36:18.953Z
+Last session: 2026-09-19T19:47:07.819Z
 Stopped at: Completed 09-02-PLAN.md (SEC-01 prompt isolation + SEC-02 command allowlist); 512/512 green
 Resume: `/gsd-progress` → Phase 9 complete (3/3 plans done); next Phase 10
