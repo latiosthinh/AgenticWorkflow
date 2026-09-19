@@ -48,6 +48,7 @@ import {
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
 import { runOpenCode } from './opencode-runner.js';
+import { getKnownSecrets } from '../sandbox/runner.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
 
 export interface ProcessExecuteOptions {
@@ -246,6 +247,7 @@ async function runExecutionPipeline(
     worktreePath: worktreeResult.worktreePath,
     git,
     workItemId: workItem.id,
+    knownSecrets: getKnownSecrets(),
     mockTestRunner: options?.mockTestRunner || defaultMockTestRunner,
     mockOpenCodeRunner: options?.mockOpenCodeRunner,
     sessionId: options?.openCodeSessionId,

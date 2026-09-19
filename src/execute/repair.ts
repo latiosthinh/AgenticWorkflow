@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { runLocalTests, type TestRunResult } from '../test-runner/executor.js';
 import { pruneTestDiagnostics } from '../test-runner/parser.js';
 import { runOpenCode, type OpenCodeRunOptions } from './opencode-runner.js';
+import { scrubOutput } from '../sandbox/runner.js';
 
 export interface RepairLoopOptions {
   worktreePath: string;
@@ -121,10 +122,11 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
     lastTestResult?.stderr || ''
   );
 
-  let diagnostics = `${pruned.summary}\n${pruned.assertionErrors.join('\n')}\n${pruned.prunedStackTrace.join('\n')}`;
+  let rawDiagnostics = `${pruned.summary}\n${pruned.assertionErrors.join('\n')}\n${pruned.prunedStackTrace.join('\n')}`;
   if (pushFailedInProd) {
-    diagnostics += '\nRemote push to WIP branch failed';
+    rawDiagnostics += '\nRemote push to WIP branch failed';
   }
+  const diagnostics = scrubOutput(rawDiagnostics, options.knownSecrets);
 
   return {
     success: false,

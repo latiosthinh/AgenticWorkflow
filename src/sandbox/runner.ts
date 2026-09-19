@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { execa } from 'execa';
+import { env } from '../config/env.js';
 import type { CommandOptions, CommandResult } from './types.js';
 
 // ponytail: execa host runner with signal cascades; wrap in docker run when running untrusted public repos in v2
@@ -25,8 +26,14 @@ function assertAllowedCommand(file: string): void {
 }
 
 export const SENSITIVE_KEY_PATTERN = /(PAT|API_KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|AUTH_KEY)/i;
-export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,})/g;
+export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,}|[a-zA-Z0-9]{52})/g;
 export const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
+
+export function getKnownSecrets(): string[] {
+  return [env.ADO_PAT, env.ADO_WEBHOOK_SECRET, env.API_KEY, env.OPENAI_API_KEY].filter(
+    (s): s is string => Boolean(s)
+  );
+}
 
 /**
  * Sanitizes environment variables for child processes.

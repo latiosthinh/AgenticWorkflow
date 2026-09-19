@@ -33,6 +33,7 @@ import { formatWorkerAlertComment } from '../ado/formatter.js';
 import type { TestRunResult } from '../test-runner/executor.js';
 import { env } from '../config/env.js';
 import { runOpenCode } from './opencode-runner.js';
+import { getKnownSecrets } from '../sandbox/runner.js';
 import { workItemQueueManager } from '../queue/lane-manager.js';
 
 export interface ProcessReworkOptions {
@@ -288,6 +289,7 @@ export async function processWorkItemRework(
       worktreePath: worktreeResult.worktreePath,
       git,
       workItemId: workItem.id,
+      knownSecrets: getKnownSecrets(),
       mockTestRunner: options?.mockTestRunner || defaultMockTestRunner,
       mockOpenCodeRunner: options?.mockOpenCodeRunner,
       sessionId: options?.openCodeSessionId,
