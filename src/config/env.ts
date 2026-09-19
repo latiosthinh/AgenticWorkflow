@@ -48,7 +48,44 @@ export const EnvSchema = z.object({
   TELEMETRY_P95_LATENCY_THRESHOLD_MS: z.coerce.number().default(500),
   ENABLE_ADO_POLLING: z.coerce.boolean().default(true),
   ADO_POLLING_INTERVAL_MS: z.coerce.number().default(10_000),
+  APPROVER_IDS: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.NODE_ENV === 'production' && (!data.APPROVER_IDS || data.APPROVER_IDS.trim() === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'APPROVER_IDS is required and must be non-empty in production',
+      path: ['APPROVER_IDS'],
+    });
+  }
 });
+
+export function parseApproverIds(raw?: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isActorAuthorized(actor?: string, approverIds?: string[]): boolean {
+  if (!approverIds || approverIds.length === 0) return true;
+  if (!actor) return false;
+
+  const cleanActor = actor.trim().toLowerCase();
+  const emailMatch = cleanActor.match(/<([^>]+)>/);
+  const actorEmail = emailMatch ? emailMatch[1].trim().toLowerCase() : undefined;
+  const actorName = emailMatch ? cleanActor.replace(/<[^>]+>/, '').trim().toLowerCase() : cleanActor;
+
+  return approverIds.some((allowed) => {
+    const target = allowed.trim().toLowerCase();
+    if (!target) return false;
+    return (
+      cleanActor === target ||
+      (actorEmail !== undefined && actorEmail === target) ||
+      actorName === target
+    );
+  });
+}
 
 export type Env = z.infer<typeof EnvSchema>;
 

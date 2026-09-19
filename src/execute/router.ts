@@ -1,8 +1,10 @@
 import { stateStore } from '../state/index.js';
+import sanitizeHtml from 'sanitize-html';
 import {
   getWorkItemDetails,
   updateWorkItemTags,
   escalateReworkToBlocked,
+  postFeedbackComment,
 } from '../ado/work-item.js';
 import { processWorkItemAudit } from '../auditor/worker.js';
 import { processWorkItemExecute } from './worker.js';
@@ -89,6 +91,18 @@ export async function routeWorkItemEvent(
         revisedBy: workItem.revisedBy,
       });
 
+      if (scopeVerdict.type === 'unauthorized') {
+        const rawActor = scopeVerdict.actor || 'unknown';
+        const sanitizedActor = sanitizeHtml(rawActor, { allowedTags: [], disallowedTagsMode: 'escape' });
+        const warningComment = `[Unauthorized Verdict] User ${sanitizedActor} is not authorized to approve or reject this gate. Action ignored.\n<!-- [automated-agent] -->`;
+        console.warn(
+          `[router] Unauthorized scope verdict token '${scopeVerdict.token}' from actor '${sanitizedActor}' on work item ${workItemId}`
+        );
+        await postFeedbackComment(workItemId, warningComment);
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+        return;
+      }
+
       if (scopeVerdict.type === 'reset_scope') {
         await handleScopeReset(workItemId, workItem.tags);
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
@@ -113,7 +127,20 @@ export async function routeWorkItemEvent(
         previousState,
         historyComment: workItem.history,
         tags: workItem.tags,
+        revisedBy: workItem.revisedBy,
       });
+
+      if (verdict.type === 'unauthorized') {
+        const rawActor = verdict.actor || 'unknown';
+        const sanitizedActor = sanitizeHtml(rawActor, { allowedTags: [], disallowedTagsMode: 'escape' });
+        const warningComment = `[Unauthorized Verdict] User ${sanitizedActor} is not authorized to approve or reject this gate. Action ignored.\n<!-- [automated-agent] -->`;
+        console.warn(
+          `[router] Unauthorized acceptance verdict token '${verdict.token}' from actor '${sanitizedActor}' on work item ${workItemId}`
+        );
+        await postFeedbackComment(workItemId, warningComment);
+        stateStore.updateDedupStatus(workItemId, revId, 'completed');
+        return;
+      }
 
       if (verdict.type === 'reset_rework') {
         await resetCircuitBreaker(workItemId);

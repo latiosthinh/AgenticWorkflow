@@ -1,7 +1,10 @@
+import { env, parseApproverIds, isActorAuthorized } from '../config/env.js';
+
 export type ScopeVerdict =
   | { type: 'approve'; comment?: string; actor?: string }
   | { type: 'reject'; feedback: string; actor?: string }
   | { type: 'reset_scope' }
+  | { type: 'unauthorized'; actor?: string; token?: string }
   | { type: 'none' };
 
 export interface ScopeVerdictDetectionInput {
@@ -11,12 +14,17 @@ export interface ScopeVerdictDetectionInput {
   tags?: string;
   previousTags?: string;
   revisedBy?: string;
+  approverIds?: string[];
 }
 
 export function detectScopeVerdict(input: ScopeVerdictDetectionInput): ScopeVerdict {
   const comment = input.historyComment || '';
+  const approverIds = input.approverIds ?? parseApproverIds(env.APPROVER_IDS);
 
   if (comment.includes('[reset-scope]')) {
+    if (!isActorAuthorized(input.revisedBy, approverIds)) {
+      return { type: 'unauthorized', actor: input.revisedBy, token: '[reset-scope]' };
+    }
     return { type: 'reset_scope' };
   }
 
@@ -33,8 +41,18 @@ export function detectScopeVerdict(input: ScopeVerdictDetectionInput): ScopeVerd
   // 1. Explicit token [approve-scope]
   // 2. State transition New -> Ready to Dev
   // 3. Tag [scope-locked] added (only valid if previousTags is known and ticket is awaiting scope)
+  if (comment.includes('[approve-scope]')) {
+    if (!isActorAuthorized(input.revisedBy, approverIds)) {
+      return { type: 'unauthorized', actor: input.revisedBy, token: '[approve-scope]' };
+    }
+    return {
+      type: 'approve',
+      comment: comment || undefined,
+      actor: input.revisedBy,
+    };
+  }
+
   if (
-    comment.includes('[approve-scope]') ||
     (input.previousState === 'New' && input.currentState === 'Ready to Dev') ||
     (isAwaitingScope && tagJustAdded)
   ) {
@@ -53,12 +71,26 @@ export function detectScopeVerdict(input: ScopeVerdictDetectionInput): ScopeVerd
   // Rejection triggers:
   // 1. Explicit token [reject-scope]
   // 2. Tag [scope-rejected] added
-  if (
-    comment.includes('[reject-scope]') ||
-    rejectTagJustAdded
-  ) {
+  if (comment.includes('[reject-scope]')) {
+    if (!isActorAuthorized(input.revisedBy, approverIds)) {
+      return { type: 'unauthorized', actor: input.revisedBy, token: '[reject-scope]' };
+    }
     const feedback = comment
       .replace(/\[reject-scope\]/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .trim();
+
+    return {
+      type: 'reject',
+      feedback:
+        feedback ||
+        'Scope review rejected by PM without specific comments. Please clarify requirements and scope boundaries.',
+      actor: input.revisedBy,
+    };
+  }
+
+  if (rejectTagJustAdded) {
+    const feedback = comment
       .replace(/<!--[\s\S]*?-->/g, '')
       .trim();
 

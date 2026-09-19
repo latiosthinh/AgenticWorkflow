@@ -42,8 +42,26 @@ describe('Boot validation: LOCAL_AGENT_TYPE and OPENCODE_BIN', () => {
         NODE_ENV: 'production',
         LOCAL_AGENT_TYPE: 'opencode',
         OPENCODE_BIN: process.execPath,
+        APPROVER_IDS: 'approver1@example.com',
       });
       expect(parsed.OPENCODE_BIN).toBe(process.execPath);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('fails fast when APPROVER_IDS is missing in production', () => {
+    const originalEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'production';
+      expect(() =>
+        EnvSchema.parse({
+          ...BASE_ENV,
+          NODE_ENV: 'production',
+          LOCAL_AGENT_TYPE: 'opencode',
+          OPENCODE_BIN: process.execPath,
+        })
+      ).toThrow(/APPROVER_IDS is required/);
     } finally {
       process.env.NODE_ENV = originalEnv;
     }
