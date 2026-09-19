@@ -17,7 +17,6 @@ import {
   cleanupWorktree,
   protectTestFiles,
 } from '../sandbox/worktree.js';
-import { createDynamicMcpTools } from '../mcp/registry.js';
 import { formulateImplementationPlan, type PlannerOutcome } from '../plan/planner.js';
 import {
   createPlanCheckpoint,
@@ -373,7 +372,6 @@ export async function processWorkItemExecute(
     }
 
     let worktreeResult: { worktreePath: string; branchName: string } | undefined;
-    let mcpSession: { close: () => Promise<void> } | undefined;
 
     try {
       // Provision ephemeral git worktree
@@ -383,22 +381,11 @@ export async function processWorkItemExecute(
         workItem.title
       );
 
-      // Resolve dynamic MCP tools
+      // Parse tags for planner
       const tags = (workItem.tags || '')
         .split(';')
         .map((t) => t.trim())
         .filter(Boolean);
-
-      mcpSession = await createDynamicMcpTools({
-        worktreePath: worktreeResult.worktreePath,
-        tags,
-        knownSecrets: [
-          env.ADO_PAT,
-          env.OPENAI_API_KEY,
-          env.API_KEY,
-          env.ADO_WEBHOOK_SECRET,
-        ].filter(Boolean) as string[],
-      });
 
       // Formulate implementation plan
       type ExecPlan = PlannerOutcome & { planDelegated?: boolean; planNote?: string };
@@ -444,9 +431,6 @@ export async function processWorkItemExecute(
         await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
         worktreeResult = undefined;
 
-        await mcpSession.close();
-        mcpSession = undefined;
-
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
         return;
       } else {
@@ -478,9 +462,6 @@ export async function processWorkItemExecute(
           },
         ]);
 
-        await mcpSession.close();
-        mcpSession = undefined;
-
         // Run Phase 3 implementation & verification pipeline
         await runExecutionPipeline(workItem, revId, worktreeResult, options);
         worktreeResult = undefined;
@@ -493,9 +474,6 @@ export async function processWorkItemExecute(
         await cleanupWorktree(process.cwd(), worktreeResult.worktreePath).catch(
           () => {}
         );
-      }
-      if (mcpSession) {
-        await mcpSession.close().catch(() => {});
       }
       throw innerErr;
     }
