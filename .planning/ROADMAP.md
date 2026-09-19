@@ -74,7 +74,11 @@ Plans:
   3. A production git push failure results in Blocked + dedup `failed` + alert comment; the error-swallow path executes only under `NODE_ENV=test` (env-gating proven by test)
   4. Containment tests prove `learn/prompt.ts` content is XML-escaped (a `</learning_source_context>` payload cannot escape), the PR description formatter is sanitized, and scope-gate feedback + actor displayName are sanitized
   5. No code path can emit fabricated evidence — router `{totalTests:1,passed:1}`, evidence-index L2/L4/errorRate/p95 constants, `commitSha='main'` — replaced by real values (worktree `git rev-parse HEAD`) or fail-closed `MissingEvidenceError` blocking the transition; `executeRepairLoop` passes `knownSecrets` consistently with QA/smoke; full suite green with no §Done-well regression
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Approver allowlist for verdict tokens (SEC-03) + XML escaping & HTML sanitization (SEC-06)
+- [ ] 10-02-PLAN.md — 100% comment sanitization & loop-shielding in workers (SEC-04) + production push failure honesty (SEC-05)
+- [ ] 10-03-PLAN.md — Zero fabricated evidence in router, QA, evidence index (CORE-04) + knownSecrets in repair loop (REL-09)
 
 ### Phase 11: Reliability Hardening
 **Goal**: Transient failures and hazards can no longer corrupt tickets, hang the orchestrator, strand work, or fabricate attribution — tag-wipe guard, LLM/ADO timeouts, failed-dedup retry, bounded poller load, publisher isolation, QA fail-closed, rejection handling, sha256 dedup keys, win32 fsync + orphan sweep, and silent degradations made visible in state/evidence
@@ -135,7 +139,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 |-------|-----------|----------------|--------|-----------|
 | 8. WIP Resolution | v2.1 | 2/2 | Complete   | 2026-09-19 |
 | 9. Opencode-Only Honest Core | v2.1 | 0/3 | Not started | - |
-| 10. Security & Evidence Hardening | v2.1 | 0/TBD | Not started | - |
+| 10. Security & Evidence Hardening | v2.1 | 0/3 | Not started | - |
 | 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
 | 12. Config Hygiene & Quality Debt | v2.1 | 0/TBD | Not started | - |
 | 13. E2E Proof | v2.1 | 0/TBD | Not started | - |
