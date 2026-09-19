@@ -58,7 +58,11 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
   3. A subprocess test proves agent command execution accepts only allowlisted test commands and agent file reads outside the worktree — including the orchestrator `.env` — are denied (path containment + opencode cwd jail)
   4. Every repair cycle either performs a real edit-and-retry through the opencode runner with failure context, or the evidence honestly records that no repair occurred — no path re-runs identical tests ≤5× while implying repairs
   5. No runtime-dead MCP subsystem remains (registry tools wired into the opencode invocation, or `src/mcp/` + MCP deps deleted) and the full suite is green — tests of the deleted built-in path removed alongside it, §Done-well invariants (HMAC, `wx`-dedup, lane single-writer, sanitizing formatters, crash-atomic writes) untouched
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 09-01-PLAN.md — Delete built-in path + MCP subsystem; require opencode at boot (CORE-01, CORE-03)
+- [ ] 09-02-PLAN.md — XML-isolate ticket content in prompts + command allowlist (SEC-01, SEC-02)
+- [ ] 09-03-PLAN.md — Rewrite repair loop with real opencode re-invocation (CORE-02)
 
 ### Phase 10: Security & Evidence Hardening
 **Goal**: All remaining security findings closed — verdict tokens actor-authorized, all 10 inline ADO comments sanitized + loop-shielded, push failures honest, remaining XML-escape/sanitize gaps sealed — and zero fabricated evidence anywhere: router step-4 defaults, evidence-index L2/L4/errorRate/p95 constants, and QA `commitSha='main'` replaced with real values or fail-closed `MissingEvidenceError`
@@ -130,7 +134,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 8. WIP Resolution | v2.1 | 2/2 | Complete   | 2026-09-19 |
-| 9. Opencode-Only Honest Core | v2.1 | 0/TBD | Not started | - |
+| 9. Opencode-Only Honest Core | v2.1 | 0/3 | Not started | - |
 | 10. Security & Evidence Hardening | v2.1 | 0/TBD | Not started | - |
 | 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
 | 12. Config Hygiene & Quality Debt | v2.1 | 0/TBD | Not started | - |
