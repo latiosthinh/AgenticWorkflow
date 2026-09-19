@@ -25,9 +25,9 @@
 
 ### Honest Agent Core (opencode-only per Key Decision)
 
-- [ ] **CORE-01**: Built-in coding path deleted; `LOCAL_AGENT_TYPE=opencode` required — config validation fails fast at boot with actionable error when unset or `OPENCODE_BIN` unresolvable (H5; `src/config/env.ts:16`, `src/execute/worker.ts:82-109`, `src/execute/rework-worker.ts:128-161`)
+- [x] **CORE-01**: Built-in coding path deleted; `LOCAL_AGENT_TYPE=opencode` required — config validation fails fast at boot with actionable error when unset or `OPENCODE_BIN` unresolvable (H5; `src/config/env.ts:16`, `src/execute/worker.ts:82-109`, `src/execute/rework-worker.ts:128-161`)
 - [ ] **CORE-02**: Repair loop performs real edit-and-retry via the opencode runner with failure context, or records honestly that no repair occurred — never re-runs identical tests ≤5× while implying repairs (H6; `src/execute/repair.ts:51-57`)
-- [ ] **CORE-03**: MCP subsystem resolved: registry tools wired into the opencode invocation or `src/mcp/` + MCP deps deleted; no runtime-dead subsystem remains (H7; `src/execute/worker.ts:392-469`)
+- [x] **CORE-03**: MCP subsystem resolved: registry tools wired into the opencode invocation or `src/mcp/` + MCP deps deleted; no runtime-dead subsystem remains (H7; `src/execute/worker.ts:392-469`)
 - [ ] **CORE-04**: Zero fabricated evidence: router step-4 `{totalTests:1,passed:1}` default, evidence-index L2/L4/errorRate/p95 constants, and QA `commitSha='main'` replaced with real values (worktree `git rev-parse HEAD`) or fail-closed `MissingEvidenceError` blocking the transition (H8; `src/execute/router.ts:208-214`, `src/deploy/evidence-index.ts:169-193`, `src/qa/worker.ts:65`)
 
 ### Reliability
@@ -103,9 +103,9 @@ Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2
 | SEC-04 | Phase 10 | Pending |
 | SEC-05 | Phase 10 | Pending |
 | SEC-06 | Phase 10 | Pending |
-| CORE-01 | Phase 9 | Pending |
+| CORE-01 | Phase 9 | Complete |
 | CORE-02 | Phase 9 | Pending |
-| CORE-03 | Phase 9 | Pending |
+| CORE-03 | Phase 9 | Complete |
 | CORE-04 | Phase 10 | Pending |
 | REL-01 | Phase 11 | Pending |
 | REL-02 | Phase 11 | Pending |

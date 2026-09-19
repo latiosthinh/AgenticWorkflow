@@ -60,7 +60,7 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
   5. No runtime-dead MCP subsystem remains (registry tools wired into the opencode invocation, or `src/mcp/` + MCP deps deleted) and the full suite is green — tests of the deleted built-in path removed alongside it, §Done-well invariants (HMAC, `wx`-dedup, lane single-writer, sanitizing formatters, crash-atomic writes) untouched
 **Plans**: 3 plans
 Plans:
-- [ ] 09-01-PLAN.md — Delete built-in path + MCP subsystem; require opencode at boot (CORE-01, CORE-03)
+- [x] 09-01-PLAN.md — Delete built-in path + MCP subsystem; require opencode at boot (CORE-01, CORE-03)
 - [ ] 09-02-PLAN.md — XML-isolate ticket content in prompts + command allowlist (SEC-01, SEC-02)
 - [ ] 09-03-PLAN.md — Rewrite repair loop with real opencode re-invocation (CORE-02)
 

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.1
-milestone_name: Audit Remediation & Hardening
-status: executing
-stopped_at: Completed 08-02-PLAN.md - Phase 8 complete (WIP-01..05); working tree clean
-last_updated: "2026-09-19T10:57:52.354Z"
-last_activity: "2026-09-19 — 08-02 executed: fallbackUsed+model persisted in L1/L2 evidence, opencode plan-skip governance deviation recorded + surfaced, prompt.ts/src-cli committed as-is, tree CLEAN (483→488 tests green, 4 atomic commits) — Phase 8 complete (WIP-01..05)"
+milestone_name: Overview
+status: verifying
+stopped_at: Completed 09-01-PLAN.md (MCP deleted, built-in path deleted, opencode-only boot); 482/482 green
+last_updated: "2026-09-19T13:47:07.172Z"
+last_activity: 2026-09-19
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 5
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 Phase: 8 of 13 (WIP Resolution) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
 Plan: 2 of 2 (Phase 8 complete — WIP-01..05 all done)
-Status: Phase 8 complete — next: Phase 9 (Opencode-Only Honest Core: SEC-01/02 + CORE-01/02/03)
-Last activity: 2026-09-19 — 08-02 executed: fallback evidence persisted in L1/L2, opencode plan-skip governance deviation recorded + surfaced, working tree clean (483→488 tests green, 4 atomic commits)
+Status: Phase complete — ready for verification
+Last activity: 2026-09-19
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 60%
 
 **Working tree:** CLEAN — commit-forward gate (WIP-05) closed by 08-02: all WIP committed (prompt.ts verbatim, src/cli/ado.ts as-is per recorded QAL-03 decision), full suite 488/488 green, tsc clean.
 
@@ -83,6 +83,7 @@ Progress: [██████████] 100%
 | Phase 07 P01 | 6m | 3 tasks | 7 files |
 | Phase 08 P01 | 28m | 3 tasks | 6 files |
 | Phase 08 P02 | 13m | 3 tasks | 11 files |
+| Phase 09 P01 | 13 | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -269,6 +270,7 @@ Recent decisions affecting current work:
 - [Phase 08]: [08-02]: worker.test.ts pins env.API_MODEL in harness (local .env overrides schema default) - keeps the 'gpt-4o' model assertion verbatim while making it machine-hermetic.
 - [Phase 08]: [08-02]: Governance deviations surface on the work item markdown-first - governanceNote rides THROUGH marked.parse + sanitizeHtml allowlist + loop shield, never raw HTML.
 - [Phase 08]: [08-02]: Evidence fields (fallbackUsed/model/planDelegated/planNote) are additive-optional on persisted entry types - JSON.stringify drops undefined, old state files parse unchanged, zero store changes.
+- [Phase ?]: [09-01]: OPENCODE_BIN keeps default('opencode') with .pipe(refine) for PATH resolvability
 
 ### Pending Todos
 
@@ -303,6 +305,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-19T10:57:52.349Z
-Stopped at: Completed 08-02-PLAN.md - Phase 8 complete (WIP-01..05); working tree clean
+Last session: 2026-09-19T13:47:07.167Z
+Stopped at: Completed 09-01-PLAN.md (MCP deleted, built-in path deleted, opencode-only boot); 482/482 green
 Resume: `/gsd-progress` → Phase 9 (Opencode-Only Honest Core) — discuss/plan next; Phase 8 artifacts complete (08-01/08-02 SUMMARYs)
