@@ -9,6 +9,10 @@ export interface CreateCheckpointInput {
   planMarkdown?: string;
   estimatedFiles?: string[];
   testStrategy?: string;
+  fallbackUsed?: boolean;
+  model?: string;
+  planDelegated?: boolean;
+  planNote?: string;
 }
 
 export async function createPlanCheckpoint(
@@ -26,6 +30,10 @@ export async function createPlanCheckpoint(
         planMarkdown: data.planMarkdown || null,
         estimatedFiles: data.estimatedFiles ? JSON.stringify(data.estimatedFiles) : null,
         testStrategy: data.testStrategy || null,
+        fallbackUsed: data.fallbackUsed,
+        model: data.model ?? null,
+        planDelegated: data.planDelegated,
+        planNote: data.planNote ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

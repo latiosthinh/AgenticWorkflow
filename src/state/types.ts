@@ -14,6 +14,7 @@ export interface AuditLogEntry {
   reasons: string;
   criteriaSummary: string;
   model: string;
+  fallbackUsed?: boolean;
   evaluatedAt: string;
 }
 
@@ -26,6 +27,10 @@ export interface PlanCheckpointState {
   planMarkdown?: string | null;
   estimatedFiles?: string | null;
   testStrategy?: string | null;
+  fallbackUsed?: boolean;
+  model?: string | null;
+  planDelegated?: boolean;
+  planNote?: string | null;
   remindedAt?: string | null;
   escalatedAt?: string | null;
   createdAt: string;

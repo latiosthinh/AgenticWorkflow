@@ -14,10 +14,14 @@ import { createTestStateStore, type TestStateStoreContext } from '../src/state/t
 describe('Background Audit Worker Pipeline', () => {
   let harness: TestStateStoreContext;
   const originalStateDir = env.STATE_STORE_DIR;
+  const originalApiModel = env.API_MODEL;
 
   beforeEach(() => {
     harness = createTestStateStore();
     (env as any).STATE_STORE_DIR = harness.tempDir;
+    // Pin API_MODEL so the deterministic evaluator path's env-resolved model is
+    // hermetic even when a local .env overrides the schema default.
+    (env as any).API_MODEL = 'gpt-4o';
     resetStateStore();
     adoClient.setWorkItemTrackingApi(null);
   });
@@ -25,6 +29,7 @@ describe('Background Audit Worker Pipeline', () => {
   afterEach(() => {
     harness.cleanup();
     (env as any).STATE_STORE_DIR = originalStateDir;
+    (env as any).API_MODEL = originalApiModel;
     resetStateStore();
   });
 
@@ -78,6 +83,7 @@ describe('Background Audit Worker Pipeline', () => {
     expect(ticket?.auditLogs).toHaveLength(1);
     expect(ticket?.auditLogs[0].verdict).toBe('passed');
     expect(ticket?.auditLogs[0].model).toBe('gpt-4o');
+    expect(ticket?.auditLogs[0].fallbackUsed).toBe(false);
     expect(ticket?.auditLogs[0].criteriaSummary).toBeTruthy();
     expect(ticket?.scopeLock).toBeDefined();
     expect(ticket?.scopeLock?.status).toBe('pending');
@@ -133,6 +139,7 @@ describe('Background Audit Worker Pipeline', () => {
     expect(ticket).toBeDefined();
     expect(ticket?.auditLogs).toHaveLength(1);
     expect(ticket?.auditLogs[0].verdict).toBe('failed');
+    expect(ticket?.auditLogs[0].fallbackUsed).toBe(false);
 
     // Verify dedup marker status is 'completed'
     const markerPath = path.join(harness.tempDir, 'dedup', `${workItemId}-${revId}.json`);

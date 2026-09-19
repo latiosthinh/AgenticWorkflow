@@ -81,7 +81,8 @@ export async function processWorkItemAudit(
             verdict: 'passed',
             reasons: JSON.stringify(result.reasons),
             criteriaSummary: result.criteria_summary,
-            model: 'gpt-4o',
+            model: result.model,
+            fallbackUsed: result.fallbackUsed,
             evaluatedAt: now,
           });
           draft.scopeLock = {
@@ -113,7 +114,8 @@ export async function processWorkItemAudit(
             verdict: 'failed',
             reasons: JSON.stringify(result.reasons),
             criteriaSummary: result.criteria_summary,
-            model: 'gpt-4o',
+            model: result.model,
+            fallbackUsed: result.fallbackUsed,
             evaluatedAt: now,
           });
         },

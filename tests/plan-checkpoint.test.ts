@@ -84,6 +84,39 @@ describe('Plan Checkpoint Persistence & Lifecycle', () => {
     const expiredRow = updatedTicket?.planCheckpoints.find((c) => c.id === cp.id);
     expect(expiredRow?.status).toBe('expired');
   });
+
+  it('persists fallbackUsed/model/planDelegated/planNote through roundtrip and stays backwards compatible', async () => {
+    const cp = await createPlanCheckpoint({
+      workItemId: 3002,
+      revId: 1,
+      questions: ['Which DB schema?'],
+      planMarkdown: 'Step 1: migrate',
+      estimatedFiles: ['src/db.ts'],
+      testStrategy: 'vitest',
+      fallbackUsed: true,
+      model: 'm-x',
+      planDelegated: true,
+      planNote: 'n',
+    });
+
+    const ticket = await stateStore.getTicketState(3002);
+    const row = ticket?.planCheckpoints.find((c) => c.id === cp.id);
+    expect(row?.fallbackUsed).toBe(true);
+    expect(row?.model).toBe('m-x');
+    expect(row?.planDelegated).toBe(true);
+    expect(row?.planNote).toBe('n');
+
+    // Backwards compat: checkpoint created WITHOUT the new fields → absent/undefined after roundtrip
+    const cp2 = await createPlanCheckpoint({
+      workItemId: 3002,
+      revId: 2,
+      questions: ['What status code?'],
+    });
+    const ticket2 = await stateStore.getTicketState(3002);
+    const row2 = ticket2?.planCheckpoints.find((c) => c.id === cp2.id);
+    expect(row2?.planDelegated).toBeUndefined();
+    expect(row2?.fallbackUsed).toBeUndefined();
+  });
 });
 
 describe('Plan Watchdog 24h/72h Timeouts', () => {
