@@ -101,39 +101,39 @@ describe('SEC-02: Command Allowlist + File-Read Jail', () => {
   });
 
   describe('File-read jail (structural worktree containment)', () => {
-    it('node process in worktree cannot read ../../.env via path traversal', async () => {
-      // Create simulated worktree structure: tmp/.env + tmp/worktrees/123/
+    it('scrubs secrets from traversal-read output via knownSecrets', async () => {
+      // Simulated worktree structure: tmp/.env + tmp/worktrees/123/
       const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'sec02-jail-'));
       const secretFile = path.join(tmpBase, '.env');
       const worktreeDir = path.join(tmpBase, 'worktrees', '123');
       fs.mkdirSync(worktreeDir, { recursive: true });
-      fs.writeFileSync(secretFile, 'ADO_PAT=super-secret-token');
+      // Use a value matching SENSITIVE_VALUE_PATTERN (ghp_ token)
+      fs.writeFileSync(secretFile, 'TOKEN=ghp_abcdefghijklmnopqrstuvwxyz1234567890');
 
       try {
-        // From worktreeDir, ../../.env resolves to tmpBase/.env
-        // The runner runs with cwd=worktreeDir, extendEnv:false
-        // The node script attempts to read the secret file via traversal
         const traversalPath = path.join('..', '..', '.env');
         const result = await runCommand(
           'node',
-          ['-e', `try { console.log(require('fs').readFileSync('${traversalPath.replace(/\\/g, '\\\\')}', 'utf8')); process.exit(0); } catch(e) { console.error(e.message); process.exit(1); }`],
-          { cwd: worktreeDir }
+          ['-e', `console.log(require('fs').readFileSync('${traversalPath.replace(/\\/g, '\\\\')}', 'utf8'))`],
+          { cwd: worktreeDir },
+          // Belt-and-suspenders: pass as knownSecrets too
+          ['ghp_abcdefghijklmnopqrstuvwxyz1234567890']
         );
 
-        // The node process CAN read the file (it's on the filesystem).
-        // But the critical containment is: the orchestrator's .env is at REPO ROOT,
-        // worktrees are under .worktrees/<id>/ — traversal goes to .worktrees/ not repo root.
-        // In our simulated structure, traversal succeeds because the mock layout allows it.
-        // The REAL security is: extendEnv:false prevents env vars from leaking,
-        // and the command allowlist prevents tools like curl/cat from exfiltrating.
-        // This test documents the structural assumption.
-        if (result.exitCode === 0) {
-          // Even if the file is readable, the output is scrubbed
-          expect(result.stdout).not.toContain('super-secret-token');
-        }
+        // Even if filesystem allows the read, output is scrubbed
+        expect(result.stdout).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz1234567890');
+        expect(result.stdout).toContain('[REDACTED]');
       } finally {
         fs.rmSync(tmpBase, { recursive: true, force: true });
       }
+    });
+
+    it('extendEnv:false prevents host env leak to child process', () => {
+      const runnerSrc = fs.readFileSync(
+        path.resolve(__dirname, '../src/sandbox/runner.ts'),
+        'utf8'
+      );
+      expect(runnerSrc).toContain('extendEnv: false');
     });
   });
 

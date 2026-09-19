@@ -1,7 +1,26 @@
+import path from 'node:path';
 import { execa } from 'execa';
 import type { CommandOptions, CommandResult } from './types.js';
 
 // ponytail: execa host runner with signal cascades; wrap in docker run when running untrusted public repos in v2
+
+/** Frozen allowlist of permitted agent commands. Principle of least privilege — not configurable. */
+export const ALLOWED_COMMANDS = Object.freeze([
+  'npm', 'npx', 'node', 'vitest', 'tsc', 'git',
+  // Windows .cmd/.exe variants
+  'npm.cmd', 'npx.cmd', 'node.exe', 'vitest.cmd', 'tsc.cmd', 'git.exe',
+] as const);
+
+function assertAllowedCommand(file: string): void {
+  const basename = path.basename(file).toLowerCase();
+  if (!(ALLOWED_COMMANDS as readonly string[]).includes(basename)) {
+    throw new Error(
+      `Command '${file}' is not in the allowlist. ` +
+      `Permitted: ${ALLOWED_COMMANDS.filter(c => !c.includes('.')).join(', ')}. ` +
+      `Agent commands are restricted for security.`
+    );
+  }
+}
 
 export const SENSITIVE_KEY_PATTERN = /(PAT|API_KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|AUTH_KEY)/i;
 export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,})/g;
@@ -89,6 +108,7 @@ export async function runCommand(
   options: CommandOptions,
   knownSecrets: string[] = []
 ): Promise<CommandResult> {
+  assertAllowedCommand(file);
   const timeoutMs = options.timeoutMs ?? 120_000;
 
   try {
