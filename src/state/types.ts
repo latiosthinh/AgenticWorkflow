@@ -215,6 +215,8 @@ export interface TicketState {
   smokeEvidence?: SmokeEvidenceState | null;
   retroRecords?: L7EvidenceState[];
   l7Evidence?: L7EvidenceState | null;
+  l2Evidence?: { reviewPassed: boolean; qualityNotes: string } | null;
+  l4Evidence?: { securityPassed: boolean; policiesSummary: string } | null;
 }
 
 export interface StateStore {

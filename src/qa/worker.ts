@@ -1,8 +1,11 @@
 import { stateStore } from '../state/index.js';
 import { workItemQueueManager, laneContext } from '../queue/lane-manager.js';
 import { adoClient } from '../ado/client.js';
-import { getWorkItemDetails, buildTagPatch } from '../ado/work-item.js';
+import { getWorkItemDetails, buildTagPatch, flagTicketBlocked } from '../ado/work-item.js';
 import { createWorktree, cleanupWorktree } from '../sandbox/worktree.js';
+import { simpleGit } from 'simple-git';
+import { slugify } from '../utils/paths.js';
+import { formatWorkerAlertComment } from '../ado/formatter.js';
 import {
   checkStagingHealth,
   executeTwoStrikeQaFilter,
@@ -62,7 +65,7 @@ export async function processQaVerification(
 
   // Provision isolated worktree on task branch or target
   let worktreePath: string | undefined;
-  let commitSha = 'main';
+  let commitSha: string | undefined;
 
   try {
     const worktreeResult = await createWorktree(
@@ -75,6 +78,39 @@ export async function processQaVerification(
   } catch (err) {
     console.warn(`[qa-worker] Failed to attach to task branch; using process.cwd() fallback:`, err);
     worktreePath = process.cwd();
+  }
+
+  if (worktreePath) {
+    try {
+      const git = simpleGit(worktreePath);
+      commitSha = (await git.raw(['rev-parse', 'HEAD'])).trim();
+    } catch (err) {
+      console.warn(`[qa-worker] Failed rev-parse HEAD in worktree (${worktreePath}):`, err);
+    }
+  }
+
+  if (!commitSha) {
+    try {
+      const rootGit = simpleGit(process.cwd());
+      const slug = slugify(workItem.title || 'qa-verification');
+      const branchRef = `task/ticket-${workItemId}-${slug}`;
+      commitSha = (await rootGit.raw(['rev-parse', branchRef])).trim();
+    } catch (err) {
+      console.warn(`[qa-worker] Failed resolving branch ref:`, err);
+    }
+  }
+
+  if (!commitSha) {
+    console.error(`[qa-worker] Could not resolve commit SHA for work item #${workItemId}`);
+    if (worktreePath && worktreePath !== process.cwd()) {
+      await cleanupWorktree(process.cwd(), worktreePath).catch(() => {});
+    }
+    const alertComment = formatWorkerAlertComment(
+      '[QA Harness Error] Git Commit SHA Unresolved',
+      `Failed to resolve real commit SHA for work item #${workItemId}. Fail-closed: hardcoded 'main' is prohibited.`
+    );
+    await flagTicketBlocked(workItemId, alertComment, 'qa-harness-error');
+    return;
   }
 
   let result: TwoStrikeResult;

@@ -68,9 +68,15 @@ export interface L1L7EvidenceSummary {
 
 export type L1L6EvidenceSummary = L1L7EvidenceSummary;
 
+export interface CompileEvidenceIndexOptions {
+  failClosed?: boolean;
+  l2Evidence?: { reviewPassed: boolean; qualityNotes: string } | null;
+  l4Evidence?: { securityPassed: boolean; policiesSummary: string } | null;
+}
+
 export async function compileL1L7EvidenceIndex(
   workItemId: number,
-  options?: { failClosed?: boolean }
+  options?: CompileEvidenceIndexOptions
 ): Promise<L1L7EvidenceSummary> {
   return workItemQueueManager.runInLane(workItemId, async () => {
     let ticket = await stateStore.getTicketState(workItemId);
@@ -94,11 +100,15 @@ export async function compileL1L7EvidenceIndex(
       ? ticket.auditLogs[ticket.auditLogs.length - 1]
       : undefined;
 
+    const resolvedL2 = options?.l2Evidence ?? ticket.l2Evidence;
+
     const l3Local = ticket.l3Evidence && ticket.l3Evidence.length > 0
       ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
       : undefined;
 
     const l3Qa = ticket.qaEvidence ?? undefined;
+
+    const resolvedL4 = options?.l4Evidence ?? ticket.l4Evidence;
 
     const l5Record = ticket.deploymentRecords && ticket.deploymentRecords.length > 0
       ? ticket.deploymentRecords[ticket.deploymentRecords.length - 1]
@@ -118,14 +128,29 @@ export async function compileL1L7EvidenceIndex(
       if (!l1Record) {
         throw new MissingEvidenceError(`Missing required L1 contract audit record for #${workItemId}`, 'L1', workItemId);
       }
+      if (!resolvedL2) {
+        throw new MissingEvidenceError(`Missing required L2 code review evidence for #${workItemId}`, 'L2', workItemId);
+      }
       if (!l3Local && !l3Qa) {
         throw new MissingEvidenceError(`Missing required L3 test evidence for #${workItemId}`, 'L3', workItemId);
+      }
+      if (!resolvedL4) {
+        throw new MissingEvidenceError(`Missing required L4 security policy evidence for #${workItemId}`, 'L4', workItemId);
       }
       if (!l5Record) {
         throw new MissingEvidenceError(`Missing required L5 deployment record for #${workItemId}`, 'L5', workItemId);
       }
       if (!l6Record || l6Record.breached) {
         throw new MissingEvidenceError(`Missing or breached L6 telemetry record for #${workItemId}`, 'L6', workItemId);
+      }
+      if (
+        l6Record.errorRate === undefined ||
+        l6Record.errorRate === null ||
+        l6Record.errorRate === '' ||
+        l6Record.p95LatencyMs === undefined ||
+        l6Record.p95LatencyMs === null
+      ) {
+        throw new MissingEvidenceError(`Missing required L6 telemetry metrics (errorRate/p95LatencyMs) for #${workItemId}`, 'L6', workItemId);
       }
       if (smokeRecord && smokeRecord.status === 'failed') {
         throw new MissingEvidenceError(`Failed L6 smoke verification for #${workItemId}`, 'L6', workItemId);
@@ -162,37 +187,47 @@ export async function compileL1L7EvidenceIndex(
     const summary: L1L7EvidenceSummary = {
       workItemId,
       l1: {
-        verdict: l1Record?.verdict === 'passed' ? 'PASSED' : 'VERIFIED',
-        criteriaSummary: l1Record?.criteriaSummary || 'Acceptance criteria and DoD complete',
+        verdict: l1Record?.verdict === 'passed' ? 'PASSED' : (l1Record ? 'VERIFIED' : 'Pending'),
+        criteriaSummary: l1Record?.criteriaSummary || 'Pending acceptance criteria and DoD audit',
         reasons: l1Reasons,
       },
-      l2: {
-        reviewPassed: true,
-        qualityNotes: 'PR approved by peer reviewer; clean branch policy audit',
-      },
+      l2: resolvedL2
+        ? {
+            reviewPassed: resolvedL2.reviewPassed,
+            qualityNotes: resolvedL2.qualityNotes,
+          }
+        : {
+            reviewPassed: false,
+            qualityNotes: 'Pending code review and branch policy verification',
+          },
       l3: {
-        localTestsPassed: l3Local?.passed ?? 1,
-        localTestsTotal: l3Local?.totalTests ?? 1,
-        qaTestsPassed: l3Qa?.passedCount ?? 1,
-        qaTestsTotal: l3Qa?.totalTests ?? 1,
+        localTestsPassed: l3Local?.passed ?? (l3Qa?.passedCount ?? 0),
+        localTestsTotal: l3Local?.totalTests ?? (l3Qa?.totalTests ?? 0),
+        qaTestsPassed: l3Qa?.passedCount ?? 0,
+        qaTestsTotal: l3Qa?.totalTests ?? 0,
         flakeCleared: Boolean(l3Qa?.flakeCleared),
       },
-      l4: {
-        securityPassed: true,
-        policiesSummary: 'SAST/Security policies green; test assertions immutable; diff ceiling bounded',
-      },
+      l4: resolvedL4
+        ? {
+            securityPassed: resolvedL4.securityPassed,
+            policiesSummary: resolvedL4.policiesSummary,
+          }
+        : {
+            securityPassed: false,
+            policiesSummary: 'Pending security policy and assertion immutability audit',
+          },
       l5: {
         environmentName: l5Record?.environmentName || 'Production',
-        commitSha: l5Record?.commitSha || 'main',
+        commitSha: l5Record?.commitSha || 'unknown',
         migrationRisk: l5Record?.migrationRisk || 'low',
-        status: l5Record?.status || 'deployed',
+        status: l5Record?.status || 'pending',
       },
       l6: {
-        errorRate: l6Record?.errorRate || '0.05%',
-        p95LatencyMs: l6Record?.p95LatencyMs || 145,
-        windowMinutes: l6Record?.windowMinutes || 30,
+        errorRate: l6Record?.errorRate || 'Pending',
+        p95LatencyMs: l6Record?.p95LatencyMs ?? 0,
+        windowMinutes: l6Record?.windowMinutes || 0,
         breached: Boolean(l6Record?.breached),
-        smokePassed: smokeRecord ? smokeRecord.status === 'passed' : true,
+        smokePassed: smokeRecord ? smokeRecord.status === 'passed' : false,
         smokeStatus: smokeRecord?.status,
         smokeChecksPassed: smokeRecord?.checksPassed,
         smokeChecksTotal: smokeRecord?.checksTotal,
@@ -273,7 +308,7 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
       <tr>
         <td><strong>L2</strong></td>
         <td>${getTaxonomyStage('L2')}</td>
-        <td><span style="color: #2e7d32; font-weight: bold;">[APPROVED]</span></td>
+        <td>${l2.reviewPassed ? '<span style="color: #2e7d32; font-weight: bold;">[APPROVED]</span>' : '<span style="color: #f57c00; font-weight: bold;">[PENDING]</span>'}</td>
         <td>${sanitizeHtml(l2.qualityNotes)}</td>
       </tr>
       <tr>
@@ -285,7 +320,7 @@ export function formatEvidenceIndexComment(summary: L1L7EvidenceSummary): string
       <tr>
         <td><strong>L4</strong></td>
         <td>${getTaxonomyStage('L4')}</td>
-        <td><span style="color: #2e7d32; font-weight: bold;">[COMPLIANT]</span></td>
+        <td>${l4.securityPassed ? '<span style="color: #2e7d32; font-weight: bold;">[COMPLIANT]</span>' : '<span style="color: #f57c00; font-weight: bold;">[PENDING]</span>'}</td>
         <td>${sanitizeHtml(l4.policiesSummary)}</td>
       </tr>
       <tr>

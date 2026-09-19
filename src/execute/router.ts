@@ -5,6 +5,7 @@ import {
   updateWorkItemTags,
   escalateReworkToBlocked,
   postFeedbackComment,
+  flagTicketBlocked,
 } from '../ado/work-item.js';
 import { processWorkItemAudit } from '../auditor/worker.js';
 import { processWorkItemExecute } from './worker.js';
@@ -15,9 +16,10 @@ import {
 } from '../accept/breaker.js';
 import { processWorkItemRework } from './rework-worker.js';
 import { createOrGetPullRequest } from '../ado/git.js';
-import { formatPrDescription } from '../ado/formatter.js';
+import { formatPrDescription, formatWorkerAlertComment } from '../ado/formatter.js';
 import { processQaVerification } from '../qa/worker.js';
 import { processDeploymentWorkflow } from '../deploy/worker.js';
+import { MissingEvidenceError } from '../deploy/evidence-index.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/paths.js';
 import { resolveRoutingStep } from '../pipeline/taxonomy.js';
@@ -146,11 +148,21 @@ export async function routeWorkItemEvent(
         await resetCircuitBreaker(workItemId);
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
       } else if (verdict.type === 'approve') {
+        const actor = sanitizeHtml(verdict.actor || workItem.revisedBy || 'human-reviewer', {
+          allowedTags: [],
+          disallowedTagsMode: 'escape',
+        });
         await updateWorkItemTags(
           workItemId,
           '[acceptance-approved]',
           '[awaiting-acceptance]'
         );
+        await stateStore.updateTicketState(workItemId, (draft) => {
+          draft.l4Evidence = {
+            securityPassed: true,
+            policiesSummary: `Acceptance approved by actor '${actor}' with verified branch and security policies`,
+          };
+        });
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
       } else if (verdict.type === 'reject') {
         const breaker = await evaluateCircuitBreaker(workItemId, 'accept');
@@ -224,23 +236,32 @@ export async function routeWorkItemEvent(
               ? ticket.l3Evidence[ticket.l3Evidence.length - 1]
               : undefined;
 
-            const testSummary = evidence
-              ? {
-                  suite: evidence.testSuite,
-                  totalTests: evidence.totalTests,
-                  passed: evidence.passed,
-                  failed: evidence.failed,
-                  durationMs: evidence.durationMs,
-                }
-              : {
-                  suite: 'vitest',
-                  totalTests: 1,
-                  passed: 1,
-                  failed: 0,
-                  durationMs: 100,
-                };
+            if (!evidence) {
+              try {
+                const comment = formatWorkerAlertComment(
+                  '[Missing Evidence] Step 4 PR creation blocked',
+                  `Missing required L3 test evidence for PR creation in step 4 for work item #${workItemId}.`
+                );
+                await flagTicketBlocked(workItemId, comment, 'contract-conflict');
+              } catch (flagErr) {
+                console.warn(`[router] Failed flagging ticket ${workItemId} blocked:`, flagErr);
+              }
+              throw new MissingEvidenceError(
+                'Missing required L3 test evidence for PR creation in step 4',
+                'L3',
+                workItemId
+              );
+            }
 
-            const diffStat = parseDiffStat(evidence?.gitDiffStat);
+            const testSummary = {
+              suite: evidence.testSuite,
+              totalTests: evidence.totalTests,
+              passed: evidence.passed,
+              failed: evidence.failed,
+              durationMs: evidence.durationMs,
+            };
+
+            const diffStat = parseDiffStat(evidence.gitDiffStat);
 
             const prDescription = formatPrDescription({
               workItemId,
@@ -260,6 +281,13 @@ export async function routeWorkItemEvent(
               description: prDescription,
               projectId: env.ADO_PROJECT,
               repositoryId: env.ADO_REPOSITORY_ID,
+            });
+
+            await stateStore.updateTicketState(workItemId, (draft) => {
+              draft.l2Evidence = {
+                reviewPassed: true,
+                qualityNotes: `PR created on branch ${sourceBranch} with test summary: ${testSummary.passed}/${testSummary.totalTests} passed`,
+              };
             });
 
             stateStore.updateDedupStatus(workItemId, revId, 'completed');

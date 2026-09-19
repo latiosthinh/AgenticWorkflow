@@ -246,7 +246,7 @@ export async function transitionToDevDone(
 export async function flagTicketBlocked(
   workItemId: number,
   htmlComment: string,
-  type: 'contract-conflict' | 'repair-exhausted' | 'diff-ceiling'
+  type: 'contract-conflict' | 'repair-exhausted' | 'diff-ceiling' | 'qa-harness-error'
 ): Promise<any> {
   const sanitizedComment = sanitizeHtml(htmlComment, {
     allowedTags: ['h3', 'p', 'pre', 'code', 'strong', 'ul', 'li', 'b', 'i', 'em', 'a'],
@@ -262,6 +262,25 @@ export async function flagTicketBlocked(
     patchDoc = buildContractConflictPatch(safeComment, details.tags);
   } else if (type === 'repair-exhausted') {
     patchDoc = buildRepairExhaustedPatch(safeComment, details.tags);
+  } else if (type === 'qa-harness-error') {
+    const tagPatches = buildTagPatch(
+      details.tags,
+      '[qa-harness-error]',
+      '[awaiting-input]'
+    );
+    patchDoc = [
+      ...tagPatches,
+      {
+        op: Operation.Replace,
+        path: '/fields/System.State',
+        value: 'Blocked',
+      },
+      {
+        op: Operation.Add,
+        path: '/fields/System.History',
+        value: safeComment,
+      },
+    ];
   } else {
     const tagPatches = buildTagPatch(
       details.tags,

@@ -236,6 +236,10 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
               evaluatedAt: new Date().toISOString(),
             },
           ];
+          draft.l2Evidence = {
+            reviewPassed: true,
+            qualityNotes: 'PR approved by peer reviewer; clean branch policy audit',
+          };
           draft.l3Evidence = [
             {
               revId: 3,
@@ -249,6 +253,10 @@ describe('Evidence Index Compilation & Persistence (EVID-02)', () => {
               createdAt: new Date().toISOString(),
             },
           ];
+          draft.l4Evidence = {
+            securityPassed: true,
+            policiesSummary: 'SAST/Security policies green; test assertions immutable; diff ceiling bounded',
+          };
           draft.deploymentRecords = [
             {
               pipelineRunId: 'pipe-1',

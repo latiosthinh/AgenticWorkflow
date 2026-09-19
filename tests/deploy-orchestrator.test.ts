@@ -73,6 +73,18 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
             createdAt: new Date().toISOString(),
           });
         }
+        if (!draft.l2Evidence) {
+          draft.l2Evidence = {
+            reviewPassed: true,
+            qualityNotes: 'PR approved by peer reviewer; clean branch policy audit',
+          };
+        }
+        if (!draft.l4Evidence) {
+          draft.l4Evidence = {
+            securityPassed: true,
+            policiesSummary: 'SAST/Security policies green; test assertions immutable; diff ceiling bounded',
+          };
+        }
       });
     });
   }
@@ -620,6 +632,10 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
             model: 'gpt-4o',
             evaluatedAt: new Date().toISOString(),
           });
+          draft.l2Evidence = {
+            reviewPassed: true,
+            qualityNotes: 'PR approved by peer reviewer; clean branch policy audit',
+          };
           draft.l3Evidence.push({
             revId: 1,
             testSuite: 'vitest',
@@ -631,6 +647,10 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
             gitDiffStat: '1 file changed',
             createdAt: new Date().toISOString(),
           });
+          draft.l4Evidence = {
+            securityPassed: true,
+            policiesSummary: 'SAST/Security policies green; test assertions immutable; diff ceiling bounded',
+          };
           draft.deploymentRecords.push({
             pipelineRunId: 'run-1',
             stageName: 'DeployToProd',
@@ -694,6 +714,10 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
             model: 'gpt-4o',
             evaluatedAt: new Date().toISOString(),
           });
+          draft.l2Evidence = {
+            reviewPassed: true,
+            qualityNotes: 'PR approved by peer reviewer; clean branch policy audit',
+          };
           draft.l3Evidence.push({
             revId: 1,
             testSuite: 'vitest',
@@ -705,6 +729,10 @@ describe('Deploy & Telemetry Orchestrator (DPLY-01, DPLY-02, DPLY-03)', () => {
             gitDiffStat: '1 file changed',
             createdAt: new Date().toISOString(),
           });
+          draft.l4Evidence = {
+            securityPassed: true,
+            policiesSummary: 'SAST/Security policies green; test assertions immutable; diff ceiling bounded',
+          };
           draft.deploymentRecords.push({
             pipelineRunId: 'run-1',
             stageName: 'DeployToProd',

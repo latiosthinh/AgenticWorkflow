@@ -219,6 +219,22 @@ describe('V1 Lifecycle Replay Parity Test (TAX-03)', () => {
     currentRev = 3;
     stateStore.recordDedupEvent(workItemId, currentRev, `hash-${currentRev}`);
     const executeOptions = { maxDiffLoc: 200, mockCodeEdit: vi.fn() };
+    vi.mocked(processWorkItemExecute).mockImplementationOnce(async (id: number, rev: number) => {
+      await stateStore.updateTicketState(id, (draft) => {
+        draft.l3Evidence.push({
+          revId: 3,
+          testSuite: 'vitest',
+          totalTests: 10,
+          passed: 10,
+          failed: 0,
+          durationMs: 300,
+          coverageSummary: '90%',
+          gitDiffStat: '1 file changed',
+          createdAt: new Date().toISOString(),
+        });
+      });
+      stateStore.updateDedupStatus(id, rev, 'completed');
+    });
     await routeWorkItemEvent(workItemId, currentRev, executeOptions);
 
     expect(processWorkItemExecute).toHaveBeenCalledWith(workItemId, currentRev, executeOptions);
