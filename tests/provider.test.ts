@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createOpenAI } from '@ai-sdk/openai';
-import { EnvSchema } from '../src/config/env.js';
-import { getModel, appModel, customOpenAi, customStreamFetch } from '../src/ai/provider.js';
+import { EnvSchema, env } from '../src/config/env.js';
+import { getModel, appModel, customOpenAi, customStreamFetch, rewriteRouterBody } from '../src/ai/provider.js';
 
 describe('Config & AI Provider', () => {
   it('parses custom API and OpenCode config fields in EnvSchema', () => {
@@ -79,5 +80,67 @@ describe('Config & AI Provider', () => {
       process.env.API_KEY = originalKey;
       process.env.OPENAI_API_KEY = originalOpenAiKey;
     }
+  });
+});
+
+describe('rewriteRouterBody (WIP-01)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('injects stream:false and strips the 9router/ model prefix', () => {
+    const out = rewriteRouterBody('{"model":"9router/deepseek-chat"}') as string;
+    expect(JSON.parse(out)).toEqual({ model: 'deepseek-chat', stream: false });
+  });
+
+  it('preserves explicit stream:true and non-prefixed model', () => {
+    const out = rewriteRouterBody('{"stream":true,"model":"m"}') as string;
+    expect(JSON.parse(out)).toEqual({ stream: true, model: 'm' });
+  });
+
+  it('returns undefined and non-string bodies as-is', () => {
+    expect(rewriteRouterBody(undefined)).toBeUndefined();
+    const bytes = new Uint8Array([1, 2, 3]);
+    expect(rewriteRouterBody(bytes)).toBe(bytes);
+  });
+
+  it('forwards unparseable body unchanged and warns once (no silent catch)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(rewriteRouterBody('not json{')).toBe('not json{');
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards valid JSON primitives untouched without warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(rewriteRouterBody('"scalar"')).toBe('"scalar"');
+    expect(rewriteRouterBody('123')).toBe('123');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('getModel strips the 9router/ prefix', () => {
+    expect(getModel('9router/deepseek-chat').modelId).toBe('deepseek-chat');
+  });
+
+  it('customStreamFetch sends the rewritten body and sets authorization from env.API_KEY', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await customStreamFetch('http://localhost:9999/v1/chat', {
+      body: JSON.stringify({ model: '9router/m', messages: [] }),
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('http://localhost:9999/v1/chat');
+    expect(JSON.parse(init.body as string)).toEqual({ model: 'm', messages: [], stream: false });
+    if (env.API_KEY) {
+      expect(new Headers(init.headers).get('authorization')).toBe(`Bearer ${env.API_KEY}`);
+    }
+  });
+
+  it('static guard: src/ai/provider.ts contains no empty catch block', () => {
+    const src = readFileSync(new URL('../src/ai/provider.ts', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/catch\s*\{\s*\}/);
   });
 });
