@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Overview
 status: verifying
-stopped_at: Completed 09-01-PLAN.md (MCP deleted, built-in path deleted, opencode-only boot); 482/482 green
-last_updated: "2026-09-19T14:13:13.735Z"
+stopped_at: Completed 09-02-PLAN.md (SEC-01 prompt isolation + SEC-02 command allowlist); 512/512 green
+last_updated: "2026-09-19T14:20:00.000Z"
 last_activity: 2026-09-19
 progress:
   total_phases: 6
@@ -84,6 +84,7 @@ Progress: [████████░░] 80%
 | Phase 08 P01 | 28m | 3 tasks | 6 files |
 | Phase 08 P02 | 13m | 3 tasks | 11 files |
 | Phase 09 P01 | 13 | 2 tasks | 16 files |
+| Phase 09 P02 | 28m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -271,6 +272,8 @@ Recent decisions affecting current work:
 - [Phase 08]: [08-02]: Governance deviations surface on the work item markdown-first - governanceNote rides THROUGH marked.parse + sanitizeHtml allowlist + loop shield, never raw HTML.
 - [Phase 08]: [08-02]: Evidence fields (fallbackUsed/model/planDelegated/planNote) are additive-optional on persisted entry types - JSON.stringify drops undefined, old state files parse unchanged, zero store changes.
 - [Phase ?]: [09-01]: OPENCODE_BIN keeps default('opencode') with .pipe(refine) for PATH resolvability
+- [Phase 09]: [09-02]: escapeXml reused from auditor/prompt.ts — single XML-escape function across all prompt paths (worker.ts + planner.ts + auditor prompt.ts)
+- [Phase 09]: [09-02]: ALLOWED_COMMANDS is frozen const (not env-configurable) — principle of least privilege; assertAllowedCommand throws synchronously before execa call
 
 ### Pending Todos
 
@@ -305,6 +308,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-19T14:13:13.728Z
-Stopped at: Completed 09-01-PLAN.md (MCP deleted, built-in path deleted, opencode-only boot); 482/482 green
-Resume: `/gsd-progress` → Phase 9 (Opencode-Only Honest Core) — discuss/plan next; Phase 8 artifacts complete (08-01/08-02 SUMMARYs)
+Last session: 2026-09-19T14:20:00.000Z
+Stopped at: Completed 09-02-PLAN.md (SEC-01 prompt isolation + SEC-02 command allowlist); 512/512 green
+Resume: `/gsd-progress` → Phase 9 complete (3/3 plans done); next Phase 10
