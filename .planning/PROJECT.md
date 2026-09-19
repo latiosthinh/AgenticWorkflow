@@ -10,12 +10,29 @@ Deterministic, evidence-backed software delivery where AI agents autonomously pl
 
 ## Current State
 
+- **Full audit 2026-09-19** (`.planning/research/AUDIT-v2.1.md`): 1 CRITICAL security chain, 8 HIGH, 15 MEDIUM, ~25 LOW findings; 462/462 tests green, typecheck clean. Milestone v2.1 created to remediate all findings.
 - **v2.0 shipped 2026-09-18 (git tag `v2.0`)**: 5 columns / 9 steps / L1–L7 evidence on file-backed `StateStore`, 437 tests passing green.
 - **v1.0 shipped 2026-09-09 (git tag `v1.0`)**: 8 Golden Path phases, 31 requirements complete.
 
-## Current Milestone: v2.0 — Golden Path v2
+## Current Milestone: v2.1 — Audit Remediation & Hardening
 
-**Goal:** Restructure the pipeline to the v2 model — 5 columns (Refinement, Execution, Acceptance, Release, Retro), 9 actor-assigned steps, 7 evidence levels (L1–L7) — adding the 4 capabilities v1.0 lacks.
+**Goal:** Fix every finding of the 2026-09-19 full audit — close the CRITICAL injection-to-secret-theft chain, make the agent core honest (opencode-only, zero fabricated evidence), harden reliability, resolve the uncommitted WIP safely, and pay down quality/config debt. No new features.
+
+**Binding decisions (user, 2026-09-19):**
+- **Opencode-only agent core** — delete the built-in no-op coding path; `LOCAL_AGENT_TYPE=opencode` required with fail-fast config validation; MCP subsystem wired into opencode path or deleted; all recorded evidence must reflect real runs (fail-closed on missing).
+- **Commit-forward WIP** — first phase completes the uncommitted diff (provider 9router rewrite, LLM fallbacks, opencode plan-skip) with tests + gate-safe fallbacks (fallback recorded in evidence; planner fallback parks for human), then commits.
+- **No regression to "done well" list** — AUDIT-v2.1.md §Done-well behaviors (HMAC, dedup, lane single-writer, sanitizing formatters, crash-atomic writes, fail-closed telemetry) are protected invariants.
+
+**Target features (fix categories):**
+- **WIP resolution** — tests + governance-safe fallbacks for the dirty working tree, then commit.
+- **SEC hardening** — ticket-content isolation in opencode/planner prompts, `run_test` allowlist + worktree file jail, actor authorization on verdict tokens, sanitize + loop-shield the 10 inline ADO comments, XML-escape gaps (learn/PR description/scope feedback), push-failure honesty.
+- **Honest core** — built-in path deleted, repair loop real-or-honest, MCP resolved, fabricated evidence defaults (router 1/1, L2/L4 constants, `commitSha='main'`, errorRate/p95 constants) replaced with fail-closed real values.
+- **Reliability** — tag-wipe guard, LLM/ADO timeouts, failed-dedup retry, poller WIQL filter, publisher race, QA cwd fail-closed, unhandled rejections, dedup collision, knownSecrets consistency, win32 fsync/orphans.
+- **Config hygiene** — boolean coerce trap, required ADO_PROJECT/ADO_REPOSITORY_ID, regenerated `.env.example`, prod mock-seam guards.
+- **Code quality** — circular-dep extract (`ado/patch.ts`), smoke.ts split + two-strike dedup, dead code/deps purge, silent-catch degradation flags, lane boilerplate cleanup, lint tooling + tests in typecheck.
+- **E2E proof** — real chain integration test (edit→test→PR through router), mock-echo assertions removed.
+
+## Pipeline Model (v2.0, authoritative — v2.1 hardens, does not restructure)
 
 **The v2 model (5 columns, 9 steps):**
 
@@ -33,13 +50,7 @@ Deterministic, evidence-backed software delivery where AI agents autonomously pl
 
 **Evidence levels (L1–L7):** L1 Requirement · L2 Code Quality · L3 Functional · L4 Security · L5 Deploy Safety · L6 Prod Confidence · **L7 Continuous Feedback (new)**.
 
-**Target features:**
-- **Persistence migration (foundation)** — replace v1.0 SQLite/Drizzle with a file-backed `StateStore` (per-ticket markdown+frontmatter, lane-serialized, atomic `wx` dedup); workers call a backend-agnostic interface. Removes the drizzle-migration hazard entirely.
-- **Taxonomy restructure** — 8 stages → 5 columns / 9 steps with explicit actors (⚡ AI / 👤 Human) + governance hand-offs; state matrix, evidence index, and docs realigned.
-- **L7 Continuous-Feedback evidence** — extend the unified evidence record + index L1–L6 → **L1–L7** (additive field on the ticket state file).
-- **PM scope-review gate (Step 2)** — human 👤 PM scope-lock verdict in REFINEMENT before EXECUTION (v1.0 auto-transitions `New→Ready to Dev` with no human gate).
-- **Prod smoke-test suite (Step 8)** — automated ⚡ smoke runner in RELEASE alongside the existing telemetry monitor (L6).
-- **Retro output (Step 9)** — retro takeaways + runbook updates + skill enhancement captured as **L7** evidence (v1.0 only emits SKILL.md).
+**Shipped in v2.0:** file-backed `StateStore` (SQLite/Drizzle removed), taxonomy restructure, L7 evidence, PM scope-lock gate (Step 2), prod smoke suite (Step 8), retro output (Step 9). Details: `.planning/milestones/v2.0-*`.
 
 **Preserved from v1.0:** native ADO gates (branch policies L2/L3/L4, Environments L5); security posture (prompt-injection defenses, secret scrubbing, loop shields, shared rework breaker ≤2); ADO Boards as single source of truth.
 
@@ -62,17 +73,20 @@ Authoritative state matrix: `.planning/ROADMAP.md`.
 
 ### Validated
 
-v1.0 shipped (git tag `v1.0`, 2026-09-09): all 31 Golden Path requirements complete and validated across 8 phases, 277 tests passing.
+- v2.0 shipped (git tag `v2.0`, 2026-09-18): all 19 Golden Path v2 requirements complete across 7 phases, 437 tests passing.
+- v1.0 shipped (git tag `v1.0`, 2026-09-09): all 31 Golden Path requirements complete and validated across 8 phases, 277 tests passing.
 
 ### Active
 
-Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planning/REQUIREMENTS.md`):
+Milestone **v2.1 — Audit Remediation & Hardening** (full REQ-ID breakdown in `.planning/REQUIREMENTS.md`; findings source `.planning/research/AUDIT-v2.1.md`):
 
-- [x] **RESTRUCTURE**: Re-taxonomize the pipeline into 5 columns / 9 steps with actor roles (⚡/👤) + governance hand-offs; realign state matrix, evidence index, and docs.
-- [x] **L7 EVIDENCE**: Add L7 Continuous-Feedback schema and extend the unified evidence index L1–L6 → L1–L7.
-- [x] **PM SCOPE GATE**: Add human PM scope-review & verify (scope-lock) gate in REFINEMENT (Step 2) before EXECUTION begins.
-- [x] **PROD SMOKE**: Add automated production smoke-test suite in RELEASE (Step 8) alongside the existing telemetry monitor (L6).
-- [x] **RETRO OUTPUT**: Emit retro takeaways + runbook updates + skill enhancement as L7 evidence in RETRO (Step 9).
+- [ ] **WIP**: Resolve the uncommitted working tree (provider rewrite, LLM fallbacks, opencode plan-skip) with tests + governance-safe fallbacks; commit.
+- [ ] **SEC**: Close the CRITICAL injection-to-secret chain and all HIGH security findings (prompt isolation, run_test allowlist + file jail, actor authorization, comment sanitization, push honesty).
+- [ ] **CORE**: Opencode-only honest agent core — built-in path deleted, repair real-or-honest, MCP resolved, zero fabricated evidence defaults.
+- [ ] **REL**: Reliability hardening — timeouts, tag-wipe guard, dedup retry, poller load, publisher race, QA fail-closed, rejection handling.
+- [ ] **CFG**: Config hygiene — boolean trap, required ids, regenerated `.env.example`, prod mock guards.
+- [ ] **QAL**: Quality debt — circular deps, god-file split, dead code/deps purge, silent-catch flags, lint + tests typecheck.
+- [ ] **E2E**: Real-chain integration proof without mock-echo assertions.
 
 ### Out of Scope
 
@@ -120,6 +134,9 @@ Milestone **v2.0 — Golden Path v2** (full REQ-ID breakdown defined in `.planni
 | **Automated prod smoke tests (Step 8)** | Telemetry alone (L6) is reactive; active smoke suite confirms deploy health in RELEASE | ✓ v2.0 active |
 | **Remove SQLite → file-backed `StateStore`** | Orchestrator is an agent layer; per-ticket markdown checkpoint-memory the agent reads directly is simpler than querying a DB. Viable because the per-work-item lane (`concurrency:1`) already serializes writes → single-writer per ticket; ingress dedup uses atomic `wx` create. Collapses 12 tables → 1 file/ticket. `StateStore` interface keeps workers backend-agnostic. | ✓ v2.0 active |
 | **Single-machine persistence ceiling** | Local files don't share across instances; enterprise multi-machine swaps `StateStore` → network store (Postgres). Recorded as `ponytail:` ceiling, deferred. | ✓ v2.0 active |
+| **Opencode-only agent core (v2.1)** | Audit proved built-in path codes nothing while recording evidence; opencode CLI is the only real codegen path. Delete the no-op, require opencode, fail-fast config. Evidence honesty > dependency-free fallback. | ✓ v2.1 active |
+| **Commit-forward dirty WIP (v2.1)** | Working tree carries provider/fallback/plan-skip changes with zero tests and a Plan-Q&A gate bypass; completing them under phase discipline beats reverting working integration. | ✓ v2.1 active |
+| **Zero fabricated evidence (v2.1)** | Audit found trust-me constants inside the "fail-closed" index (L2/L4 defaults, router 1/1, commitSha 'main'); all evidence must come from real runs or block the transition (`MissingEvidenceError` pattern). | ✓ v2.1 active |
 
 ## Evolution
 
@@ -139,4 +156,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 — milestone v2.0 (Golden Path v2 restructure) started*
+*Last updated: 2026-09-19 — milestone v2.1 (Audit Remediation & Hardening) started from full-project audit findings*

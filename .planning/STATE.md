@@ -1,38 +1,38 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Golden Path v2
-status: complete
-stopped_at: Milestone v2.0 shipped & archived
-last_updated: "2026-09-18T09:15:00.000Z"
-last_activity: 2026-09-18 — Milestone v2.0 complete and archived
+milestone: v2.1
+milestone_name: Audit Remediation & Hardening
+status: planning
+stopped_at: Defining requirements for milestone v2.1
+last_updated: "2026-09-19T00:00:00.000Z"
+last_activity: 2026-09-19 — Milestone v2.1 started from full-project audit
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-09-18)
+See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 **Core value:** Deterministic, evidence-backed delivery across the Golden Path v2 model (Refinement → Execution → Acceptance → Release → Retro; 9 steps) with **L1–L7** evidence, native ADO gates, and human verdicts on a file-backed `StateStore`.
-**Current focus:** Milestone v2.0 shipped. Ready for next milestone or live deployment.
+**Current focus:** Milestone v2.1 — remediate all findings of the 2026-09-19 full audit (`.planning/research/AUDIT-v2.1.md`): CRITICAL security chain, hollow agent core (opencode-only decision), reliability, config, quality debt, E2E proof.
 
 ## Current Position
 
-Phase: 7 — Docs Realignment & E2E Proof (completed)
-Plan: 07-01 (completed) — E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment
-Status: Milestone v2.0 complete (all 7 phases / 19 plans complete). All 19 requirements satisfied.
-Last activity: 2026-09-18 — completed Plan 07-01 (E2E Golden Path v2 simulation, state matrix drift guard, and documentation realignment)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-09-19 — Milestone v2.1 started from full-project audit; user decisions locked (opencode-only core, commit-forward WIP, skip research)
 
-Progress: [██████████] 100%
+Progress: [          ] 0%
 
-**Phase structure (v2.0 re-plan):** Wave A (serial): 1 StateStore Migration → 2 Taxonomy Foundation → **Wave B (3-way parallel): 3 PM Scope-Lock Gate ∥ 4 L7 Evidence Index Extension ∥ 5 Prod Smoke Suite** → Wave C: 6 Retro & L7 Output → Wave D: 7 Docs Realignment & E2E Proof. Critical path: 1 → 2 → 4 → 6 → 7.
+**Working tree warning:** dirty (5 modified files + untracked `src/cli/`) — milestone Phase 1 must resolve WIP (commit-forward decision) before other phases build on it.
 
 ## Performance Metrics
 
@@ -254,6 +254,11 @@ Recent decisions affecting current work:
 - [07-01]: Added automated drift guard test parsing Authoritative ADO State Matrix in ROADMAP.md and verifying 9-step parity against GOLDEN_PATH_V2
 - [07-01]: Added fallback resolution for archived tickets via listTickets({ includeArchived: true }) in compileL1L7EvidenceIndex to support post-Done inspection without re-creating active ticket files
 - [07-01]: Realigned CLAUDE.md stack definition completely to file-backed StateStore (node:fs) and LaneManager (p-queue), eliminating all stale better-sqlite3 and drizzle-orm references
+- [v2.1 Audit]: Full-project audit 2026-09-19 → `.planning/research/AUDIT-v2.1.md` (1 CRITICAL, 8 HIGH, 15 MEDIUM, ~25 LOW; all with file:line evidence).
+- [v2.1 Decision]: Opencode-only agent core — delete built-in no-op coding path, require LOCAL_AGENT_TYPE=opencode (fail-fast), resolve MCP dead-wiring (wire or delete), zero fabricated evidence defaults (fail-closed `MissingEvidenceError` pattern everywhere).
+- [v2.1 Decision]: Commit-forward the dirty WIP (provider 9router rewrite, evaluator/planner LLM fallbacks, opencode plan-skip) in Phase 1 with tests + gate-safe fallbacks (fallback recorded in evidence; planner fallback parks for human instead of auto-proceed).
+- [v2.1 Decision]: Skip domain research for v2.1 — remediation milestone, findings already evidence-backed.
+- [v2.1 Invariant]: AUDIT-v2.1.md §Done-well list (HMAC, wx-dedup, lane single-writer, sanitizing formatters, crash-atomic writes, fail-closed telemetry/smoke, circuit breakers, withRetry) must not regress — verifier checks against it.
 
 ### Pending Todos
 
