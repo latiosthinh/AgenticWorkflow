@@ -62,7 +62,7 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
 Plans:
 - [x] 09-01-PLAN.md — Delete built-in path + MCP subsystem; require opencode at boot (CORE-01, CORE-03)
 - [ ] 09-02-PLAN.md — XML-isolate ticket content in prompts + command allowlist (SEC-01, SEC-02)
-- [ ] 09-03-PLAN.md — Rewrite repair loop with real opencode re-invocation (CORE-02)
+- [x] 09-03-PLAN.md — Rewrite repair loop with real opencode re-invocation (CORE-02)
 
 ### Phase 10: Security & Evidence Hardening
 **Goal**: All remaining security findings closed — verdict tokens actor-authorized, all 10 inline ADO comments sanitized + loop-shielded, push failures honest, remaining XML-escape/sanitize gaps sealed — and zero fabricated evidence anywhere: router step-4 defaults, evidence-index L2/L4/errorRate/p95 constants, and QA `commitSha='main'` replaced with real values or fail-closed `MissingEvidenceError`
