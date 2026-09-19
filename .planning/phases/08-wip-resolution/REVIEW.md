@@ -70,6 +70,8 @@ if (env.LOCAL_AGENT_TYPE === 'opencode' && env.NODE_ENV !== 'test' && !options?.
 }
 ```
 
+**Fixed:** `86ed41a` — applied as suggested. `plan` typed `ExecPlan = PlannerOutcome & { planDelegated?: boolean; planNote?: string }`; delegated literal completed with `fallbackUsed: false, model: 'opencode-delegated'`. `tsc --noEmit` clean; compiler now enforces both branch shapes. Static guards + plan-checkpoint tests green.
+
 ## Low
 
 ### LO-01: Fallback records the intended model, not the model that produced the result
@@ -78,11 +80,15 @@ if (env.LOCAL_AGENT_TYPE === 'opencode' && env.NODE_ENV !== 'test' && !options?.
 **Issue:** On LLM-failure fallback the result is produced by `evaluateDoDDeterministically` (a keyword rubric), yet `model: env.API_MODEL` is recorded. An auditor reading the evidence sees e.g. `model:'gpt-4o', fallbackUsed:true` and could misread `gpt-4o` as the producer of the output. The `fallbackUsed:true` flag mitigates this and the audit's "no hardcoded gpt-4o literal" goal is met, but the `model` value is semantically "attempted model," not "producing model."
 **Fix:** On fallback paths record an explicit non-LLM producer so the field is unambiguous, e.g. `model: 'deterministic-rubric'` (keep `fallbackUsed:true`). Success paths already correctly use `result.response?.modelId`. Low priority — informational accuracy only.
 
+**Fixed:** `0ee3de1` — fallback paths (`fallbackUsed:true`) now record the producing engine: evaluator catch → `model: 'deterministic-rubric'`, planner park → `model: 'deterministic-park'`. Test assertions updated (auditor-fallback ×2, planner-fallback ×1). Scope note: the NODE_ENV=test stub branches (evaluator `:151`, planner `:42`/`:55`) keep `env.API_MODEL` — they are dev-only deterministic stubs carrying `fallbackUsed:false`, not fallback paths; worker.test.ts pins API_MODEL hermetically for them and Case 1 stays green.
+
 ### LO-02: Skip-branch governance record is verified only by static source-scan, not by execution
 
 **File:** `tests/wip-static-guards.test.ts:16-27`
 **Issue:** SC#4's runtime behavior — the opencode skip branch constructing `planDelegated:true`/`planNote` and flowing them through `createPlanCheckpoint` — is asserted only by `expect(src).toContain(...)` / a regex over `worker.ts` source text. The branch requires `NODE_ENV !== 'test'`, so the worker integration path never executes it under the test runner. `plan-checkpoint.test.ts` covers persistence of those fields and `planner.test.ts` covers note rendering, but no test drives the worker's decision to enter the skip branch and emit the record. The static guard is a pragmatic choice given the env gate, but it is brittle: it passes on string presence regardless of wiring correctness.
 **Fix:** Optional — add a worker-level test that stubs `env.LOCAL_AGENT_TYPE='opencode'` and forces the non-test branch (or inject `forceAiPlanner:false` with a spy on `createPlanCheckpoint`) to assert `planDelegated:true` + `planNote` are actually passed. Acceptable to defer given the NODE_ENV gate makes this awkward; keep the static guard as the floor.
+
+**Fixed:** `a4122ac` — runtime test added in `tests/opencode-runner.test.ts` (Worker Integration describe, reusing its harness/worktree cleanup). Stubs `LOCAL_AGENT_TYPE='opencode'` + `NODE_ENV='development'` (restored in `finally`), drives real `processWorkItemExecute` with `mockOpenCodeRunner`/`mockTestRunner`, asserts persisted checkpoint carries `planDelegated:true`, `planNote:'plan delegated to opencode'`, `model:'opencode-delegated'` (skip-branch fingerprint proving the planner was bypassed), `status:'locked'`, and the locked ADO history comment surfaces the note. Static guard kept as the floor.
 
 ---
 
