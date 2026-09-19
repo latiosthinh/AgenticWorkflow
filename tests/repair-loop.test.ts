@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { simpleGit } from 'simple-git';
 import { executeRepairLoop } from '../src/execute/repair.js';
+import type { RepairLoopResult } from '../src/execute/repair.js';
 import { runLocalTests } from '../src/test-runner/executor.js';
 import { pruneTestDiagnostics, parseVitestSummary } from '../src/test-runner/parser.js';
 
@@ -78,7 +79,7 @@ describe('Sandboxed Local Test Runner Executor', () => {
   });
 });
 
-describe('Iterative Self-Repair Loop with WIP Branch Preservation', () => {
+describe('Opencode-Driven Repair Loop', () => {
   let tempRepo: string;
 
   beforeEach(async () => {
@@ -96,176 +97,146 @@ describe('Iterative Self-Repair Loop with WIP Branch Preservation', () => {
     fs.rmSync(tempRepo, { recursive: true, force: true });
   });
 
-  it('terminates immediately with success when initial test passes (cycle 0)', async () => {
+  it('Test 1: repair invokes runOpenCode with failure diagnostics, second test passes → success with repairAttempted:true, filesEdited>0', async () => {
     const git = simpleGit(tempRepo);
-    const result = await executeRepairLoop({
-      worktreePath: tempRepo,
-      git,
-      workItemId: 101,
-      mockTestRunner: async () => ({
-        passed: true,
-        exitCode: 0,
-        stdout: 'Tests passed',
-        stderr: '',
-        timedOut: false,
-        durationMs: 50,
-      }),
-    });
-
-    expect(result.success).toBe(true);
-    expect(result.cyclesUsed).toBe(0);
-    expect(result.testResult?.passed).toBe(true);
-  });
-
-  it('succeeds on subsequent cycle when repair mock turns green', async () => {
-    const git = simpleGit(tempRepo);
-    let attempts = 0;
+    let testAttempts = 0;
+    let opencodeCalls = 0;
+    let capturedMessage = '';
 
     const result = await executeRepairLoop({
       worktreePath: tempRepo,
       git,
-      workItemId: 102,
+      workItemId: 201,
       maxCycles: 3,
       mockTestRunner: async () => {
-        attempts++;
-        if (attempts === 1) {
+        testAttempts++;
+        if (testAttempts === 1) {
           return {
-            passed: false,
-            exitCode: 1,
-            stdout: 'FAIL test.ts\nAssertionError: fail',
-            stderr: '',
-            timedOut: false,
-            durationMs: 40,
+            passed: false, exitCode: 1,
+            stdout: 'FAIL tests/app.test.ts\nAssertionError: expected true to be false\n  at src/app.ts:12:5',
+            stderr: '', timedOut: false, durationMs: 40,
           };
         }
-        return {
-          passed: true,
-          exitCode: 0,
-          stdout: 'PASS test.ts',
-          stderr: '',
-          timedOut: false,
-          durationMs: 40,
-        };
+        return { passed: true, exitCode: 0, stdout: 'PASS', stderr: '', timedOut: false, durationMs: 30 };
+      },
+      mockOpenCodeRunner: async (args, cwd) => {
+        opencodeCalls++;
+        capturedMessage = args[args.length - 1]; // message is last arg
+        // Simulate opencode writing a fix file
+        fs.writeFileSync(path.join(cwd, 'fix.ts'), 'export const fixed = true;\n');
+        await simpleGit(cwd).add('fix.ts');
+        return { stdout: '{}', stderr: '', exitCode: 0 };
       },
     });
 
     expect(result.success).toBe(true);
     expect(result.cyclesUsed).toBe(1);
-    expect(attempts).toBe(2);
+    expect(result.repairAttempted).toBe(true);
+    expect(result.filesEdited).toBeGreaterThan(0);
+    expect(opencodeCalls).toBe(1);
+    expect(capturedMessage).toContain('tests failed');
+    expect(capturedMessage).toContain('AssertionError');
+    expect(testAttempts).toBe(2);
   });
 
-  it('bounds execution to maxCycles and terminates on budget exhaustion', async () => {
+  it('Test 2: opencode runs but makes no edits (git diff empty) → repairAttempted:true, filesEdited:0, continues', async () => {
     const git = simpleGit(tempRepo);
-    let attempts = 0;
+    let testAttempts = 0;
+    let opencodeCalls = 0;
 
     const result = await executeRepairLoop({
       worktreePath: tempRepo,
       git,
-      workItemId: 103,
+      workItemId: 202,
       maxCycles: 2,
       mockTestRunner: async () => {
-        attempts++;
+        testAttempts++;
         return {
-          passed: false,
-          exitCode: 1,
-          stdout: 'FAIL tests/app.test.ts\nAssertionError: expected 1 to be 2\n  at src/app.ts:5:5',
-          stderr: '',
-          timedOut: false,
-          durationMs: 50,
+          passed: false, exitCode: 1,
+          stdout: 'FAIL tests/foo.test.ts\nAssertionError: nope',
+          stderr: '', timedOut: false, durationMs: 30,
         };
+      },
+      mockOpenCodeRunner: async () => {
+        opencodeCalls++;
+        // Simulate opencode running but making no edits
+        return { stdout: '{}', stderr: '', exitCode: 0 };
       },
     });
 
     expect(result.success).toBe(false);
-    expect(result.cyclesUsed).toBe(2);
-    expect(attempts).toBe(2);
+    expect(result.repairAttempted).toBe(true);
+    expect(result.filesEdited).toBe(0);
+    expect(opencodeCalls).toBe(1); // only 1 repair cycle (maxCycles=2: test1 fail, repair, test2 fail, budget)
   });
 
-  it('preserves uncommitted progress on wip/ticket-{id} branch with work item trailer on budget exhaustion', async () => {
+  it('Test 3: all cycles exhausted → success:false, WIP branch created, repairAttempted:true', async () => {
     const git = simpleGit(tempRepo);
-
-    // Create uncommitted file in repo
-    fs.writeFileSync(path.join(tempRepo, 'wip-feature.ts'), 'export const wip = true;\n');
+    let opencodeCalls = 0;
 
     const result = await executeRepairLoop({
       worktreePath: tempRepo,
       git,
-      workItemId: 2048,
+      workItemId: 203,
       maxCycles: 3,
       mockTestRunner: async () => ({
-        passed: false,
-        exitCode: 1,
+        passed: false, exitCode: 1,
         stdout: 'FAIL tests/math.test.ts\nAssertionError: expected 4 to be 5\n  at src/math.ts:10:3',
-        stderr: '',
-        timedOut: false,
-        durationMs: 40,
+        stderr: '', timedOut: false, durationMs: 40,
       }),
+      mockOpenCodeRunner: async (_args, cwd) => {
+        opencodeCalls++;
+        // Simulate opencode writing a file each cycle (but tests keep failing)
+        fs.writeFileSync(path.join(cwd, `attempt-${opencodeCalls}.ts`), `// attempt ${opencodeCalls}\n`);
+        await simpleGit(cwd).add(`attempt-${opencodeCalls}.ts`);
+        return { stdout: '{}', stderr: '', exitCode: 0 };
+      },
     });
 
     expect(result.success).toBe(false);
     expect(result.cyclesUsed).toBe(3);
-    expect(result.wipBranch).toBe('wip/ticket-2048');
+    expect(result.repairAttempted).toBe(true);
+    expect(result.filesEdited).toBeGreaterThan(0);
+    expect(result.wipBranch).toBe('wip/ticket-203');
+    expect(result.diagnostics).toContain('tests failed');
+    expect(opencodeCalls).toBe(2); // 3 test runs, 2 repair attempts (no repair after last test)
 
-    // Verify git branch checked out
+    // Verify WIP branch created
     const branches = await git.branchLocal();
-    expect(branches.current).toBe('wip/ticket-2048');
-
-    // Verify commit created with trailer
-    const log = await git.log({ maxCount: 1 });
-    expect(log.latest?.message).toContain('wip: repair budget exhausted for ticket 2048');
-    expect(log.latest?.body).toContain('AB#2048');
-
-    // Verify diagnostics returned
-    expect(result.diagnostics).toContain('1 tests failed');
-    expect(result.diagnostics).toContain('AssertionError: expected 4 to be 5');
-    expect(result.diagnostics).toContain('at src/math.ts:10:3');
+    expect(branches.current).toBe('wip/ticket-203');
   });
 
-  it('resets and checks out wip branch cleanly even when wip branch already exists', async () => {
+  it('Test 4: first test passes → no repair invoked → repairAttempted:false, cyclesUsed:0', async () => {
     const git = simpleGit(tempRepo);
-
-    // Pre-create wip branch with different commit
-    await git.checkoutLocalBranch('wip/ticket-2049');
-    fs.writeFileSync(path.join(tempRepo, 'old-wip.ts'), 'old content\n');
-    await git.add('.');
-    await git.commit('old wip commit');
-
-    // Switch back to master
-    await git.checkout('master');
-
-    // Create uncommitted change on master
-    fs.writeFileSync(path.join(tempRepo, 'new-wip.ts'), 'new uncommitted work\n');
+    let opencodeCalls = 0;
 
     const result = await executeRepairLoop({
       worktreePath: tempRepo,
       git,
-      workItemId: 2049,
-      maxCycles: 1,
+      workItemId: 204,
       mockTestRunner: async () => ({
-        passed: false,
-        exitCode: 1,
-        stdout: 'FAIL tests/app.test.ts\nAssertionError: failed',
-        stderr: '',
-        timedOut: false,
-        durationMs: 30,
+        passed: true, exitCode: 0,
+        stdout: 'Tests passed', stderr: '', timedOut: false, durationMs: 50,
       }),
+      mockOpenCodeRunner: async () => {
+        opencodeCalls++;
+        return { stdout: '{}', stderr: '', exitCode: 0 };
+      },
     });
 
-    expect(result.success).toBe(false);
-    expect(result.wipBranch).toBe('wip/ticket-2049');
-
-    const branches = await git.branchLocal();
-    expect(branches.current).toBe('wip/ticket-2049');
-
-    const log = await git.log({ maxCount: 1 });
-    expect(log.latest?.message).toContain('wip: repair budget exhausted for ticket 2049');
+    expect(result.success).toBe(true);
+    expect(result.cyclesUsed).toBe(0);
+    expect(result.repairAttempted).toBe(false);
+    expect(result.filesEdited).toBe(0);
+    expect(opencodeCalls).toBe(0);
   });
 
-  it('clamps maxCycles to minimum 1 and maximum 5', async () => {
+  it('Test 5: maxCycles clamped between 1 and 5', async () => {
     const git = simpleGit(tempRepo);
-    let attempts = 0;
+    let attempts: number;
 
-    // Test clamped to 1 when passed 0 or negative
+    // maxCycles=0 → clamped to 1
+    attempts = 0;
     await executeRepairLoop({
       worktreePath: tempRepo,
       git,
@@ -273,19 +244,13 @@ describe('Iterative Self-Repair Loop with WIP Branch Preservation', () => {
       maxCycles: 0,
       mockTestRunner: async () => {
         attempts++;
-        return {
-          passed: false,
-          exitCode: 1,
-          stdout: 'FAIL test.ts',
-          stderr: '',
-          timedOut: false,
-          durationMs: 10,
-        };
+        return { passed: false, exitCode: 1, stdout: 'FAIL', stderr: '', timedOut: false, durationMs: 10 };
       },
+      mockOpenCodeRunner: async () => ({ stdout: '{}', stderr: '', exitCode: 0 }),
     });
     expect(attempts).toBe(1);
 
-    // Test clamped to 5 when passed > 5
+    // maxCycles=10 → clamped to 5
     attempts = 0;
     await executeRepairLoop({
       worktreePath: tempRepo,
@@ -294,16 +259,44 @@ describe('Iterative Self-Repair Loop with WIP Branch Preservation', () => {
       maxCycles: 10,
       mockTestRunner: async () => {
         attempts++;
-        return {
-          passed: false,
-          exitCode: 1,
-          stdout: 'FAIL test.ts',
-          stderr: '',
-          timedOut: false,
-          durationMs: 10,
-        };
+        return { passed: false, exitCode: 1, stdout: 'FAIL', stderr: '', timedOut: false, durationMs: 10 };
       },
+      mockOpenCodeRunner: async () => ({ stdout: '{}', stderr: '', exitCode: 0 }),
     });
     expect(attempts).toBe(5);
+  });
+
+  it('preserves uncommitted progress on wip/ticket-{id} branch with work item trailer on budget exhaustion', async () => {
+    const git = simpleGit(tempRepo);
+
+    fs.writeFileSync(path.join(tempRepo, 'wip-feature.ts'), 'export const wip = true;\n');
+
+    const result = await executeRepairLoop({
+      worktreePath: tempRepo,
+      git,
+      workItemId: 2048,
+      maxCycles: 3,
+      mockTestRunner: async () => ({
+        passed: false, exitCode: 1,
+        stdout: 'FAIL tests/math.test.ts\nAssertionError: expected 4 to be 5\n  at src/math.ts:10:3',
+        stderr: '', timedOut: false, durationMs: 40,
+      }),
+      mockOpenCodeRunner: async () => ({ stdout: '{}', stderr: '', exitCode: 0 }),
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.cyclesUsed).toBe(3);
+    expect(result.wipBranch).toBe('wip/ticket-2048');
+    expect(result.repairAttempted).toBe(true);
+
+    const branches = await git.branchLocal();
+    expect(branches.current).toBe('wip/ticket-2048');
+
+    const log = await git.log({ maxCount: 1 });
+    expect(log.latest?.message).toContain('wip: repair budget exhausted for ticket 2048');
+    expect(log.latest?.body).toContain('AB#2048');
+
+    expect(result.diagnostics).toContain('1 tests failed');
+    expect(result.diagnostics).toContain('AssertionError: expected 4 to be 5');
   });
 });
