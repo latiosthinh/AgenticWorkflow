@@ -59,6 +59,7 @@ export interface ProcessExecuteOptions {
     args: string[],
     cwd: string
   ) => Promise<{ stdout: string; stderr: string; exitCode: number; timedOut?: boolean }>;
+  forceAiPlanner?: boolean;
 }
 
 async function runExecutionPipeline(
@@ -400,12 +401,25 @@ export async function processWorkItemExecute(
       });
 
       // Formulate implementation plan
-      const plan = await formulateImplementationPlan({
-        title: workItem.title,
-        description: workItem.description,
-        acceptanceCriteria: workItem.acceptanceCriteria,
-        tags,
-      });
+      let plan: any;
+      if (env.LOCAL_AGENT_TYPE === 'opencode' && env.NODE_ENV !== 'test' && !options?.forceAiPlanner) {
+        plan = {
+          hasAmbiguities: false,
+          questions: [],
+          planMarkdown: 'Autonomous execution delegated directly to OpenCode agent.',
+          estimatedFiles: [],
+          testStrategy: 'Local automated tests',
+          planDelegated: true,
+          planNote: 'plan delegated to opencode',
+        };
+      } else {
+        plan = await formulateImplementationPlan({
+          title: workItem.title,
+          description: workItem.description,
+          acceptanceCriteria: workItem.acceptanceCriteria,
+          tags,
+        });
+      }
 
       if (plan.hasAmbiguities) {
         await createPlanCheckpoint({
@@ -415,6 +429,8 @@ export async function processWorkItemExecute(
           planMarkdown: plan.planMarkdown,
           estimatedFiles: plan.estimatedFiles,
           testStrategy: plan.testStrategy,
+          fallbackUsed: plan.fallbackUsed,
+          model: plan.model,
         });
 
         const comment = formatPlanQuestionsComment(plan.questions);
@@ -438,12 +454,17 @@ export async function processWorkItemExecute(
           planMarkdown: plan.planMarkdown,
           estimatedFiles: plan.estimatedFiles,
           testStrategy: plan.testStrategy,
+          fallbackUsed: plan.fallbackUsed,
+          model: plan.model,
+          planDelegated: plan.planDelegated,
+          planNote: plan.planNote,
         });
         await updateCheckpointStatus(cp.id, 'locked', undefined, workItemId);
 
         const comment = formatPlanLockedComment(
           plan.planMarkdown,
-          plan.estimatedFiles
+          plan.estimatedFiles,
+          plan.planNote
         );
 
         await adoClient.updateWorkItem(workItemId, [

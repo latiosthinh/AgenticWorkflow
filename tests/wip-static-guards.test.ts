@@ -12,4 +12,17 @@ describe('WIP static guards', () => {
     );
     expect(src).not.toMatch(/gpt-4o/);
   });
+
+  it('execute worker skip branch records planDelegated + planNote governance deviation', () => {
+    const src = readFileSync(
+      new URL('../src/execute/worker.ts', import.meta.url),
+      'utf8'
+    );
+    expect(src).toContain('planDelegated: true');
+    expect(src).toContain("'plan delegated to opencode'");
+    // escape hatch preserved in the skip condition
+    expect(src).toContain('forceAiPlanner');
+    // locked-branch comment call surfaces the note (call spans lines)
+    expect(src).toMatch(/formatPlanLockedComment\([^)]*plan\.planNote/);
+  });
 });

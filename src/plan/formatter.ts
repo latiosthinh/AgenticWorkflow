@@ -28,16 +28,20 @@ ${questionsList}
 
 export function formatPlanLockedComment(
   planMarkdown: string,
-  estimatedFiles: string[]
+  estimatedFiles: string[],
+  governanceNote?: string
 ): string {
   const fileItems =
     estimatedFiles.length > 0
       ? estimatedFiles.map((f) => `* \`${f}\``).join('\n')
       : '* None specified';
 
+  // Note rides THROUGH marked.parse + sanitizeHtml below — never raw HTML.
+  const noteSection = governanceNote ? `**Governance Note:** ${governanceNote}\n\n` : '';
+
   const md = `### [Plan Checkpoint] Implementation Plan Locked
 
-**Estimated Files to Modify/Create:**
+${noteSection}**Estimated Files to Modify/Create:**
 ${fileItems}
 
 **Implementation Plan:**

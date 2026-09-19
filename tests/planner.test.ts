@@ -111,4 +111,26 @@ describe('Plan Comment Formatters', () => {
     expect(html).toContain('<code>src/routes.ts</code>');
     expect(html).toContain('<!-- [automated-agent] -->');
   });
+
+  it('formatPlanLockedComment renders governanceNote through sanitization with loop shield; 2-arg calls unchanged', () => {
+    const plan = '1. Create migration';
+    const files = ['src/routes.ts'];
+    const html = formatPlanLockedComment(plan, files, 'plan delegated to opencode');
+    expect(html).toContain('Governance Note');
+    expect(html).toContain('plan delegated to opencode');
+    expect(html).toContain('[Plan Checkpoint]');
+    expect(html).toContain('<!-- [automated-agent] -->');
+
+    // 2-arg call renders identically to before — no governance section
+    const htmlNoNote = formatPlanLockedComment(plan, files);
+    expect(htmlNoNote).not.toContain('Governance Note');
+    expect(htmlNoNote).toContain('Implementation Plan Locked');
+    expect(htmlNoNote).toContain('<!-- [automated-agent] -->');
+  });
+
+  it('formatPlanLockedComment sanitizes a hostile governanceNote', () => {
+    const html = formatPlanLockedComment('plan', [], '<img src=x onerror=alert(1)>');
+    expect(html).not.toContain('onerror');
+    expect(html).toContain('<!-- [automated-agent] -->');
+  });
 });
