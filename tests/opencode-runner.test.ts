@@ -349,6 +349,76 @@ malformed non-json line
       expect(ticket?.agentSessionId).toBe('ses_exec_01');
     });
 
+    it('processWorkItemExecute takes the opencode plan-skip branch outside test env and persists the planDelegated/planNote governance record (LO-02)', async () => {
+      (env as any).LOCAL_AGENT_TYPE = 'opencode';
+      const originalNodeEnv = env.NODE_ENV;
+      (env as any).NODE_ENV = 'development';
+      const workItemId = 9915;
+      const revId = 1;
+
+      const mockWitApi = {
+        getWorkItem: vi.fn().mockResolvedValue({
+          id: workItemId,
+          rev: revId,
+          fields: {
+            'System.Title': 'Delegated Plan Governance',
+            'System.Description': 'Feature executed via delegated opencode planning',
+            'Microsoft.VSTS.Common.AcceptanceCriteria': 'Feature works and returns 200 OK.',
+            'System.State': 'In Dev',
+            'System.Tags': 'backend',
+          },
+        }),
+        updateWorkItem: vi.fn().mockResolvedValue({ id: workItemId }),
+      };
+      adoClient.setWorkItemTrackingApi(mockWitApi as any);
+      stateStore.recordDedupEvent(workItemId, revId, 'hash-9915');
+
+      try {
+        await workItemQueueManager.runInLane(workItemId, () =>
+          processWorkItemExecute(workItemId, revId, {
+            mockOpenCodeRunner: async (_args, cwd) => {
+              fs.writeFileSync(
+                path.join(cwd, 'delegated_output.ts'),
+                'export const delegated = true;\n'
+              );
+              return {
+                stdout: '{"type":"session","session_id":"ses_delegated_15"}',
+                stderr: '',
+                exitCode: 0,
+              };
+            },
+            mockTestRunner: async () => ({
+              passed: true,
+              exitCode: 0,
+              stdout: 'Tests 1 passed (1)\nDuration 100ms',
+              stderr: '',
+              timedOut: false,
+              durationMs: 100,
+            }),
+          })
+        );
+
+        // Skip-branch governance record actually flowed through createPlanCheckpoint
+        const ticket = await stateStore.getTicketState(workItemId);
+        const cp = ticket?.planCheckpoints.find((c) => c.planDelegated === true);
+        expect(cp).toBeDefined();
+        expect(cp?.planNote).toBe('plan delegated to opencode');
+        // 'opencode-delegated' is the skip-branch fingerprint: proves the planner LLM was bypassed
+        expect(cp?.model).toBe('opencode-delegated');
+        expect(cp?.fallbackUsed).toBe(false);
+        expect(cp?.status).toBe('locked');
+
+        // Locked comment surfaces the governance note to ADO history
+        const historyValues = mockWitApi.updateWorkItem.mock.calls
+          .flatMap((call: any[]) => call.find((a: any) => Array.isArray(a)) || [])
+          .filter((op: any) => op.path === '/fields/System.History')
+          .map((op: any) => String(op.value));
+        expect(historyValues.some((v) => v.includes('plan delegated to opencode'))).toBe(true);
+      } finally {
+        (env as any).NODE_ENV = originalNodeEnv;
+      }
+    });
+
     it('processWorkItemRework preserves sessionId and invokes OpenCode runner', async () => {
       (env as any).LOCAL_AGENT_TYPE = 'opencode';
       const workItemId = 9911;
