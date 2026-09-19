@@ -18,10 +18,10 @@
 
 - [ ] **SEC-01**: Ticket content (title/description/AC) is XML-escaped and tag-isolated with a SECURITY BOUNDARY directive in the opencode execution prompt and the planner prompt, matching the auditor pattern (C1, H1; `src/execute/worker.ts:84-91`, `src/plan/planner.ts:49-57`)
 - [ ] **SEC-02**: Agent command execution is allowlisted (`run_test` accepts only vetted test commands) and agent file reads are jailed to the worktree; orchestrator `.env` is unreachable from any agent subprocess (C1; `src/mcp/tools/common.ts:52-54` or its opencode-path successor)
-- [ ] **SEC-03**: Scope-lock and acceptance verdict tokens require the commenter to be in a configured approver allowlist; non-allowlisted tokens are rejected, logged, and answered with an ADO comment (H2; `src/scope/verdict.ts:37-46`, `src/accept/verdict.ts:25-27`)
+- [x] **SEC-03**: Scope-lock and acceptance verdict tokens require the commenter to be in a configured approver allowlist; non-allowlisted tokens are rejected, logged, and answered with an ADO comment (H2; `src/scope/verdict.ts:37-46`, `src/accept/verdict.ts:25-27`)
 - [ ] **SEC-04**: Every ADO comment the system posts goes through a sanitizing formatter and carries the `<!-- [automated-agent] -->` loop-shield marker — including the 10 inline comments in execute/rework workers (H3; `src/execute/worker.ts:96,159,172,187,219`, `src/execute/rework-worker.ts:146,169,211,226,242,276`)
 - [ ] **SEC-05**: Git push failure in production fails the ticket (Blocked + dedup `failed` + alert comment); error-swallow exists only under `NODE_ENV=test` (H4; `src/execute/worker.ts:267-271`, `src/execute/repair.ts:71-75`)
-- [ ] **SEC-06**: Remaining injection/escape gaps closed: `learn/prompt.ts` content XML-escaped, PR description formatter sanitized, scope-gate feedback + actor displayName sanitized (M11; `src/learn/prompt.ts:25-43`, `src/ado/formatter.ts:68-74`, `src/scope/gate.ts:260,289`)
+- [x] **SEC-06**: Remaining injection/escape gaps closed: `learn/prompt.ts` content XML-escaped, PR description formatter sanitized, scope-gate feedback + actor displayName sanitized (M11; `src/learn/prompt.ts:25-43`, `src/ado/formatter.ts:68-74`, `src/scope/gate.ts:260,289`)
 
 ### Honest Agent Core (opencode-only per Key Decision)
 
@@ -99,10 +99,10 @@ Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2
 | WIP-05 | Phase 8 | Complete |
 | SEC-01 | Phase 9 | Pending |
 | SEC-02 | Phase 9 | Pending |
-| SEC-03 | Phase 10 | Pending |
+| SEC-03 | Phase 10 | Complete |
 | SEC-04 | Phase 10 | Pending |
 | SEC-05 | Phase 10 | Pending |
-| SEC-06 | Phase 10 | Pending |
+| SEC-06 | Phase 10 | Complete |
 | CORE-01 | Phase 9 | Complete |
 | CORE-02 | Phase 9 | Complete |
 | CORE-03 | Phase 9 | Complete |

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Overview
-status: verifying
-stopped_at: Completed 09-02-PLAN.md (SEC-01 prompt isolation + SEC-02 command allowlist); 512/512 green
-last_updated: "2026-09-19T14:20:00.000Z"
-last_activity: 2026-09-19
+status: in_progress
+stopped_at: Completed 10-01-PLAN.md (SEC-03 approver allowlist + SEC-06 XML/HTML sanitization); 547/547 green
+last_updated: "2026-09-20T02:35:00.000Z"
+last_activity: 2026-09-20
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 7
+  percent: 87
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 ## Current Position
 
-Phase: 8 of 13 (WIP Resolution) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
-Plan: 2 of 2 (Phase 8 complete — WIP-01..05 all done)
-Status: Phase complete — ready for verification
-Last activity: 2026-09-19
+Phase: 10 of 13 (Security & Evidence Hardening) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
+Plan: 1 of 3 (10-01 complete)
+Status: In progress
+Last activity: 2026-09-20
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 87%
 
 **Working tree:** CLEAN — commit-forward gate (WIP-05) closed by 08-02: all WIP committed (prompt.ts verbatim, src/cli/ado.ts as-is per recorded QAL-03 decision), full suite 488/488 green, tsc clean.
 
@@ -274,6 +274,11 @@ Recent decisions affecting current work:
 - [Phase ?]: [09-01]: OPENCODE_BIN keeps default('opencode') with .pipe(refine) for PATH resolvability
 - [Phase 09]: [09-02]: escapeXml reused from auditor/prompt.ts — single XML-escape function across all prompt paths (worker.ts + planner.ts + auditor prompt.ts)
 - [Phase 09]: [09-02]: ALLOWED_COMMANDS is frozen const (not env-configurable) — principle of least privilege; assertAllowedCommand throws synchronously before execa call
+- [Phase 10]: [10-01]: APPROVER_IDS in EnvSchema: optional in test/dev, required and non-empty in production.
+- [Phase 10]: [10-01]: Verdict tokens ([approve-scope], [reject-scope], [reset-scope], [approve-acceptance], [reject-acceptance], [reset-rework]) require actor in approverIds allowlist when allowlist is configured; board drag-and-drop state transitions without comment tokens remain functional.
+- [Phase 10]: [10-01]: Unauthorized verdict tokens log security warning, reply with sanitized ADO warning comment carrying <!-- [automated-agent] --> loop shield, and complete dedup without state transition.
+- [Phase 10]: [10-01]: XML containment: escapeXml wraps all untrusted inputs in buildSkillLearningPrompt and buildRetroLearningPrompt preventing </learning_source_context> breakout.
+- [Phase 10]: [10-01]: HTML sanitization: formatPrDescription sanitizes title and acceptanceCriteria; handleScopeApproval and handleScopeRejection sanitize actor and feedback before embedding in HTML.
 
 ### Pending Todos
 
@@ -308,6 +313,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-19T14:20:00.000Z
+Last session: 2026-09-19T19:36:18.953Z
 Stopped at: Completed 09-02-PLAN.md (SEC-01 prompt isolation + SEC-02 command allowlist); 512/512 green
 Resume: `/gsd-progress` → Phase 9 complete (3/3 plans done); next Phase 10
