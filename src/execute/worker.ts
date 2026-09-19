@@ -18,7 +18,7 @@ import {
   protectTestFiles,
 } from '../sandbox/worktree.js';
 import { createDynamicMcpTools } from '../mcp/registry.js';
-import { formulateImplementationPlan } from '../plan/planner.js';
+import { formulateImplementationPlan, type PlannerOutcome } from '../plan/planner.js';
 import {
   createPlanCheckpoint,
   getPendingCheckpoint,
@@ -401,7 +401,8 @@ export async function processWorkItemExecute(
       });
 
       // Formulate implementation plan
-      let plan: any;
+      type ExecPlan = PlannerOutcome & { planDelegated?: boolean; planNote?: string };
+      let plan: ExecPlan;
       if (env.LOCAL_AGENT_TYPE === 'opencode' && env.NODE_ENV !== 'test' && !options?.forceAiPlanner) {
         plan = {
           hasAmbiguities: false,
@@ -409,6 +410,8 @@ export async function processWorkItemExecute(
           planMarkdown: 'Autonomous execution delegated directly to OpenCode agent.',
           estimatedFiles: [],
           testStrategy: 'Local automated tests',
+          fallbackUsed: false,
+          model: 'opencode-delegated',
           planDelegated: true,
           planNote: 'plan delegated to opencode',
         };
