@@ -1,7 +1,7 @@
 import { SimpleGit } from 'simple-git';
 import { runLocalTests, type TestRunResult } from '../test-runner/executor.js';
 import { pruneTestDiagnostics } from '../test-runner/parser.js';
-import { env } from '../config/env.js';
+import { runOpenCode, type OpenCodeRunOptions } from './opencode-runner.js';
 
 export interface RepairLoopOptions {
   worktreePath: string;
@@ -10,6 +10,9 @@ export interface RepairLoopOptions {
   maxCycles?: number;
   knownSecrets?: string[];
   mockTestRunner?: () => Promise<TestRunResult>;
+  // Opencode repair delegation
+  mockOpenCodeRunner?: OpenCodeRunOptions['mockRunner'];
+  sessionId?: string;
 }
 
 export interface RepairLoopResult {
@@ -18,12 +21,17 @@ export interface RepairLoopResult {
   wipBranch?: string;
   diagnostics?: string;
   testResult?: TestRunResult;
+  // Honest evidence fields
+  repairAttempted: boolean;
+  filesEdited: number;
 }
 
 export async function executeRepairLoop(options: RepairLoopOptions): Promise<RepairLoopResult> {
   const maxCycles = Math.min(Math.max(options.maxCycles ?? 3, 1), 5);
   let cycle = 0;
   let lastTestResult: TestRunResult | undefined;
+  let repairAttempted = false;
+  let totalFilesEdited = 0;
 
   while (cycle < maxCycles) {
     const testResult = options.mockTestRunner
@@ -38,7 +46,7 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
     lastTestResult = testResult;
 
     if (testResult.passed) {
-      return { success: true, cyclesUsed: cycle, testResult };
+      return { success: true, cyclesUsed: cycle, testResult, repairAttempted, filesEdited: totalFilesEdited };
     }
 
     cycle++;
@@ -46,15 +54,33 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
       break;
     }
 
+    // Prune diagnostics from failed test output
     const diagnostics = pruneTestDiagnostics(testResult.stdout, testResult.stderr);
 
-    // ponytail: mock deterministic repair in test env; enable live LLM repair in staging
-    if (env.NODE_ENV === 'test') {
-      continue;
-    }
+    // Build repair prompt with failure context
+    const repairPrompt = [
+      'The following tests failed. Fix the code to make them pass.',
+      '',
+      diagnostics.summary,
+      '',
+      ...diagnostics.assertionErrors,
+      '',
+      ...diagnostics.prunedStackTrace,
+    ].join('\n');
 
-    // Live model self-repair reasoning call (when in production/staging)
-    // LLM inspects diagnostics.failingTests, assertionErrors, and prunedStackTrace to edit code
+    // Re-invoke opencode with failure context
+    repairAttempted = true;
+    await runOpenCode({
+      cwd: options.worktreePath,
+      message: repairPrompt,
+      mockRunner: options.mockOpenCodeRunner,
+      sessionId: options.sessionId,
+    });
+
+    // Check git diff to count files edited (staged + unstaged vs HEAD)
+    const diffStat = await options.git.diff(['--stat', 'HEAD']);
+    const diffLines = diffStat.trim().split('\n').filter(l => l.includes('|'));
+    totalFilesEdited += diffLines.length;
   }
 
   // Budget exhausted: preserve work on WIP branch
@@ -88,5 +114,7 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
     wipBranch,
     diagnostics: `${pruned.summary}\n${pruned.assertionErrors.join('\n')}\n${pruned.prunedStackTrace.join('\n')}`,
     testResult: lastTestResult,
+    repairAttempted,
+    filesEdited: totalFilesEdited,
   };
 }

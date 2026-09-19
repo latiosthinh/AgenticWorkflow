@@ -222,6 +222,8 @@ async function runExecutionPipeline(
     git,
     workItemId: workItem.id,
     mockTestRunner: options?.mockTestRunner || defaultMockTestRunner,
+    mockOpenCodeRunner: options?.mockOpenCodeRunner,
+    sessionId: options?.openCodeSessionId,
   });
 
   if (!repairResult.success) {

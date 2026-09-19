@@ -268,6 +268,8 @@ export async function processWorkItemRework(
       git,
       workItemId: workItem.id,
       mockTestRunner: options?.mockTestRunner || defaultMockTestRunner,
+      mockOpenCodeRunner: options?.mockOpenCodeRunner,
+      sessionId: options?.openCodeSessionId,
     });
 
     if (!repairResult.success) {

@@ -541,6 +541,7 @@ describe('Execution Worker Pipeline End-to-End Orchestration', () => {
         timedOut: false,
         durationMs: 90,
       }),
+      mockOpenCodeRunner: async () => ({ stdout: '{}', stderr: '', exitCode: 0 }),
     });
 
     const updateCalls = mockWitApi.updateWorkItem.mock.calls;
