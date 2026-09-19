@@ -77,10 +77,12 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
       sessionId: options.sessionId,
     });
 
-    // Check git diff to count files edited (staged + unstaged vs HEAD)
+    // Check git status/diff to count files edited (tracked modified + untracked)
     const diffStat = await options.git.diff(['--stat', 'HEAD']);
     const diffLines = diffStat.trim().split('\n').filter(l => l.includes('|'));
-    totalFilesEdited += diffLines.length;
+    const status = await options.git.status();
+    const untrackedCount = status.not_added.length;
+    totalFilesEdited = diffLines.length + untrackedCount;
   }
 
   // Budget exhausted: preserve work on WIP branch

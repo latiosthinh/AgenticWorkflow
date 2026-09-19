@@ -299,4 +299,38 @@ describe('Opencode-Driven Repair Loop', () => {
     expect(result.diagnostics).toContain('1 tests failed');
     expect(result.diagnostics).toContain('AssertionError: expected 4 to be 5');
   });
+
+  it('does not double count files across repair cycles and includes untracked files', async () => {
+    const git = simpleGit(tempRepo);
+    let opencodeCalls = 0;
+
+    const result = await executeRepairLoop({
+      worktreePath: tempRepo,
+      git,
+      workItemId: 205,
+      maxCycles: 3,
+      mockTestRunner: async () => ({
+        passed: false,
+        exitCode: 1,
+        stdout: 'FAIL tests/math.test.ts',
+        stderr: '',
+        timedOut: false,
+        durationMs: 20,
+      }),
+      mockOpenCodeRunner: async (_args, cwd) => {
+        opencodeCalls++;
+        if (opencodeCalls === 1) {
+          fs.appendFileSync(path.join(cwd, 'README.md'), 'updated line\n');
+          fs.writeFileSync(path.join(cwd, 'untracked.ts'), 'export const a = 1;\n');
+        } else if (opencodeCalls === 2) {
+          fs.appendFileSync(path.join(cwd, 'README.md'), 'another line\n');
+        }
+        return { stdout: '{}', stderr: '', exitCode: 0 };
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(opencodeCalls).toBe(2);
+    expect(result.filesEdited).toBe(2);
+  });
 });
