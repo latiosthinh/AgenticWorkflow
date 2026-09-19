@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Audit Remediation & Hardening
 status: executing
-stopped_at: Completed 08-01-PLAN.md (WIP fallback mechanics); 08-02 next
-last_updated: "2026-09-19T10:39:40.746Z"
-last_activity: "2026-09-19 — 08-01 executed: rewriteRouterBody extracted + tested, planner fallback parks for human review, evaluator/planner stamp fallbackUsed+model (462→483 tests green, 3 atomic commits)"
+stopped_at: Completed 08-02-PLAN.md - Phase 8 complete (WIP-01..05); working tree clean
+last_updated: "2026-09-19T10:57:52.354Z"
+last_activity: "2026-09-19 — 08-02 executed: fallbackUsed+model persisted in L1/L2 evidence, opencode plan-skip governance deviation recorded + surfaced, prompt.ts/src-cli committed as-is, tree CLEAN (483→488 tests green, 4 atomic commits) — Phase 8 complete (WIP-01..05)"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -26,13 +26,13 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 ## Current Position
 
 Phase: 8 of 13 (WIP Resolution) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
-Plan: 1 of 2 (08-01 complete)
-Status: Executing Phase 8 — 08-02 next (`/gsd-execute-phase 8`)
-Last activity: 2026-09-19 — 08-01 executed: rewriteRouterBody extracted + tested, planner fallback parks for human review, evaluator/planner stamp fallbackUsed+model (462→483 tests green, 3 atomic commits)
+Plan: 2 of 2 (Phase 8 complete — WIP-01..05 all done)
+Status: Phase 8 complete — next: Phase 9 (Opencode-Only Honest Core: SEC-01/02 + CORE-01/02/03)
+Last activity: 2026-09-19 — 08-02 executed: fallback evidence persisted in L1/L2, opencode plan-skip governance deviation recorded + surfaced, working tree clean (483→488 tests green, 4 atomic commits)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
-**Working tree warning:** still dirty — `src/auditor/prompt.ts`, `src/execute/worker.ts` + untracked `src/cli/` remain for plan 08-02 (commit-forward scope). 08-01 territory (provider/planner/evaluator) fully committed.
+**Working tree:** CLEAN — commit-forward gate (WIP-05) closed by 08-02: all WIP committed (prompt.ts verbatim, src/cli/ado.ts as-is per recorded QAL-03 decision), full suite 488/488 green, tsc clean.
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [█████░░░░░] 50%
 | Phase 06 P03 | 6m | 2 tasks | 2 files |
 | Phase 07 P01 | 6m | 3 tasks | 7 files |
 | Phase 08 P01 | 28m | 3 tasks | 6 files |
+| Phase 08 P02 | 13m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -265,6 +266,9 @@ Recent decisions affecting current work:
 - [Phase 08]: [08-01]: Read actual LLM model from result.response.modelId (AI SDK v7 field; plan-drafted .model would be permanently undefined) in planner + evaluator success paths.
 - [Phase 08]: [08-01]: Planner LLM-failure fallback parks via existing hasAmbiguities -> createPlanCheckpoint machinery; boilerplate auto-proceed plan deleted.
 - [Phase 08]: [08-01]: Fallback provenance pattern - every planner/evaluator return path stamps fallbackUsed + model (actual response.modelId else env.API_MODEL; mock path 'mock'); WIP-02 stays open until 08-02 persists it.
+- [Phase 08]: [08-02]: worker.test.ts pins env.API_MODEL in harness (local .env overrides schema default) - keeps the 'gpt-4o' model assertion verbatim while making it machine-hermetic.
+- [Phase 08]: [08-02]: Governance deviations surface on the work item markdown-first - governanceNote rides THROUGH marked.parse + sanitizeHtml allowlist + loop shield, never raw HTML.
+- [Phase 08]: [08-02]: Evidence fields (fallbackUsed/model/planDelegated/planNote) are additive-optional on persisted entry types - JSON.stringify drops undefined, old state files parse unchanged, zero store changes.
 
 ### Pending Todos
 
@@ -299,6 +303,6 @@ Plan-phase validation items (from research flags — resolve during discuss/plan
 
 ## Session Continuity
 
-Last session: 2026-09-19T10:39:40.741Z
-Stopped at: Completed 08-01-PLAN.md (WIP fallback mechanics); 08-02 next
-Resume: `/gsd-execute-phase 8` (08-02: evidence persistence + WIP-04/05; prompt.ts/worker.ts/src-cli diff remains)
+Last session: 2026-09-19T10:57:52.349Z
+Stopped at: Completed 08-02-PLAN.md - Phase 8 complete (WIP-01..05); working tree clean
+Resume: `/gsd-progress` → Phase 9 (Opencode-Only Honest Core) — discuss/plan next; Phase 8 artifacts complete (08-01/08-02 SUMMARYs)

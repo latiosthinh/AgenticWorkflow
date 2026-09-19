@@ -25,7 +25,7 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
 - Integer phases (8, 9, …13): planned v2.1 milestone work, continuing v2.0 numbering
 - Decimal phases (e.g. 9.1): urgent insertions via `/gsd-insert-phase` (none planned)
 
-- [ ] **Phase 8: WIP Resolution** - Complete the uncommitted diff (provider 9router rewrite, LLM fallbacks, opencode plan-skip) with tests + gate-safe fallbacks; commit; working tree clean
+- [x] **Phase 8: WIP Resolution** - Complete the uncommitted diff (provider 9router rewrite, LLM fallbacks, opencode plan-skip) with tests + gate-safe fallbacks; commit; working tree clean (completed 2026-09-19)
 - [ ] **Phase 9: Opencode-Only Honest Core** - Delete the built-in no-op coding path, require opencode (fail-fast), close the CRITICAL injection-to-secret-theft chain, resolve MCP, make repair real-or-honest
 - [ ] **Phase 10: Security & Evidence Hardening** - Actor-authorized verdicts, sanitized + loop-shielded comments everywhere, push-failure honesty, remaining escape gaps, zero fabricated evidence
 - [ ] **Phase 11: Reliability Hardening** - Tag-wipe guard, LLM/ADO timeouts, failed-dedup retry, bounded poller, publisher isolation, QA fail-closed, rejection handling, fsync + orphan sweep, degradation flags
@@ -46,7 +46,7 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
   5. `git status` is clean at phase end (all 5 modified files committed; `src/cli/` resolved by an explicit wire-or-delete decision recorded for QAL-03) and the full suite — the existing 462 tests plus new WIP tests — passes green with no §Done-well regression
 **Plans**: 2 plans (serial — 08-02 consumes the AuditOutcome/PlannerOutcome types 08-01 produces)
 - [x] 08-01-PLAN.md — Fallback mechanics: rewriteRouterBody extraction + failure logging (WIP-01), planner park-on-LLM-failure (WIP-03), evaluator/planner fallbackUsed+model returns (WIP-02 producer half)
-- [ ] 08-02-PLAN.md — Evidence persistence: L1/L2 fallback records + hardcoded-model removal (WIP-02), opencode plan-skip governance record (WIP-04), cli-as-is commit + clean tree + full-suite gate (WIP-05)
+- [x] 08-02-PLAN.md — Evidence persistence: L1/L2 fallback records + hardcoded-model removal (WIP-02), opencode plan-skip governance record (WIP-04), cli-as-is commit + clean tree + full-suite gate (WIP-05)
 
 ### Phase 9: Opencode-Only Honest Core
 **Goal**: The agent core codes for real or not at all — built-in no-op path deleted, `LOCAL_AGENT_TYPE=opencode` required with fail-fast boot validation, MCP subsystem wired-or-deleted, repair loop real-or-honest — and the CRITICAL injection-to-secret-theft chain (C1) is closed: ticket content XML-isolated in opencode/planner prompts, agent commands allowlisted, agent file reads jailed to the worktree, orchestrator `.env` unreachable
@@ -129,7 +129,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 8. WIP Resolution | v2.1 | 1/2 | In Progress|  |
+| 8. WIP Resolution | v2.1 | 2/2 | Complete   | 2026-09-19 |
 | 9. Opencode-Only Honest Core | v2.1 | 0/TBD | Not started | - |
 | 10. Security & Evidence Hardening | v2.1 | 0/TBD | Not started | - |
 | 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
