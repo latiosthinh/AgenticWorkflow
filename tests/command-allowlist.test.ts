@@ -89,6 +89,18 @@ describe('SEC-02: Command Allowlist + File-Read Jail', () => {
       ).rejects.toThrow('not in the allowlist');
     });
 
+    it('rejects path-qualified allowed command name (e.g. /tmp/npm or ./node)', async () => {
+      await expect(
+        runCommand('/tmp/npm', ['--version'], { cwd: process.cwd() })
+      ).rejects.toThrow('not in the allowlist');
+      await expect(
+        runCommand('./node', ['--version'], { cwd: process.cwd() })
+      ).rejects.toThrow('not in the allowlist');
+      await expect(
+        runCommand('..\\node.exe', ['--version'], { cwd: process.cwd() })
+      ).rejects.toThrow('not in the allowlist');
+    });
+
     it('error message lists permitted commands', async () => {
       try {
         await runCommand('curl', [], { cwd: process.cwd() });

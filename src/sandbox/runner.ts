@@ -12,8 +12,10 @@ export const ALLOWED_COMMANDS = Object.freeze([
 ] as const);
 
 function assertAllowedCommand(file: string): void {
+  const isBare = file === path.basename(file) && !file.includes('/') && !file.includes('\\');
+  const isNodeExec = path.resolve(file) === path.resolve(process.execPath);
   const basename = path.basename(file).toLowerCase();
-  if (!(ALLOWED_COMMANDS as readonly string[]).includes(basename)) {
+  if ((!isBare && !isNodeExec) || !(ALLOWED_COMMANDS as readonly string[]).includes(basename)) {
     throw new Error(
       `Command '${file}' is not in the allowlist. ` +
       `Permitted: ${ALLOWED_COMMANDS.filter(c => !c.includes('.')).join(', ')}. ` +
