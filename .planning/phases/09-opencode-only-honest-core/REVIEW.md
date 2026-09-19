@@ -24,7 +24,7 @@ findings:
   warning: 2
   info: 2
   total: 5
-status: findings
+status: resolved
 ---
 
 # Phase 9: Code Review Report
@@ -32,7 +32,7 @@ status: findings
 **Reviewed:** 2026-09-19T23:15:00Z
 **Depth:** standard
 **Files Reviewed:** 15
-**Status:** findings
+**Status:** resolved (all findings fixed)
 
 ## Summary
 
@@ -51,6 +51,7 @@ Five findings were identified: 1 Critical (absolute path in `OPENCODE_BIN` fails
 
 ### CR-01: Absolute path in OPENCODE_BIN fails boot validation on Windows
 
+**Status:** Fixed in commit `2086308`
 **File:** `src/config/env.ts:18-29`
 **Issue:** When `OPENCODE_BIN` is configured as an absolute path on Windows (e.g., `C:\Users\...\opencode.cmd` or `D:\tools\opencode.exe`), `execFileSync('where', [val])` fails because Windows `where.exe` interprets colons in drive specifications as pattern qualifiers (`path:pattern`) and exits with code 2 (`ERROR: Invalid pattern is specified in "path:pattern"`). In non-test environments (`NODE_ENV !== 'test'`), Zod boot validation throws despite following the error message instructions ("set OPENCODE_BIN to absolute path").
 **Fix:** Check `fs.existsSync(val)` before attempting system PATH lookup with `which`/`where`:
@@ -76,6 +77,7 @@ OPENCODE_BIN: z.string().default('opencode').pipe(z.string().min(1, 'OPENCODE_BI
 
 ### WR-01: totalFilesEdited compounds cumulative diffs across cycles and misses untracked files
 
+**Status:** Fixed in commit `7d728b9`
 **File:** `src/execute/repair.ts:81-83`
 **Issue:** In `executeRepairLoop`, `options.git.diff(['--stat', 'HEAD'])` inspects cumulative changes between the working tree and `HEAD`. No commit occurs between repair cycles, so `diffStat` reflects all modifications since `HEAD`. Line 83 does `totalFilesEdited += diffLines.length` on every cycle. If cycle 1 modifies 2 files and cycle 2 makes no changes or edits one of the same files, `totalFilesEdited` becomes 4 instead of 2. Additionally, `git diff HEAD` only compares tracked files; untracked new files created by `opencode` are ignored unless staged.
 **Fix:** Compute the total files edited directly from the latest diff without accumulating past cycle snapshots, and capture untracked files:
@@ -90,6 +92,7 @@ totalFilesEdited = diffLines.length + untrackedCount;
 
 ### WR-02: SEC-01 tests assert against local test-file helper functions instead of production prompt builders
 
+**Status:** Fixed in commit `423b5ff`
 **File:** `tests/prompt-injection.test.ts:22-62`
 **Issue:** `buildOpenCodePrompt` and `buildPlannerPrompt` are declared locally within `tests/prompt-injection.test.ts`. The prompt injection behavioral tests (lines 65-179) execute against these test helper functions rather than the prompt generation in `src/execute/worker.ts` and `src/plan/planner.ts`. While lines 180-212 perform static source regex checks, behavioral coverage is decoupled from the production code.
 **Fix:** Export prompt building functions from `src/execute/worker.ts` and `src/plan/planner.ts`, or test prompt construction via mocked `runOpenCode` / `generateText` invocations.
@@ -98,6 +101,7 @@ totalFilesEdited = diffLines.length + untrackedCount;
 
 ### IN-01: escapeXml throws TypeError on undefined or null input
 
+**Status:** Fixed in commit `09962e3`
 **File:** `src/auditor/prompt.ts:7-14` (called in `src/execute/worker.ts:90-94` and `src/plan/planner.ts:68-72`)
 **Issue:** `escapeXml(str: string)` assumes `str` is always defined. If `workItem.description` or `workItem.acceptanceCriteria` is undefined or null, calling `escapeXml` throws `TypeError: Cannot read properties of undefined (reading 'replace')`.
 **Fix:** Handle falsy/non-string values defensively in `escapeXml`:
@@ -115,6 +119,7 @@ export function escapeXml(str: string): string {
 
 ### IN-02: assertAllowedCommand checks only path.basename without path qualification guard
 
+**Status:** Fixed in commit `2c2bc37`
 **File:** `src/sandbox/runner.ts:14-23`
 **Issue:** `assertAllowedCommand` checks `path.basename(file).toLowerCase()`. A path-qualified argument such as `/tmp/npm` or `..\..\node.exe` passes allowlist validation because its basename matches. While currently only invoked internally with fixed string literals, enforcing bare command names (no directory separators) prevents potential path confusion.
 **Fix:** Verify `file === path.basename(file)` in `assertAllowedCommand`.
