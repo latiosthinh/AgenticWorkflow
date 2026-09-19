@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
 
@@ -18,6 +19,7 @@ export const EnvSchema = z.object({
   OPENCODE_BIN: z.string().default('opencode').pipe(z.string().min(1, 'OPENCODE_BIN is required').refine(
     (val) => {
       if (process.env.NODE_ENV === 'test') return true;
+      if (fs.existsSync(val)) return true;
       try {
         execFileSync(process.platform === 'win32' ? 'where' : 'which', [val], { stdio: 'ignore' });
         return true;

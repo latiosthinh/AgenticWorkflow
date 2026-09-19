@@ -32,4 +32,20 @@ describe('Boot validation: LOCAL_AGENT_TYPE and OPENCODE_BIN', () => {
       EnvSchema.parse({ ...BASE_ENV, LOCAL_AGENT_TYPE: 'opencode', OPENCODE_BIN: '' })
     ).toThrow();
   });
+
+  it('accepts OPENCODE_BIN as existing absolute path outside test mode', () => {
+    const originalEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'production';
+      const parsed = EnvSchema.parse({
+        ...BASE_ENV,
+        NODE_ENV: 'production',
+        LOCAL_AGENT_TYPE: 'opencode',
+        OPENCODE_BIN: process.execPath,
+      });
+      expect(parsed.OPENCODE_BIN).toBe(process.execPath);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });
