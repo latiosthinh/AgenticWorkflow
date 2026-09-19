@@ -28,19 +28,21 @@ describe('Config & AI Provider', () => {
     expect(parsed.OPENCODE_TIMEOUT_MS).toBe(120000);
   });
 
-  it('provides default values for API_MODEL, LOCAL_AGENT_TYPE, OPENCODE_BIN, OPENCODE_TIMEOUT_MS', () => {
+  it('provides default values for API_MODEL, OPENCODE_TIMEOUT_MS and requires LOCAL_AGENT_TYPE=opencode', () => {
     const parsed = EnvSchema.parse({
       ADO_ORG_URL: 'https://dev.azure.com/test-org',
       ADO_PAT: 'test-pat',
       ADO_BOT_ID: 'test-bot',
       ADO_WEBHOOK_SECRET: 'test-secret',
       OPENAI_API_KEY: 'test-key',
+      LOCAL_AGENT_TYPE: 'opencode',
+      OPENCODE_BIN: 'opencode',
     });
 
     expect(parsed.API_ENDPOINT).toBeUndefined();
     expect(parsed.API_KEY).toBeUndefined();
     expect(parsed.API_MODEL).toBe('gpt-4o');
-    expect(parsed.LOCAL_AGENT_TYPE).toBe('built-in');
+    expect(parsed.LOCAL_AGENT_TYPE).toBe('opencode');
     expect(parsed.OPENCODE_BIN).toBe('opencode');
     expect(parsed.OPENCODE_TIMEOUT_MS).toBe(180000);
   });

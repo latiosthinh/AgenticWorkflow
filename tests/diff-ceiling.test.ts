@@ -9,7 +9,6 @@ import {
   verifyPackageDependencies,
 } from '../src/execute/diff-guard.js';
 import {
-  createCoderTools,
   commitImplementation,
 } from '../src/execute/coder.js';
 
@@ -154,7 +153,7 @@ describe('Diff Ceiling and Dependency Guard', () => {
   });
 });
 
-describe('Bounded Coder Tools and Conventional Commit', () => {
+describe('Conventional Commit', () => {
   let tempDir: string;
 
   beforeEach(async () => {
@@ -163,72 +162,6 @@ describe('Bounded Coder Tools and Conventional Commit', () => {
 
   afterEach(() => {
     fs.rmSync(tempDir, { recursive: true, force: true });
-  });
-
-  it('creates, edits, and deletes files within the worktree', async () => {
-    const tools = createCoderTools(tempDir);
-
-    // Create file
-    const createRes = await tools.createFile.execute({
-      relativePath: 'src/hello.ts',
-      content: 'export const hello = "world";',
-    });
-    expect(createRes.success).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'src/hello.ts'))).toBe(true);
-    expect(fs.readFileSync(path.join(tempDir, 'src/hello.ts'), 'utf8')).toBe(
-      'export const hello = "world";'
-    );
-
-    // Edit file
-    const editRes = await tools.editFile.execute({
-      relativePath: 'src/hello.ts',
-      content: 'export const hello = "updated";',
-    });
-    expect(editRes.success).toBe(true);
-    expect(fs.readFileSync(path.join(tempDir, 'src/hello.ts'), 'utf8')).toBe(
-      'export const hello = "updated";'
-    );
-
-    // Delete file
-    const deleteRes = await tools.deleteFile.execute({
-      relativePath: 'src/hello.ts',
-    });
-    expect(deleteRes.success).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'src/hello.ts'))).toBe(false);
-  });
-
-  it('throws when editing a non-existent file', async () => {
-    const tools = createCoderTools(tempDir);
-    await expect(
-      tools.editFile.execute({
-        relativePath: 'missing.ts',
-        content: 'content',
-      })
-    ).rejects.toThrow(/File does not exist/);
-  });
-
-  it('denies directory traversal attempts in createFile, editFile, deleteFile', async () => {
-    const tools = createCoderTools(tempDir);
-
-    await expect(
-      tools.createFile.execute({
-        relativePath: '../secret.txt',
-        content: 'pwned',
-      })
-    ).rejects.toThrow(/Path traversal denied/);
-
-    await expect(
-      tools.editFile.execute({
-        relativePath: '../../etc/passwd',
-        content: 'hacked',
-      })
-    ).rejects.toThrow(/Path traversal denied/);
-
-    await expect(
-      tools.deleteFile.execute({
-        relativePath: '../other.txt',
-      })
-    ).rejects.toThrow(/Path traversal denied/);
   });
 
   it('commits implementation using conventional format and AB#<id> trailer', async () => {

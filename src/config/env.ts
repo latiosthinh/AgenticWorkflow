@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { execFileSync } from 'node:child_process';
 
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -13,8 +14,19 @@ export const EnvSchema = z.object({
   API_ENDPOINT: z.preprocess((val) => (val === '' ? undefined : val), z.string().url().optional()),
   API_KEY: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   API_MODEL: z.string().default('gpt-4o'),
-  LOCAL_AGENT_TYPE: z.enum(['opencode', 'built-in']).default('built-in'),
-  OPENCODE_BIN: z.string().default('opencode'),
+  LOCAL_AGENT_TYPE: z.literal('opencode'),
+  OPENCODE_BIN: z.string().default('opencode').pipe(z.string().min(1, 'OPENCODE_BIN is required').refine(
+    (val) => {
+      if (process.env.NODE_ENV === 'test') return true;
+      try {
+        execFileSync(process.platform === 'win32' ? 'where' : 'which', [val], { stdio: 'ignore' });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    'OPENCODE_BIN not found on PATH — install opencode or set OPENCODE_BIN to absolute path'
+  )),
   OPENCODE_TIMEOUT_MS: z.coerce.number().default(180_000),
   ADO_PROJECT: z.string().default('default-project'),
   ADO_REPOSITORY_ID: z.string().default('default-repo'),
