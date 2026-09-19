@@ -9,6 +9,8 @@ export interface AuditOptions {
   forceAi?: boolean;
 }
 
+export type AuditOutcome = AuditResult & { fallbackUsed: boolean; model: string };
+
 function evaluateDoDDeterministically(ticket: TicketInput): AuditResult {
   const missingRequirements: string[] = [];
   const passedCriteria: string[] = [];
@@ -123,7 +125,7 @@ export async function auditTicketContract(
   descriptionOrOptions?: string | AuditOptions,
   acceptanceCriteria?: string,
   options?: AuditOptions
-): Promise<AuditResult> {
+): Promise<AuditOutcome> {
   let ticket: TicketInput;
   let opts: AuditOptions | undefined;
 
@@ -141,24 +143,33 @@ export async function auditTicketContract(
 
   if (opts?.mock) {
     const mockRes = await opts.mock(ticket);
-    return AuditResultSchema.parse(mockRes);
+    return { ...AuditResultSchema.parse(mockRes), fallbackUsed: false, model: 'mock' };
   }
 
   // ponytail: deterministic offline fallback in test env; enable live model in staging
   if (env.NODE_ENV === 'test' && !opts?.forceAi) {
-    return evaluateDoDDeterministically(ticket);
+    return { ...evaluateDoDDeterministically(ticket), fallbackUsed: false, model: env.API_MODEL };
   }
 
   const promptConfig = buildAuditorPrompt(ticket);
 
-  const result = await generateText({
-    model: appModel,
-    instructions: promptConfig.instructions,
-    prompt: promptConfig.prompt,
-    output: Output.object({
-      schema: AuditResultSchema,
-    }),
-  });
+  try {
+    const result = await generateText({
+      model: appModel,
+      instructions: promptConfig.instructions,
+      prompt: promptConfig.prompt,
+      output: Output.object({
+        schema: AuditResultSchema,
+      }),
+    });
 
-  return AuditResultSchema.parse(result.output);
+    return {
+      ...AuditResultSchema.parse(result.output),
+      fallbackUsed: false,
+      model: (result.response?.modelId as string | undefined) || env.API_MODEL,
+    };
+  } catch (err) {
+    console.warn('[auditor-evaluator] LLM call failed or returned non-JSON; using deterministic DoD rubric fallback:', (err as any)?.message || err);
+    return { ...evaluateDoDDeterministically(ticket), fallbackUsed: true, model: env.API_MODEL };
+  }
 }
