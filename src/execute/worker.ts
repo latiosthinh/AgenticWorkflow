@@ -309,13 +309,33 @@ async function runExecutionPipeline(
     );
     try {
       await git.push('origin', worktreeResult.branchName);
-    } catch {
-      // Ignore remote push failures in local/offline test environments
+    } catch (err: any) {
+      if (env.NODE_ENV === 'test') {
+        console.warn(
+          `[worker] Git push to origin failed in test environment (tolerated): ${err?.message || String(err)}`
+        );
+      } else {
+        console.error(`[worker] Git push to origin failed: ${err?.message || String(err)}`);
+        const alertComment = formatWorkerAlertComment(
+          '[Push Failed] Remote push to origin failed',
+          err?.message || String(err)
+        );
+        await flagTicketBlocked(workItem.id, alertComment, 'contract-conflict');
+        stateStore.updateDedupStatus(
+          workItem.id,
+          revId,
+          'failed',
+          `Git push to origin failed: ${err?.message || String(err)}`
+        );
+        await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+        return false;
+      }
     }
   }
 
   await transitionToDevDone(workItem.id, comment);
   await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+  return true;
 }
 
 export async function processWorkItemExecute(
@@ -374,7 +394,10 @@ export async function processWorkItemExecute(
             workItem.title
           );
           try {
-            await runExecutionPipeline(workItem, revId, resWorktree, options);
+            const pipelineRes = await runExecutionPipeline(workItem, revId, resWorktree, options);
+            if (pipelineRes === false) {
+              return;
+            }
           } catch (resErr) {
             await cleanupWorktree(process.cwd(), resWorktree.worktreePath).catch(
               () => {}
@@ -507,8 +530,12 @@ export async function processWorkItemExecute(
         ]);
 
         // Run Phase 3 implementation & verification pipeline
-        await runExecutionPipeline(workItem, revId, worktreeResult, options);
+        const pipelineRes = await runExecutionPipeline(workItem, revId, worktreeResult, options);
         worktreeResult = undefined;
+
+        if (pipelineRes === false) {
+          return;
+        }
 
         stateStore.updateDedupStatus(workItemId, revId, 'completed');
         return;

@@ -319,8 +319,28 @@ export async function processWorkItemRework(
       );
       try {
         await git.push('origin', worktreeResult.branchName);
-      } catch {
-        // Ignore remote push failures in local/offline test environments
+      } catch (err: any) {
+        if (env.NODE_ENV === 'test') {
+          console.warn(
+            `[rework-worker] Git push to origin failed in test environment (tolerated): ${err?.message || String(err)}`
+          );
+        } else {
+          console.error(`[rework-worker] Git push to origin failed: ${err?.message || String(err)}`);
+          const alertComment = formatWorkerAlertComment(
+            '[Push Failed] Remote push to origin failed',
+            err?.message || String(err)
+          );
+          await flagTicketBlocked(workItem.id, alertComment, 'contract-conflict');
+          stateStore.updateDedupStatus(
+            workItem.id,
+            revId,
+            'failed',
+            `Git push to origin failed: ${err?.message || String(err)}`
+          );
+          await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
+          worktreePath = undefined;
+          return;
+        }
       }
     }
 

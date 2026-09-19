@@ -1,4 +1,5 @@
 import { SimpleGit } from 'simple-git';
+import { env } from '../config/env.js';
 import { runLocalTests, type TestRunResult } from '../test-runner/executor.js';
 import { pruneTestDiagnostics } from '../test-runner/parser.js';
 import { runOpenCode, type OpenCodeRunOptions } from './opencode-runner.js';
@@ -87,6 +88,7 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
 
   // Budget exhausted: preserve work on WIP branch
   const wipBranch = `wip/ticket-${options.workItemId}`;
+  let pushFailedInProd = false;
   try {
     await options.git.checkout(['-B', wipBranch]);
     await options.git.add('.');
@@ -98,8 +100,17 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
     }
     try {
       await options.git.push('origin', wipBranch);
-    } catch {
-      // Ignore remote push failure if offline or in local test environment
+    } catch (err: any) {
+      if (env.NODE_ENV === 'test') {
+        console.warn(
+          `[repair] Git push to WIP branch failed in test environment (tolerated): ${err?.message || String(err)}`
+        );
+      } else {
+        console.error(
+          `[repair] Git push to WIP branch failed: ${err?.message || String(err)}`
+        );
+        pushFailedInProd = true;
+      }
     }
   } catch {
     // Ignore commit failure if working tree is clean or git fails
@@ -110,11 +121,16 @@ export async function executeRepairLoop(options: RepairLoopOptions): Promise<Rep
     lastTestResult?.stderr || ''
   );
 
+  let diagnostics = `${pruned.summary}\n${pruned.assertionErrors.join('\n')}\n${pruned.prunedStackTrace.join('\n')}`;
+  if (pushFailedInProd) {
+    diagnostics += '\nRemote push to WIP branch failed';
+  }
+
   return {
     success: false,
     cyclesUsed: cycle,
     wipBranch,
-    diagnostics: `${pruned.summary}\n${pruned.assertionErrors.join('\n')}\n${pruned.prunedStackTrace.join('\n')}`,
+    diagnostics,
     testResult: lastTestResult,
     repairAttempted,
     filesEdited: totalFilesEdited,
