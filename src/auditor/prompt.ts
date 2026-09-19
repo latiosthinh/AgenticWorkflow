@@ -4,8 +4,8 @@ export interface TicketInput {
   acceptanceCriteria: string;
 }
 
-export function escapeXml(str: string): string {
-  return str
+export function escapeXml(str?: string | null): string {
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

@@ -150,6 +150,14 @@ describe('SEC-01: Prompt Injection Isolation', () => {
       expect(prompt).toContain('&lt;system&gt;');
       expect(instructions).toContain('SECURITY BOUNDARY GUARD');
     });
+
+    it('handles null, undefined, and non-string inputs safely in escapeXml', () => {
+      expect(escapeXml(undefined)).toBe('');
+      expect(escapeXml(null)).toBe('');
+      expect(escapeXml('')).toBe('');
+      expect(escapeXml(123 as any)).toBe('123');
+      expect(escapeXml({ toString: () => '<safe>' } as any)).toBe('&lt;safe&gt;');
+    });
   });
 
   describe('Source file hardening verification', () => {
