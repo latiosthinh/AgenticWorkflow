@@ -170,6 +170,6 @@ export async function auditTicketContract(
     };
   } catch (err) {
     console.warn('[auditor-evaluator] LLM call failed or returned non-JSON; using deterministic DoD rubric fallback:', (err as any)?.message || err);
-    return { ...evaluateDoDDeterministically(ticket), fallbackUsed: true, model: env.API_MODEL };
+    return { ...evaluateDoDDeterministically(ticket), fallbackUsed: true, model: 'deterministic-rubric' };
   }
 }

@@ -103,7 +103,7 @@ ${ticket.acceptanceCriteria}
         testStrategy: '',
       }),
       fallbackUsed: true,
-      model: env.API_MODEL,
+      model: 'deterministic-park',
     };
   }
 }

@@ -48,7 +48,7 @@ describe('formulateImplementationPlan fallback (WIP-03 + WIP-02)', () => {
     expect(res.estimatedFiles).toEqual([]);
     expect(res.testStrategy).toBe('');
     expect(res.fallbackUsed).toBe(true);
-    expect(res.model).toBe(env.API_MODEL);
+    expect(res.model).toBe('deterministic-park');
     expect(warnSpy).toHaveBeenCalled();
     // boilerplate auto-proceed plan is gone
     expect(res.planMarkdown).not.toContain('Implement');

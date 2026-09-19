@@ -39,7 +39,7 @@ describe('auditTicketContract fallback evidence (WIP-02)', () => {
     warnSpy.mockRestore();
   });
 
-  it('LLM failure returns deterministic DoD rubric result stamped fallbackUsed:true + resolved model', async () => {
+  it('LLM failure returns deterministic DoD rubric result stamped fallbackUsed:true + producer "deterministic-rubric"', async () => {
     generateTextMock.mockRejectedValue(new Error('router down'));
 
     const res = await auditTicketContract(passingTicket, { forceAi: true });
@@ -48,7 +48,7 @@ describe('auditTicketContract fallback evidence (WIP-02)', () => {
     expect(res.reasons.length).toBe(3);
     expect(res.criteria_summary).toContain('satisfies Definition of Done');
     expect(res.fallbackUsed).toBe(true);
-    expect(res.model).toBe(env.API_MODEL);
+    expect(res.model).toBe('deterministic-rubric');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -60,7 +60,7 @@ describe('auditTicketContract fallback evidence (WIP-02)', () => {
     expect(res.passed).toBe(false);
     expect(res.reasons.join(' ')).toMatch(/Completeness/);
     expect(res.fallbackUsed).toBe(true);
-    expect(res.model).toBe(env.API_MODEL);
+    expect(res.model).toBe('deterministic-rubric');
   });
 
   it('success path captures the actual response model and fallbackUsed:false', async () => {
