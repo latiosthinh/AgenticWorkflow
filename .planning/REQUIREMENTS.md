@@ -8,9 +8,9 @@
 
 ### WIP Resolution (commit-forward gate — must land first)
 
-- [ ] **WIP-01**: Provider 9router body-rewrite (`stream:false`, prefix strip) has unit tests and logs rewrite failures explicitly — no silent `catch {}` (L9, `src/ai/provider.ts`)
+- [x] **WIP-01**: Provider 9router body-rewrite (`stream:false`, prefix strip) has unit tests and logs rewrite failures explicitly — no silent `catch {}` (L9, `src/ai/provider.ts`)
 - [ ] **WIP-02**: Evaluator/planner LLM fallbacks record `fallbackUsed: true` + actual model in persisted evidence; audit log stops hardcoding `model: 'gpt-4o'` (M7, L9)
-- [ ] **WIP-03**: Planner LLM-failure fallback parks the ticket for human review (`hasAmbiguities: true` → Plan-Q&A checkpoint) instead of auto-proceeding a boilerplate plan (M7, L9)
+- [x] **WIP-03**: Planner LLM-failure fallback parks the ticket for human review (`hasAmbiguities: true` → Plan-Q&A checkpoint) instead of auto-proceeding a boilerplate plan (M7, L9)
 - [ ] **WIP-04**: Opencode plan-skip path records "plan delegated to opencode" in L2 evidence so the governance deviation is auditable on the work item (L9)
 - [ ] **WIP-05**: Entire uncommitted diff (5 files + `src/cli/` decision per QAL-03) committed with tests; working tree clean at phase end
 
@@ -92,9 +92,9 @@ Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WIP-01 | Phase 8 | Pending |
+| WIP-01 | Phase 8 | Complete |
 | WIP-02 | Phase 8 | Pending |
-| WIP-03 | Phase 8 | Pending |
+| WIP-03 | Phase 8 | Complete |
 | WIP-04 | Phase 8 | Pending |
 | WIP-05 | Phase 8 | Pending |
 | SEC-01 | Phase 9 | Pending |

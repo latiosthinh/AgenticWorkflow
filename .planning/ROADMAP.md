@@ -45,7 +45,7 @@ Remediation-only milestone — no new features, pipeline model unchanged (5 colu
   4. The opencode plan-skip path writes a "plan delegated to opencode" record into L2 evidence, visible on the work item as an auditable governance deviation
   5. `git status` is clean at phase end (all 5 modified files committed; `src/cli/` resolved by an explicit wire-or-delete decision recorded for QAL-03) and the full suite — the existing 462 tests plus new WIP tests — passes green with no §Done-well regression
 **Plans**: 2 plans (serial — 08-02 consumes the AuditOutcome/PlannerOutcome types 08-01 produces)
-- [ ] 08-01-PLAN.md — Fallback mechanics: rewriteRouterBody extraction + failure logging (WIP-01), planner park-on-LLM-failure (WIP-03), evaluator/planner fallbackUsed+model returns (WIP-02 producer half)
+- [x] 08-01-PLAN.md — Fallback mechanics: rewriteRouterBody extraction + failure logging (WIP-01), planner park-on-LLM-failure (WIP-03), evaluator/planner fallbackUsed+model returns (WIP-02 producer half)
 - [ ] 08-02-PLAN.md — Evidence persistence: L1/L2 fallback records + hardcoded-model removal (WIP-02), opencode plan-skip governance record (WIP-04), cli-as-is commit + clean tree + full-suite gate (WIP-05)
 
 ### Phase 9: Opencode-Only Honest Core
@@ -129,7 +129,7 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 8. WIP Resolution | v2.1 | 0/2 | Planned | - |
+| 8. WIP Resolution | v2.1 | 1/2 | In Progress|  |
 | 9. Opencode-Only Honest Core | v2.1 | 0/TBD | Not started | - |
 | 10. Security & Evidence Hardening | v2.1 | 0/TBD | Not started | - |
 | 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
