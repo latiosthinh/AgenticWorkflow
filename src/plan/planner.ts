@@ -14,10 +14,12 @@ export interface PlanOptions {
   forceAi?: boolean;
 }
 
+export type PlannerOutcome = PlanResult & { fallbackUsed: boolean; model: string };
+
 export async function formulateImplementationPlan(
   ticket: PlanTicketInput,
   opts?: PlanOptions
-): Promise<PlanResult> {
+): Promise<PlannerOutcome> {
   // ponytail: deterministic offline planner fallback in test env; enable live model in staging
   if (env.NODE_ENV === 'test' && !opts?.forceAi) {
     if (
@@ -25,25 +27,33 @@ export async function formulateImplementationPlan(
       ticket.description.includes('TBD') ||
       !ticket.acceptanceCriteria
     ) {
-      return PlanResultSchema.parse({
-        hasAmbiguities: true,
-        questions: [
-          'Which database schema should be modified?',
-          'What is the expected error status code?',
-        ],
-        planMarkdown: '',
-        estimatedFiles: [],
-        testStrategy: '',
-      });
+      return {
+        ...PlanResultSchema.parse({
+          hasAmbiguities: true,
+          questions: [
+            'Which database schema should be modified?',
+            'What is the expected error status code?',
+          ],
+          planMarkdown: '',
+          estimatedFiles: [],
+          testStrategy: '',
+        }),
+        fallbackUsed: false,
+        model: env.API_MODEL,
+      };
     }
 
-    return PlanResultSchema.parse({
-      hasAmbiguities: false,
-      questions: [],
-      planMarkdown: '### Implementation Steps\n1. Modify service layer\n2. Add unit tests',
-      estimatedFiles: ['src/service.ts', 'tests/service.test.ts'],
-      testStrategy: 'Run vitest unit suite',
-    });
+    return {
+      ...PlanResultSchema.parse({
+        hasAmbiguities: false,
+        questions: [],
+        planMarkdown: '### Implementation Steps\n1. Modify service layer\n2. Add unit tests',
+        estimatedFiles: ['src/service.ts', 'tests/service.test.ts'],
+        testStrategy: 'Run vitest unit suite',
+      }),
+      fallbackUsed: false,
+      model: env.API_MODEL,
+    };
   }
 
   const prompt = `Title: ${ticket.title}
@@ -56,17 +66,44 @@ Acceptance Criteria:
 ${ticket.acceptanceCriteria}
 `;
 
-  const result = await generateText({
-    model: appModel,
-    instructions:
-      'You are an expert software engineering planner. Evaluate the ticket for clarity, technical decisions, and feasibility. ' +
-      'If critical requirements are missing, ambiguous, or unresolved, set hasAmbiguities to true and formulate concise questions. ' +
-      'Otherwise, formulate a concrete implementation plan with estimated files and test strategy.',
-    prompt,
-    output: Output.object({
-      schema: PlanResultSchema,
-    }),
-  });
+  try {
+    const result = await generateText({
+      model: appModel,
+      instructions:
+        'You are an expert software engineering planner. Evaluate the ticket for clarity, technical decisions, and feasibility. ' +
+        'If critical requirements are missing, ambiguous, or unresolved, set hasAmbiguities to true and formulate concise questions. ' +
+        'Otherwise, formulate a concrete implementation plan with estimated files and test strategy. ' +
+        'Respond with pure JSON matching this schema:\n' +
+        '{\n' +
+        '  "hasAmbiguities": boolean,\n' +
+        '  "questions": string[],\n' +
+        '  "planMarkdown": string,\n' +
+        '  "estimatedFiles": string[],\n' +
+        '  "testStrategy": string\n' +
+        '}',
+      prompt,
+      output: Output.object({
+        schema: PlanResultSchema,
+      }),
+    });
 
-  return PlanResultSchema.parse(result.output);
+    return {
+      ...PlanResultSchema.parse(result.output),
+      fallbackUsed: false,
+      model: (result.response?.modelId as string | undefined) || env.API_MODEL,
+    };
+  } catch (err) {
+    console.warn('[planner] LLM plan generation call failed; parking ticket for human plan review:', (err as any)?.message || err);
+    return {
+      ...PlanResultSchema.parse({
+        hasAmbiguities: true,
+        questions: ['LLM planning unavailable — human plan review required'],
+        planMarkdown: '',
+        estimatedFiles: [],
+        testStrategy: '',
+      }),
+      fallbackUsed: true,
+      model: env.API_MODEL,
+    };
+  }
 }
