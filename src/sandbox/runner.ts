@@ -26,7 +26,7 @@ function assertAllowedCommand(file: string): void {
 }
 
 export const SENSITIVE_KEY_PATTERN = /(PAT|API_KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|AUTH_KEY)/i;
-export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,}|[a-zA-Z0-9]{52})/g;
+export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0-9_\-\.]+|ado-[a-zA-Z0-9]{40,}|\b[a-zA-Z0-9]{52}\b)/g;
 export const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
 
 export function getKnownSecrets(): string[] {

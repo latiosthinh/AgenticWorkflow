@@ -71,6 +71,13 @@ describe('Known Secrets Scrubbing in Repair Loop & Sandboxes (REL-09)', () => {
       expect(scrubbed).toBe('Connecting to Azure DevOps with PAT: [REDACTED] ... Error 401');
     });
 
+    it('does not redact substrings of longer alphanumeric strings like 64-character sha256 hashes', () => {
+      const sha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+      const output = `SHA256: ${sha256}`;
+      const scrubbed = scrubOutput(output);
+      expect(scrubbed).toBe(`SHA256: ${sha256}`);
+    });
+
     it('scrubs Bearer tokens and GitHub PATs', () => {
       const ghpToken = 'ghp_1234567890abcdefghijklmnopqrstuvwxyz';
       const bearerToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig';
