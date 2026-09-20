@@ -152,5 +152,19 @@ describe('SEC-06: XML Escaping & HTML Sanitization', () => {
       expect(historyPatch.value).toContain('<b>Need clearer requirements</b>');
       expect(historyPatch.value).toContain('<!-- [automated-agent] -->');
     });
+
+    it('handleScopeRejection safely escapes unallowed brackets < and > in feedback text', async () => {
+      const workItemId = 9005;
+      const feedbackWithBrackets = 'Value must be < 100 and > 20 with "quoted" details';
+
+      await handleScopeRejection(workItemId, feedbackWithBrackets, '');
+
+      expect(mockWitApi.updateWorkItem).toHaveBeenCalledTimes(1);
+      const patchDoc = mockWitApi.updateWorkItem.mock.calls[0][1];
+      const historyPatch = patchDoc.find((op: any) => op.path === '/fields/System.History');
+
+      expect(historyPatch.value).toContain('Value must be &lt; 100 and &gt; 20 with "quoted" details');
+      expect(historyPatch.value).toContain('<!-- [automated-agent] -->');
+    });
   });
 });

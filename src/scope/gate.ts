@@ -293,6 +293,7 @@ export async function handleScopeRejection(
   } else {
     const sanitizedFeedback = sanitizeHtml(feedback, {
       allowedTags: ['b', 'i', 'em', 'strong', 'code', 'p', 'br', 'ul', 'ol', 'li'],
+      disallowedTagsMode: 'escape',
     });
     const commentHtml = `<p><strong>[Scope Rejected] Scope Changes Requested</strong></p><p>${sanitizedFeedback}</p>\n<!-- [automated-agent] -->`;
     await postFeedbackComment(workItemId, commentHtml);

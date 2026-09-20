@@ -312,6 +312,18 @@ export async function routeWorkItemEvent(
         }
       }
     } catch (err: any) {
+      if (err instanceof MissingEvidenceError) {
+        stateStore.updateDedupStatus(
+          workItemId,
+          revId,
+          'failed',
+          err.message
+        );
+        console.warn(
+          `[router] Work item ${workItemId} rev ${revId} blocked cleanly by missing evidence (${err.evidenceType ?? 'unknown'}): ${err.message}`
+        );
+        throw err;
+      }
       stateStore.updateDedupStatus(
         workItemId,
         revId,
