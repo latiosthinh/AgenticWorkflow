@@ -64,6 +64,10 @@ export function parseApproverIds(raw?: string): string[] {
   return raw
     .split(',')
     .map((s) => s.trim().toLowerCase())
+    .flatMap((s) => {
+      const emailMatch = s.match(/<([^>]+)>/);
+      return emailMatch ? [s, emailMatch[1].trim().toLowerCase()] : [s];
+    })
     .filter(Boolean);
 }
 

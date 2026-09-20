@@ -15,7 +15,15 @@ describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
         'alice@example.com',
         'bob',
         'charlie dev <charlie@example.com>',
+        'charlie@example.com',
       ]);
+    });
+
+    it('extracts inner emails from formatted DisplayName <email> entries', () => {
+      const parsed = parseApproverIds('Alice PM <alice@company.com>');
+      expect(parsed).toEqual(['alice pm <alice@company.com>', 'alice@company.com']);
+      // Bare email actor is authorized when allowlist configured with DisplayName <email>
+      expect(isActorAuthorized('alice@company.com', parsed)).toBe(true);
     });
 
     it('returns empty array when raw string is empty or undefined', () => {
@@ -306,9 +314,9 @@ describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
       const updateCall = mockWitApi.updateWorkItem.mock.calls[0];
       const patchDoc = updateCall[1];
       const historyPatch = patchDoc.find((op: any) => op.path === '/fields/System.History');
-      expect(historyPatch.value).toContain('[Unauthorized Verdict]');
-      expect(historyPatch.value).toContain('Attacker &lt;attacker@evil.com&gt;');
-      expect(historyPatch.value).toContain('<!-- [automated-agent] -->');
+      expect(historyPatch.value).toBe(
+        `[Unauthorized Verdict] User Attacker &lt;attacker@evil.com&gt; is not authorized to approve or reject this gate. Action ignored.\n<!-- [automated-agent] -->`
+      );
 
       // Console warning logged
       expect(warnSpy).toHaveBeenCalledWith(
@@ -359,9 +367,9 @@ describe('SEC-03: Approver Allowlist for Verdict Tokens', () => {
       const updateCall = mockWitApi.updateWorkItem.mock.calls[0];
       const patchDoc = updateCall[1];
       const historyPatch = patchDoc.find((op: any) => op.path === '/fields/System.History');
-      expect(historyPatch.value).toContain('[Unauthorized Verdict]');
-      expect(historyPatch.value).toContain('Dev &lt;dev@company.com&gt;');
-      expect(historyPatch.value).toContain('<!-- [automated-agent] -->');
+      expect(historyPatch.value).toBe(
+        `[Unauthorized Verdict] User Dev &lt;dev@company.com&gt; is not authorized to approve or reject this gate. Action ignored.\n<!-- [automated-agent] -->`
+      );
 
       // Console warning logged
       expect(warnSpy).toHaveBeenCalledWith(
