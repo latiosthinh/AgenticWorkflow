@@ -30,9 +30,13 @@ export const SENSITIVE_VALUE_PATTERN = /(?:ghp_[a-zA-Z0-9]{36}|Bearer\s+[a-zA-Z0
 export const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
 
 export function getKnownSecrets(): string[] {
-  return [env.ADO_PAT, env.ADO_WEBHOOK_SECRET, env.API_KEY, env.OPENAI_API_KEY].filter(
-    (s): s is string => Boolean(s)
-  );
+  return [
+    env.ADO_PAT,
+    env.ADO_WEBHOOK_SECRET,
+    env.API_KEY,
+    env.OPENAI_API_KEY,
+    env.AZURE_APP_INSIGHTS_API_KEY,
+  ].filter((s): s is string => Boolean(s));
 }
 
 /**

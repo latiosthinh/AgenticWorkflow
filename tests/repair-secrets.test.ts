@@ -16,6 +16,7 @@ describe('Known Secrets Scrubbing in Repair Loop & Sandboxes (REL-09)', () => {
   const originalWebhook = env.ADO_WEBHOOK_SECRET;
   const originalApiKey = env.API_KEY;
   const originalOpenAiKey = env.OPENAI_API_KEY;
+  const originalAppInsightsKey = env.AZURE_APP_INSIGHTS_API_KEY;
 
   beforeEach(() => {
     harness = createTestStateStore();
@@ -29,6 +30,7 @@ describe('Known Secrets Scrubbing in Repair Loop & Sandboxes (REL-09)', () => {
     (env as any).ADO_WEBHOOK_SECRET = originalWebhook;
     (env as any).API_KEY = originalApiKey;
     (env as any).OPENAI_API_KEY = originalOpenAiKey;
+    (env as any).AZURE_APP_INSIGHTS_API_KEY = originalAppInsightsKey;
     harness.cleanup();
   });
 
@@ -38,12 +40,14 @@ describe('Known Secrets Scrubbing in Repair Loop & Sandboxes (REL-09)', () => {
       (env as any).ADO_WEBHOOK_SECRET = 'mock-webhook-secret-999';
       (env as any).API_KEY = 'mock-api-key-abc';
       (env as any).OPENAI_API_KEY = 'sk-mock-openai-key-xyz';
+      (env as any).AZURE_APP_INSIGHTS_API_KEY = 'mock-app-insights-key-456';
 
       const secrets = getKnownSecrets();
       expect(secrets).toContain('mock-ado-pat-secret-value-12345');
       expect(secrets).toContain('mock-webhook-secret-999');
       expect(secrets).toContain('mock-api-key-abc');
       expect(secrets).toContain('sk-mock-openai-key-xyz');
+      expect(secrets).toContain('mock-app-insights-key-456');
     });
 
     it('filters out empty or undefined secrets', () => {
@@ -51,6 +55,7 @@ describe('Known Secrets Scrubbing in Repair Loop & Sandboxes (REL-09)', () => {
       (env as any).ADO_WEBHOOK_SECRET = undefined;
       (env as any).API_KEY = 'valid-key';
       (env as any).OPENAI_API_KEY = '';
+      (env as any).AZURE_APP_INSIGHTS_API_KEY = '';
 
       const secrets = getKnownSecrets();
       expect(secrets).toEqual(['valid-key']);
