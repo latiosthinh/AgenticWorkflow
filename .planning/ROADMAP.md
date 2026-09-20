@@ -90,7 +90,10 @@ Plans:
   3. A crashed run never loses a ticket: `failed` dedup markers get a bounded redelivery/retry path, PR-event dedup keys use full sha256 hex (no 32-bit collisions), every fire-and-forget lane job has a terminal `.catch`, and `src/index.ts` installs a `process.on('unhandledRejection')` hook
   4. Each poller tick issues bounded WIQL — non-terminal state filter + changed-date window + `$top` — and fetches through `withRetry` (API-load bound verified by test)
   5. Hazard paths fail closed and degradation is visible: skill-PR publishing runs in an isolated worktree or under a repo-wide lock (no branch switching in shared `process.cwd()`); QA worktree attach failure → Blocked + `[qa-harness-error]` (never cwd fallback); StateStore fsyncs the temp file before rename and TTL purge sweeps tickets-dir `.bak.*`/`.tmp.*` orphans; every silent-degradation catch (router prev-rev, pr-router details, QA rework dispatch, dedup status collision) records a flag in ticket state/evidence. Full suite green — crash-atomic writes, `wx`-dedup, lane single-writer invariants intact
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 11-01-PLAN.md — Tag-wipe guard in scope/gate (REL-01) + LLM & ADO Timeouts via AbortSignal (REL-02)
+- [ ] 11-02-PLAN.md — Bounded failed dedup retry (REL-03) + Lane terminal catch & unhandledRejection (REL-07) + Full sha256 PR dedup key (REL-08) + Bounded Poller WIQL & withRetry (REL-04)
+- [ ] 11-03-PLAN.md — Skill-PR isolated worktree (REL-05) + QA fail-closed worktree attach (REL-06) + StateStore fsync & orphan sweep (REL-10) + Silent degradation recording in state (REL-11)
 
 ### Phase 12: Config Hygiene & Quality Debt
 **Goal**: Config can no longer silently misroute or fabricate — boolean trap removed, `ADO_PROJECT`/`ADO_REPOSITORY_ID` required, `.env.example` regenerated from `EnvSchema`, prod mock seams throw — and structural debt paid: circular deps extracted, two-strike/parser duplication shared, smoke.ts split, dead code/deps purged, lane boilerplate cleaned, ingress hardened, lint + tests in typecheck
@@ -140,6 +143,6 @@ Phases execute in numeric order: 8 → 9 → 10 → 11 → 12 → 13 (serial at 
 | 8. WIP Resolution | v2.1 | 2/2 | Complete   | 2026-09-19 |
 | 9. Opencode-Only Honest Core | v2.1 | 0/3 | Not started | - |
 | 10. Security & Evidence Hardening | v2.1 | 3/3 | Complete   | 2026-09-19 |
-| 11. Reliability Hardening | v2.1 | 0/TBD | Not started | - |
+| 11. Reliability Hardening | v2.1 | 0/3 | Not started | - |
 | 12. Config Hygiene & Quality Debt | v2.1 | 0/TBD | Not started | - |
 | 13. E2E Proof | v2.1 | 0/TBD | Not started | - |
