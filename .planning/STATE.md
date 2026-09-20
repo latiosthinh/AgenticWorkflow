@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Overview
-status: executing
-stopped_at: Completed 10-02-PLAN.md (SEC-04 comment sanitization & loop shield + SEC-05 git push honesty); 567/567 green
-last_updated: "2026-09-20T02:46:00.000Z"
+status: verifying
+stopped_at: Completed 10-03-PLAN.md (CORE-04 zero fabricated evidence + REL-09 repair secrets); 582/582 green
+last_updated: "2026-09-20T03:05:00.000Z"
 last_activity: 2026-09-20
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 Phase: 10 of 13 (Security & Evidence Hardening) — v2.1 phases numbered 8–13, continuing v2.0 (ended Phase 7)
 Plan: 3 of 3 (10-01, 10-02 complete)
-Status: Ready to execute
-Last activity: 2026-09-20
+Status: Phase complete — ready for verification
+Last activity: 2026-09-19
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 **Working tree:** CLEAN — commit-forward gate (WIP-05) closed by 08-02: all WIP committed (prompt.ts verbatim, src/cli/ado.ts as-is per recorded QAL-03 decision), full suite 488/488 green, tsc clean.
 
@@ -87,6 +87,7 @@ Progress: [█████████░] 88%
 | Phase 09 P02 | 28m | 2 tasks | 5 files |
 | Phase 10 P01 | 12m | 2 tasks | 10 files |
 | Phase 10 P02 | 10m | 2 tasks | 7 files |
+| Phase 10 P03 | 15m | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,13 @@ Progress: [█████████░] 88%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [10-03]: Router step 4 throws MissingEvidenceError when ticket lacks real L3 evidence, flags ticket Blocked in ADO, and marks dedup status failed.
+- [10-03]: QA worker resolves commit SHA via git rev-parse HEAD in worktree (or branch ref), never hardcoding 'main', and transitions to Blocked with [qa-harness-error] when unresolved.
+- [10-03]: compileL1L7EvidenceIndex enforces real L2, L4, and L6 telemetry metrics (errorRate and p95LatencyMs) under failClosed: true, eliminating hardcoded constants '0.05%' and 145.
+- [10-03]: compileL1L7EvidenceIndex defaults gracefully to 'Pending' / 0 metrics when failClosed is false instead of fabricating pass states.
+- [10-03]: Router step 4 records real l2Evidence upon PR creation, and acceptance approval records real l4Evidence upon gate sign-off.
+- [10-03]: getKnownSecrets aggregates ADO PAT, webhook secret, API key, and OpenAI key; SENSITIVE_VALUE_PATTERN scrubs raw 52-char ADO PATs.
+- [10-03]: executeRepairLoop accepts knownSecrets and scrubs returned test diagnostics before emission.
 - [10-02]: Centralized formatWorkerAlertComment in src/ado/formatter.ts generates structured HTML with safe tags and trailing <!-- [automated-agent] -->.
 - [10-02]: flagTicketBlocked in src/ado/work-item.ts provides defense-in-depth by sanitizing htmlComment and ensuring loop-shield marker presence.
 - [10-02]: Git push errors under NODE_ENV === 'test' are tolerated with a warning to allow hermetic and offline test runs.

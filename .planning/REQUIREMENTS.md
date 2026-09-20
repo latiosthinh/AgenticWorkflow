@@ -28,7 +28,7 @@
 - [x] **CORE-01**: Built-in coding path deleted; `LOCAL_AGENT_TYPE=opencode` required — config validation fails fast at boot with actionable error when unset or `OPENCODE_BIN` unresolvable (H5; `src/config/env.ts:16`, `src/execute/worker.ts:82-109`, `src/execute/rework-worker.ts:128-161`)
 - [x] **CORE-02**: Repair loop performs real edit-and-retry via the opencode runner with failure context, or records honestly that no repair occurred — never re-runs identical tests ≤5× while implying repairs (H6; `src/execute/repair.ts:51-57`)
 - [x] **CORE-03**: MCP subsystem resolved: registry tools wired into the opencode invocation or `src/mcp/` + MCP deps deleted; no runtime-dead subsystem remains (H7; `src/execute/worker.ts:392-469`)
-- [ ] **CORE-04**: Zero fabricated evidence: router step-4 `{totalTests:1,passed:1}` default, evidence-index L2/L4/errorRate/p95 constants, and QA `commitSha='main'` replaced with real values (worktree `git rev-parse HEAD`) or fail-closed `MissingEvidenceError` blocking the transition (H8; `src/execute/router.ts:208-214`, `src/deploy/evidence-index.ts:169-193`, `src/qa/worker.ts:65`)
+- [x] **CORE-04**: Zero fabricated evidence: router step-4 `{totalTests:1,passed:1}` default, evidence-index L2/L4/errorRate/p95 constants, and QA `commitSha='main'` replaced with real values (worktree `git rev-parse HEAD`) or fail-closed `MissingEvidenceError` blocking the transition (H8; `src/execute/router.ts:208-214`, `src/deploy/evidence-index.ts:169-193`, `src/qa/worker.ts:65`)
 
 ### Reliability
 
@@ -40,7 +40,7 @@
 - [ ] **REL-06**: QA worktree attach failure fails closed (Blocked + `[qa-harness-error]`) — never falls back to running the suite in the orchestrator's own repo (M6; `src/qa/worker.ts:76-77`)
 - [ ] **REL-07**: Fire-and-forget lane jobs have terminal `.catch` handlers and `src/index.ts` installs a `process.on('unhandledRejection')` hook (M8; `src/ingress/routes.ts:83-101,146-155`, `src/ingress/poller.ts:58-66`)
 - [ ] **REL-08**: PR event dedup key uses full sha256 hex — no 32-bit truncation collisions (M9; `src/ingress/routes.ts:64-65`)
-- [ ] **REL-09**: `executeRepairLoop` passes `knownSecrets` to test runs consistently with QA/smoke paths (M10; `src/execute/worker.ts:209-214`, `src/execute/rework-worker.ts:266-271`)
+- [x] **REL-09**: `executeRepairLoop` passes `knownSecrets` to test runs consistently with QA/smoke paths (M10; `src/execute/worker.ts:209-214`, `src/execute/rework-worker.ts:266-271`)
 - [ ] **REL-10**: StateStore writes fsync the temp file before rename; TTL purge sweeps `.bak.*`/`.tmp.*` orphans in the tickets dir, not just dedup markers (M12; `src/state/store.ts:39-85,408-432`)
 - [ ] **REL-11**: Silent-degradation catches (router prev-rev lookup, pr-router details fetch, QA rework dispatch, dedup status collision) record the degradation in ticket state or evidence instead of logging only (L4)
 
@@ -106,7 +106,7 @@ Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2
 | CORE-01 | Phase 9 | Complete |
 | CORE-02 | Phase 9 | Complete |
 | CORE-03 | Phase 9 | Complete |
-| CORE-04 | Phase 10 | Pending |
+| CORE-04 | Phase 10 | Complete |
 | REL-01 | Phase 11 | Pending |
 | REL-02 | Phase 11 | Pending |
 | REL-03 | Phase 11 | Pending |
@@ -115,7 +115,7 @@ Every v2.1 requirement maps to exactly one phase (roadmap created 2026-09-19; v2
 | REL-06 | Phase 11 | Pending |
 | REL-07 | Phase 11 | Pending |
 | REL-08 | Phase 11 | Pending |
-| REL-09 | Phase 10 | Pending |
+| REL-09 | Phase 10 | Complete |
 | REL-10 | Phase 11 | Pending |
 | REL-11 | Phase 11 | Pending |
 | CFG-01 | Phase 12 | Pending |
