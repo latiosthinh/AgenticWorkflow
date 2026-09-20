@@ -92,7 +92,7 @@ async function runExecutionPipeline(
     testFilesProtected?: string[];
   },
   options?: ProcessExecuteOptions
-): Promise<void> {
+): Promise<boolean> {
   const lockedFiles =
     worktreeResult.testFilesProtected ??
     protectTestFiles(worktreeResult.worktreePath);
@@ -121,7 +121,7 @@ async function runExecutionPipeline(
       );
       await flagTicketBlocked(workItem.id, comment, 'repair-exhausted');
       await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-      return;
+      return false;
     }
     if (runRes.sessionId) {
       await workItemQueueManager.runInLane(workItem.id, async () => {
@@ -148,7 +148,7 @@ async function runExecutionPipeline(
     });
     await flagTicketBlocked(workItem.id, comment, 'diff-ceiling');
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-    return;
+    return false;
   }
 
   // 4. Guard package.json dependencies
@@ -189,7 +189,7 @@ async function runExecutionPipeline(
       'contract-conflict'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-    return;
+    return false;
   }
 
   // 5. Guard test assertion immutability
@@ -206,7 +206,7 @@ async function runExecutionPipeline(
       'contract-conflict'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-    return;
+    return false;
   }
 
   // Guard newly added test files for valid assertions (T-3-03)
@@ -225,7 +225,7 @@ async function runExecutionPipeline(
           'contract-conflict'
         );
         await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-        return;
+        return false;
       }
     }
   }
@@ -265,7 +265,7 @@ async function runExecutionPipeline(
       'repair-exhausted'
     );
     await cleanupWorktree(process.cwd(), worktreeResult.worktreePath);
-    return;
+    return false;
   }
 
   // 7. Record L3 evidence and transition to Dev Done

@@ -320,7 +320,7 @@ export async function routeWorkItemEvent(
           err.message
         );
         console.warn(
-          `[router] Work item ${workItemId} rev ${revId} blocked cleanly by missing evidence (${err.evidenceType ?? 'unknown'}): ${err.message}`
+          `[router] Work item ${workItemId} rev ${revId} blocked cleanly by missing evidence (${err.level ?? 'unknown'}): ${err.message}`
         );
         throw err;
       }
